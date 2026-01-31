@@ -1,0 +1,166 @@
+body {
+  margin: 0;
+  font-family: system-ui;
+  background: #f8f9fa;
+}
+
+/* LAYOUT */
+.super-layout {
+  display: flex;
+  height: 100vh;
+}
+
+/* SIDEBAR */
+.super-sidebar {
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid #dee2e6;
+  padding: 20px;
+}
+
+.super-sidebar h2 {
+  color: #0d6efd;
+}
+
+.role {
+  font-size: 12px;
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.super-sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 30px;
+}
+
+.super-sidebar li {
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.super-sidebar li.active,
+.super-sidebar li:hover {
+  background: #e7f1ff;
+  color: #0d6efd;
+}
+
+.super-sidebar li.danger {
+  color: #dc3545;
+}
+
+/* MAIN */
+.super-main {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* TOPBAR */
+.super-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #dee2e6;
+}
+
+.impersonate-btn {
+  background: #0d6efd;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+}
+
+/* STATS */
+.system-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.sys-card {
+  background: white;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #dee2e6;
+}
+
+.healthy {
+  color: #198754;
+}
+
+/* CONTROL */
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.panel {
+  background: white;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #dee2e6;
+}
+
+.panel h5 {
+  margin-bottom: 12px;
+}
+
+.panel button {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.panel button:hover {
+  background: #f1f5ff;
+}
+
+/* LOGS */
+.logs {
+  list-style: none;
+  padding: 0;
+}
+
+.logs li {
+  padding: 8px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* FULL */
+.full {
+  margin-top: 20px;
+}
+
+/* DANGER */
+.danger-zone {
+  border: 1px solid #dc3545;
+  margin-top: 20px;
+}
+
+.danger-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.danger-btn.outline {
+  background: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}

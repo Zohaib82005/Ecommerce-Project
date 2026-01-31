@@ -1,0 +1,86 @@
+.register-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #6610f2, #0d6efd);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.errorpopup{
+  position: fixed;
+  top: 90px;
+  right: 15px;
+
+  z-index: 9;
+  padding: 3px;
+}
+.register-card {
+  background: #fff;
+  border-radius: 16px;
+  display: flex;
+  width: 900px;
+  max-width: 100%;
+  overflow: hidden;
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+}
+
+/* Animation */
+.animate-fade {
+  animation: fadeIn 0.9s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Left Side */
+.register-left {
+  width: 55%;
+  padding: 40px;
+}
+
+.register-left .form-control {
+  border-radius: 10px;
+}
+
+.register-left button {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+/* Right Side */
+.register-right {
+  width: 45%;
+  background: url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f")
+    center/cover no-repeat;
+  position: relative;
+}
+
+.register-right .overlay {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  height: 100%;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .register-card {
+    flex-direction: column;
+  }
+
+  .register-left {
+    width: 100%;
+  }
+}

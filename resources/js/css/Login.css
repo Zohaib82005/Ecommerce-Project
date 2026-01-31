@@ -1,0 +1,100 @@
+.login-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0d6efd, #6610f2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  width: 900px;
+  max-width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Animation */
+.animate-slide {
+  animation: slideUp 0.8s ease forwards;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Left Side */
+.login-left {
+  width: 45%;
+  background: url("https://images.unsplash.com/photo-1523275335684-37898b6baf30")
+    center/cover no-repeat;
+  position: relative;
+}
+
+.login-left .overlay {
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  height: 100%;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Right Side */
+.login-right {
+  width: 55%;
+  padding: 40px;
+}
+
+.login-right .form-control {
+  border-radius: 10px;
+}
+
+.login-right button {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.errorpopup{
+  position: fixed;
+  top: 90px;
+  right: 15px;
+
+  z-index: 9;
+  padding: 3px;
+}
+
+.animate-fade {
+  animation: fadeIn 0.9s ease forwards;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+/* Mobile */
+@media (max-width: 768px) {
+  .login-card {
+    flex-direction: column;
+  }
+
+  .login-right {
+    width: 100%;
+  }
+}
