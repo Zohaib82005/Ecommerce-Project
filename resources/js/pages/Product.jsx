@@ -468,6 +468,7 @@ const Product = () => {
                     <strong>{props.products.length}</strong> Products Found
                   </span>
                 </div>
+                <Link href="/dashboard" className="btn btn-outline-primary">Dashboard</Link>
                 <Link href="/cart" className="btn btn-primary">View Cart</Link>
                 <div className="toolbar-right">
                   {/* View Mode Toggle */}
@@ -559,12 +560,12 @@ const Product = () => {
                         <div className={`product-card ${!(product.instock > 0) ? 'out-of-stock' : ''}`}>
                           {/* Product Image */}
                           <div className="product-image">
-                            <Link href={`/product/details/${product.id}`}>
+                           
                               <img
                                 src={product.image ? `/storage/${product.image}` : "http://127.0.0.1:8000/storage/images/default-product.png"}
                                 alt={product.name}
                               />
-                            </Link>
+                            
                             {!(product.instock > 0) && (
                               <div className="stock-badge out">Out of Stock</div>
                             )}

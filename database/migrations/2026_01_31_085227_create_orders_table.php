@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users');
             $table->decimal('total_amount', 10, 2);
-            $table->string('status')->default('pending');
+            $table->enum('status', ['Pending', 'Processing', 'Completed', 'Cancelled'])->default('Pending');
             $table->string('payment_method');
             $table->unsignedBigInteger('address_id');
             $table->foreign('address_id')->references('id')->on('addresses');

@@ -21,7 +21,7 @@ const ProductDetail = () => {
   const productData = {
     name: product?.name || "Wireless Noise Cancelling Headphones",
     price: product?.price || 129.00,
-    originalPrice: 199.00,
+    originalPrice:  product?.price  * 2,
     rating: 4.8,
     reviewCount: 124,
     inStock: true,
@@ -272,10 +272,11 @@ const ProductDetail = () => {
 
                 {/* Action Buttons */}
                 <div className="action-buttons">
-                  <button onClick={handleCartAdd}  className="btn btn-primary btn-add-to-cart">
+                  {(productData.stockCount > 0) && (<button onClick={handleCartAdd}  className="btn btn-primary btn-add-to-cart">
                     <i className="bi bi-cart-plus me-2"></i>
                     Add to Cart
-                  </button>
+                  </button>)}
+                  
                   <Link href="/cart" className="btn-view-cart" style={{textDecoration: "none"}}>View Cart</Link>
                   <button
                     className={`btn btn-wishlist ${isWishlisted ? 'active' : ''}`}

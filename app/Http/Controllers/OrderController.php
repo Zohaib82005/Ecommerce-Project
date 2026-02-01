@@ -49,6 +49,7 @@ class OrderController extends Controller
             ->where('cartitems.cart_id', $cid)
             ->where('cartitems.status', 'active')
             ->sum(\DB::raw('products.price * cartitems.quantity'));
+            
         Order::create([
             'user_id' => Auth::user()->id,
             'total_amount' => $totalPrice,
@@ -60,5 +61,13 @@ class OrderController extends Controller
         Cartitem::where('cart_id', $cid)->where('status','active')->update(['status' => 'ordered']);
         
         return Inertia::render('OrderSuccess');
+    }
+
+    public function updateStatus(Request $req){
+        Order::where('id', $req->order_id)->update([
+            'status' => $req->status
+        ]);
+        // dd($req);
+        return redirect()->back()->with('success', 'Status Updated Successfully!');
     }
 }

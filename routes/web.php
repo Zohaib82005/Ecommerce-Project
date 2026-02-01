@@ -32,6 +32,7 @@ Route::middleware([CheckSeller::class])->group(function () {
     Route::post('/addProduct', [ProductController::class, 'addProduct']);
     Route::get('/seller/editProduct/{id}', [ProductController::class, 'editProduct']);
     Route::get('/seller/deleteProduct/{id}', [ProductController::class, 'deleteProduct']);
+    Route::post('/orders/update-status', [OrderController::class, 'updateStatus']);
 });
 
 //admin routes
