@@ -14,7 +14,7 @@ const Dashboard = () => {
   });
   
   const props = usePage().props;
-  
+  console.log(props.orders);
   const handleSettingsChange = (e) => {
     setSettings({ ...settings, [e.target.name]: e.target.value });
   };
@@ -312,50 +312,123 @@ const Dashboard = () => {
           )}
 
           {activeTab === "orders" && (
-            <div className="tab-content-wrapper fade-in">
-              <div className="section-card">
-                <div className="section-header">
-                  <h4>My Orders</h4>
-                  <div className="btn-group">
-                    <button className="btn btn-sm btn-outline-primary active">All</button>
-                    <button className="btn btn-sm btn-outline-primary">Pending</button>
-                    <button className="btn btn-sm btn-outline-primary">Delivered</button>
+  <div className="tab-content-wrapper fade-in">
+    <div className="section-card">
+      <div className="section-header">
+        <h4>My Orders</h4>
+        <div className="btn-group">
+          <button className="btn btn-sm btn-outline-primary active">All</button>
+          <button className="btn btn-sm btn-outline-primary">Pending</button>
+          <button className="btn btn-sm btn-outline-primary">Processing</button>
+          <button className="btn btn-sm btn-outline-primary">Completed</button>
+        </div>
+      </div>
+      
+      {(() => {
+        const groupedOrders = props.orders ? props.orders.reduce((acc, item) => {
+          const oid = item.oid;
+          if (!acc[oid]) {
+            acc[oid] = {
+              id: item.id,
+              oid: item.oid,
+              created_at: item.created_at,
+              order_status: item.order_status,
+              status: item.status,
+              payment_method: item.payment_method,
+              total_amount: item.total_amount,
+              products: []
+            };
+          }
+          acc[oid].products.push({
+            name: item.product_name,
+            quantity: item.quantity,
+            image: item.product_image,
+            price: item.pprice
+          });
+          return acc;
+        }, {}) : {};
+        
+        return Object.keys(groupedOrders).length > 0 ? (
+          <div className="orders-grid">
+            {Object.values(groupedOrders).map((order) => (
+              <div key={order.oid} className="order-card">
+                <div className="order-card-header">
+                  <div>
+                    <h6>Order #{order.oid}</h6>
+                    <p className="text-muted small">
+                      {new Date(order.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </p>
                   </div>
+                  <span className={`status-badge status-${order.order_status?.toLowerCase() || order.status?.toLowerCase()}`}>
+                    {order.order_status || order.status}
+                  </span>
                 </div>
                 
-                <div className="orders-grid">
-                  {recentOrders.map((order) => (
-                    <div key={order.id} className="order-card">
-                      <div className="order-card-header">
-                        <div>
-                          <h6>Order #{order.id}</h6>
-                          <p className="text-muted small">{order.date}</p>
-                        </div>
-                        <span className={`status-badge status-${order.status.toLowerCase()}`}>
-                          {order.status}
-                        </span>
+                <div className="order-card-body">
+                  {order.products.map((product, idx) => (
+                    <div key={idx} className="d-flex align-items-center mb-2">
+                      <div className="order-product-image">
+                        <img 
+                          src={`/storage/${product.image}`}
+                          alt={product.name}
+                        />
                       </div>
-                      <div className="order-card-body">
-                        <div className="d-flex align-items-center">
-                          <div className="product-icon-large">{order.image}</div>
-                          <div className="flex-grow-1 ms-3">
-                            <h5>{order.product}</h5>
-                            <p className="text-muted mb-2">Quantity: 1</p>
-                            <h5 className="text-primary">{order.amount}</h5>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="order-card-footer">
-                        <button className="btn btn-sm btn-outline-primary">Track Order</button>
-                        <button className="btn btn-sm btn-primary">View Details</button>
+                      <div className="flex-grow-1 ms-3">
+                        <h5 className="product-name">{product.name}</h5>
+                        <p className="text-muted mb-1 small">Quantity: {product.quantity}</p>
+                        <p className="text-muted mb-0 small">Price: ${parseFloat(product.price).toFixed(2)}</p>
                       </div>
                     </div>
                   ))}
+                  <div className="order-total mt-3 pt-3 border-top">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <p className="text-muted mb-0">Payment Method:</p>
+                      <span className="text-capitalize">{order.payment_method}</span>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mt-2">
+                      <h5 className="mb-0">Total:</h5>
+                      <h5 className="text-primary mb-0">${parseFloat(order.total_amount).toFixed(2)}</h5>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="order-card-footer">
+                  <button className="btn btn-sm btn-outline-primary">
+                    <i className="bi bi-geo-alt me-1"></i>
+                    Track Order
+                  </button>
+                  <button 
+                    className="btn btn-sm btn-primary"
+                    onClick={() => openStatusModal(order)}
+                  >
+                    <i className="bi bi-eye me-1"></i>
+                    View Details
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-icon">
+              <i className="bi bi-inbox"></i>
             </div>
-          )}
-
+            <h5>No Orders Yet</h5>
+            <p className="text-muted">You haven't placed any orders yet</p>
+            <a href="/products" className="btn btn-primary">
+              <i className="bi bi-shop me-2"></i>
+              Start Shopping
+            </a>
+          </div>
+        );
+      })()}
+    </div>
+  </div>
+)}
           {activeTab === "wishlist" && (
             <div className="tab-content-wrapper fade-in">
               <div className="section-card">

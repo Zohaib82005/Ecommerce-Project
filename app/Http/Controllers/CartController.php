@@ -10,6 +10,7 @@ use App\Models\Cartitem;
 use Inertia\Inertia;
 class CartController extends Controller
 {
+
     public function addToCart(Request $request)
     {
         $validated = $request->validate([
@@ -20,10 +21,10 @@ class CartController extends Controller
         $user = Auth::user();
 
         // Find or create a cart for the user
-        $cart = Cart::firstOrCreate(['user_id' => $user->id]);
+        $cart = Cart::select('id')->where('user_id', $user->id)->latest();
 
         // Check if the product is already in the cart
-        $cartItem = Cartitem::where('cart_id', $cart->id)->where('product_id', $validated['product_id'])->first();
+        $cartItem = Cartitem::where('cart_id', $cart->id)->where('product_id', $validated['product_id'])->whereNotIn('status',['ordered'])->first();
 
         if ($cartItem) {
             // If it exists, update quantity

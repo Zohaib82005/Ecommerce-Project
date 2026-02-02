@@ -9,6 +9,7 @@ use App\Models\Addresse;
 use App\Models\Cartitem;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Cart;
 class OrderController extends Controller
 {
     public function success(Request $request, $cartId)
@@ -37,8 +38,11 @@ class OrderController extends Controller
         ]
         );
 
-        $address = Addresse::where('user_id', Auth::user()->id)->first();
-        $cid = $cartId;
+        // dd($cartId); 
+        $cartid = Cart::where('user_id', Auth::user()->id)->first()->id;
+        $address = Addresse::where('user_id', Auth::user()->id)->latest()->first();
+        $cid = $cartid;
+        // dd($cid);
         Product::whereIn('id', function ($query) use ($cid) {
             $query->select('product_id')
                   ->from('cartitems')

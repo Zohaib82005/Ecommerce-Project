@@ -19,8 +19,6 @@ return new class extends Migration
             $table->string('payment_method');
             $table->unsignedBigInteger('address_id');
             $table->foreign('address_id')->references('id')->on('addresses');
-            $table->unsignedBigInteger('cart_id');
-            $table->foreign('cart_id')->references('id')->on('cartitems');
             $table->timestamps();
         });
     }

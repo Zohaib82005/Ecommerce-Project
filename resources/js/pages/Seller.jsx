@@ -47,7 +47,7 @@ const Seller = () => {
   
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  
+
  
   
   // Form for status update
@@ -583,7 +583,7 @@ const Seller = () => {
               {props.orders.map((order, index) => (
                 <div key={order.id || index} className="order-card">
                   <div className="order-header">
-                    <strong className="order-id">Order #{order.id}</strong>
+                    <strong className="order-id">Order #{order.oid}</strong>
                     <span className={`status-badge ${order.status.toLowerCase()}`}>
                       {order.status}
                     </span>
