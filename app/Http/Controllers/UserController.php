@@ -9,8 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
+use App\Models\Cart;
 use App\Models\Order;
-use App\Models\Cartitem;
+
 class UserController extends Controller
 {
     public function Register(Request $req)
@@ -112,35 +113,15 @@ class UserController extends Controller
 
     public function dashboard()
     {
-        $orders = Order::join('cartitems', 'orders.cart_id', '=', 'cartitems.cart_id')
-            ->join('products', 'cartitems.product_id', '=', 'products.id')
-            ->join('addresses', 'orders.address_id', '=', 'addresses.id')
-            ->where('orders.user_id', Auth::user()->id)
-            ->where('cartitems.status', 'ordered')
-            ->select('orders.*','orders.id as oid', 'products.name as product_name', 'cartitems.quantity as quantity', 'products.image as product_image', 'products.price as pprice','addresses.*')
-            ->get();
-        // $orders = Order::select('cart_id','id','total_amount','status','created_at')->where('user_id', Auth::user()->id)->distinct()->get();
-            // ->where('user_id', Auth::user()->id)
-            // ->with(['cartitems' => function($query) {
-            //     $query->where('status', 'ordered')
-            //           ->with(['product' => function($q) {
-            //               $q->select('id', 'name', 'image', 'price');
-            //           }]);
-            // }])
-            // ->get();
-        // $groupedOrders = $orders->groupBy('oid')->map(function ($group) {
-        //     $first = $group->first();
-        //     $first->products = $group->map(function ($item) {
-        //         return [
-        //             'name' => $item->product_name,
-        //             'quantity' => $item->quantity,
-        //             'image' => $item->product_image,
-        //             'price' => $item->pprice,
-        //         ];
-        //     })->toArray();
-        //     return $first;
-        // })->values();
+            $orders = Order::where('user_id', Auth::user()->id)->get();
+          
 
+        $orders = Order::where('orders.user_id', Auth::user()->id)
+            ->join('carts', 'orders.id', '=', 'carts.order_id')
+            ->join('products', 'carts.product_id', '=', 'products.id')
+            ->select('orders.*', 'orders.id as oid','products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice')
+            ->get();
+        // dd($orders);
         return Inertia::render('Dashboard',
             [
                 'orders' => $orders,

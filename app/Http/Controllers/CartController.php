@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Cartitem;
+
 use Inertia\Inertia;
 class CartController extends Controller
 {
@@ -20,27 +20,19 @@ class CartController extends Controller
 
         $user = Auth::user();
 
-        // Find or create a cart for the user
-        $cart = Cart::select('id')->where('user_id', $user->id)->latest();
+        $cart = Cart::select('id')->where('user_id', $user->id)->where('product_id', $validated['product_id'])->where('status','active')->first();
 
-        // Check if the product is already in the cart
-        $cartItem = Cartitem::where('cart_id', $cart->id)->where('product_id', $validated['product_id'])->whereNotIn('status',['ordered'])->first();
-
-        if ($cartItem) {
-            // If it exists, update quantity
-            $cartItem->update([
-                'quantity' =>  $validated['quantity'],
-                'status' => 'active',
-                ]);
-        } else {
-            // If it doesn't exist, create a new cart item
-            Cartitem::create([
-                'cart_id' => $cart->id,
-                'product_id' => $validated['product_id'],
-                'quantity' => $validated['quantity'],
-                'status' => 'active',
-            ]);
+        if($cart){
+            return redirect()->back()->with('error', 'Product already in cart!');
         }
+        Cart::create([
+            'user_id' => $user->id,
+            'product_id' => $validated['product_id'],
+            'quantity' => $validated['quantity'],
+            'status' => 'active',
+        ]);
+        
+       
 
         return redirect()->back()->with('success', 'Product added to cart successfully!');
     }
@@ -48,14 +40,14 @@ class CartController extends Controller
     public function viewCart()
     {
         $user = Auth::user();
-        $cart = Cart::where('user_id', $user->id)->first();
-        $products = Product::Join('cartitems', 'products.id', '=', 'cartitems.product_id')
-            ->select('products.*', 'cartitems.quantity as quantity', 'cartitems.id as cartitem_id')
-            ->where('cartitems.cart_id', $cart->id)
-            ->where('cartitems.status', 'active')
+        $products = Product::join('carts', 'products.id', '=', 'carts.product_id')
+            ->where('carts.user_id', $user->id)
+            ->where('carts.status', 'active')
+            ->select('products.*', 'carts.id as cart_item_id', 'carts.quantity as quantity')
             ->get();
+
             // dd($products);
-        if (!$cart) {
+        if (!$products) {
             return Inertia::render('Cart', ['cartItems' => []]);
         }
 

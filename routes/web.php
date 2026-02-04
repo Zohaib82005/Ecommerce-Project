@@ -50,7 +50,7 @@ Route::middleware([CheckCustomer::class])->group(function () {
     Route::get('/cart', [CartController::class, 'viewCart']);
     Route::get('/cart/remove/{id}', [CartController::class, 'removeFromCart']);
     Route::get('/checkout', [CheckoutController::class, 'showCheckout']);
-    Route::post('/success/{id}',[OrderController::class, 'success']);
+    Route::post('/success',[OrderController::class, 'success']);
 });
 
 Route::get('/products', [ProductController::class, 'products']);

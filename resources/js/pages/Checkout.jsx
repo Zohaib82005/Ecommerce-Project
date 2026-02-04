@@ -34,14 +34,14 @@ const Checkout = () => {
     orderNotes: "",
   });
   function submitData() {
-    formData.post('/success/' + props.cartItems[0].cart_id);
+    formData.post('/success');
   }
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponCode, setCouponCode] = useState("");
 
   // Sample order items
   const orderItems = props.cartItems;
-  // console.log(props.errors);
+  console.log(props);
   // Calculate totals
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingCost = formData.data.shippingMethod === "express" ? 15 : formData.data.shippingMethod === "standard" ? 5 : 0;
