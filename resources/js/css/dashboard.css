@@ -171,8 +171,8 @@ body {
   width: 280px;
   background: linear-gradient(180deg, var(--white) 0%, #fefefe 100%);
   border-right: 1px solid var(--border-color);
-  /* display: flex; */
-  /* flex-direction: column; */
+  display: flex;
+  flex-direction: column;
   position: fixed;
   left: 0;
   top: 0;
@@ -182,6 +182,7 @@ body {
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-lg);
+  overflow: hidden;
 }
 
 .profile-sidebar.show {
@@ -334,7 +335,7 @@ body {
 .sidebar-nav {
   flex: 1;
   padding: 1rem 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .nav-list {

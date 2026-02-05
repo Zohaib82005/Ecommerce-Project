@@ -3,160 +3,33 @@ import '../css/Product.css'
 import Navbar from "../Components/Navbar"
 import Footer from '../components/Footer'
 import { Link, usePage } from "@inertiajs/react";
+import FlashMessage from "../Components/FlashMessage";
 
-const allProducts = [
-  {
-    id: 1,
-    name: "Wireless Headphones",
-    price: 59,
-    category: "Electronics",
-    brand: "Sony",
-    rating: 4.5,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e",
-    tags: ["audio", "wireless"]
-  },
-  {
-    id: 2,
-    name: "Smart Watch",
-    price: 89,
-    category: "Electronics",
-    brand: "Apple",
-    rating: 4.8,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30",
-    tags: ["wearable", "smart"]
-  },
-  {
-    id: 3,
-    name: "Bluetooth Speaker",
-    price: 39,
-    category: "Electronics",
-    brand: "JBL",
-    rating: 4.3,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1",
-    tags: ["audio", "portable"]
-  },
-  {
-    id: 4,
-    name: "Gaming Mouse",
-    price: 25,
-    category: "Gaming",
-    brand: "Logitech",
-    rating: 4.6,
-    inStock: false,
-    image: "https://images.unsplash.com/photo-1527814050087-3793815479db",
-    tags: ["gaming", "accessories"]
-  },
-  {
-    id: 5,
-    name: "Laptop Stand",
-    price: 30,
-    category: "Accessories",
-    brand: "Generic",
-    rating: 4.2,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46",
-    tags: ["desk", "accessories"]
-  },
-  {
-    id: 6,
-    name: "USB-C Hub",
-    price: 45,
-    category: "Accessories",
-    brand: "Anker",
-    rating: 4.7,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1625948515291-69613efd103f",
-    tags: ["connectivity", "accessories"]
-  },
-  {
-    id: 7,
-    name: "Mechanical Keyboard",
-    price: 120,
-    category: "Gaming",
-    brand: "Corsair",
-    rating: 4.9,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3",
-    tags: ["gaming", "typing"]
-  },
-  {
-    id: 8,
-    name: "Webcam HD",
-    price: 55,
-    category: "Electronics",
-    brand: "Logitech",
-    rating: 4.4,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04",
-    tags: ["video", "streaming"]
-  },
-  {
-    id: 9,
-    name: "Phone Case",
-    price: 15,
-    category: "Accessories",
-    brand: "Spigen",
-    rating: 4.1,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb",
-    tags: ["mobile", "protection"]
-  },
-  {
-    id: 10,
-    name: "Portable Charger",
-    price: 35,
-    category: "Electronics",
-    brand: "Anker",
-    rating: 4.6,
-    inStock: false,
-    image: "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5",
-    tags: ["power", "portable"]
-  },
-  {
-    id: 11,
-    name: "Gaming Headset",
-    price: 75,
-    category: "Gaming",
-    brand: "Razer",
-    rating: 4.7,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1599669454699-248893623440",
-    tags: ["gaming", "audio"]
-  },
-  {
-    id: 12,
-    name: "Monitor 27 inch",
-    price: 250,
-    category: "Electronics",
-    brand: "Dell",
-    rating: 4.8,
-    inStock: true,
-    image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf",
-    tags: ["display", "productivity"]
-  },
-];
 
 const Product = () => {
+  // Remove the let allProducts declaration from the top
+  // and use props.products directly
+  
+  const props = usePage().props;
+  
+  // Use props.products as your main data source
+  const allProducts = props.products || [];
+  
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 300]);
+  const [priceRange, setPriceRange] = useState([0, 999999]);
   const [minRating, setMinRating] = useState(0);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("featured");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [viewMode, setViewMode] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const props = usePage().props;
-  // console.log(props.products);
-  // Get unique categories and brands
+  
+  // Get unique categories and brands from props.products
   const categories = [...new Set(props.categories.map(c => c.category))];
   const brands = [...new Set(allProducts.map(p => p.brand))];
-
-  // Filter and sort products
+  
   const filteredProducts = useMemo(() => {
     let filtered = allProducts.filter(product => {
       // Category filter
@@ -232,11 +105,16 @@ const Product = () => {
     );
   };
 
+  const handleAddToWishlist = (productId) => {
+    // Implement your logic to add the product to the wishlist
+    console.log(`Add product ${productId} to wishlist`);
+  }
+
   // Clear all filters
   const clearAllFilters = () => {
     setSelectedCategories([]);
     setSelectedBrands([]);
-    setPriceRange([0, 300]);
+    setPriceRange([0, 999999]);
     setMinRating(0);
     setShowInStockOnly(false);
     setSearchQuery("");
@@ -245,13 +123,13 @@ const Product = () => {
 
   // Count active filters
   const activeFiltersCount = selectedCategories.length + selectedBrands.length +
-    (priceRange[0] !== 0 || priceRange[1] !== 300 ? 1 : 0) +
+    (priceRange[0] !== 0 || priceRange[1] !== 999999 ? 1 : 0) +
     (minRating > 0 ? 1 : 0) +
     (showInStockOnly ? 1 : 0);
 
   return (
     <>
-
+    <FlashMessage />
       <div className="products-page">
         <div className="container-fluid px-3 px-lg-4 py-4">
           {/* Page Header */}
@@ -389,9 +267,9 @@ const Product = () => {
                         type="number"
                         className="form-control form-control-sm"
                         value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 300])}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
                         min={priceRange[0]}
-                        max="300"
+                        max=""
                       />
                     </div>
                   </div>
@@ -465,7 +343,7 @@ const Product = () => {
                     )}
                   </button>
                   <span className="results-count">
-                    <strong>{props.products.length}</strong> Products Found
+                    <strong>{filteredProducts.length}</strong> Products Found
                   </span>
                 </div>
                 <Link href="/dashboard" className="btn btn-outline-primary">Dashboard</Link>
@@ -552,7 +430,7 @@ const Product = () => {
               {filteredProducts.length > 0 ? (
                 <div className={`products-container ${viewMode === 'list' ? 'list-view' : 'grid-view'}`}>
                   <div className="row g-3">
-                    {props.products.map((product) => (
+                    {filteredProducts.map((product) => (
                       <div
                         key={product.id}
                         className={viewMode === 'list' ? 'col-12' : 'col-6 col-md-4 col-xl-3'}
@@ -572,9 +450,9 @@ const Product = () => {
                             {(product.instock > 0) && (
                               <div className="stock-badge in">In Stock</div>
                             )}
-                            <button className="btn-wishlist">
+                            <Link href={`/addtowishlist/${product.id}`} className="btn-wishlist">
                               <i className="bi bi-heart"></i>
-                            </button>
+                            </Link>
                           </div>
 
                           {/* Card Body */}

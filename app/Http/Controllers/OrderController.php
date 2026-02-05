@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Addresse;
-
+use App\Models\Wishlist;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Cart;
@@ -51,10 +51,14 @@ class OrderController extends Controller
             'payment_method' => $validated['paymentMethod'],
             'status' => 'Pending'
         ]);
-
-        Cart::where('user_id', Auth::user()->id)->where('status', 'active')->update([
-            'status' => 'ordered'
-        ]);
+        $order = Order::where('user_id', Auth::id())->latest()->first();
+        $carts = Cart::where('user_id', Auth::id())->where('status', 'active')->get();
+        foreach($carts as $cart){
+            Cart::where('user_id', Auth::user()->id)->where('status', 'active')->where('id', $cart->id)->update([
+                'status' => 'ordered',
+                'order_id' => $order->id
+            ]);
+        }
         
        
         return Inertia::render('OrderSuccess');
@@ -66,5 +70,35 @@ class OrderController extends Controller
         ]);
         // dd($req);
         return redirect()->back()->with('success', 'Status Updated Successfully!');
+    }
+
+    public function addToWishlist($id){
+
+        //check if already exists
+        $exists = Wishlist::select('id')->where('user_id',Auth::user()->id)->where('product_id', $id)->where('status', 'active')->first();
+        if($exists){
+            return redirect()->back()->with('error','Product Already added to Wishlist!');
+        }
+
+        $existsremoved = Wishlist::select('id')->where('user_id',Auth::user()->id)->where('product_id', $id)->where('status', 'removed')->first();
+        if($existsremoved){
+            Wishlist::where('id', $existsremoved->id)->update([
+                'status' => 'active'
+            ]);
+            return redirect()->back()->with('success','Product Added to Wishlist!');
+        }
+        Wishlist::create([
+            'user_id' => Auth::user()->id,
+            'product_id' => $id,
+        ]);
+        // return $id;
+        return redirect()->back()->with('success', 'Product added to wishlist!');
+    }
+
+    public function removeFromWishlist($id){
+        Wishlist::where('user_id', Auth::user()->id)->where('product_id', $id)->update([
+            'status' => 'removed'
+        ]);
+        return redirect()->back()->with('success', 'Product removed from wishlist!');
     }
 }

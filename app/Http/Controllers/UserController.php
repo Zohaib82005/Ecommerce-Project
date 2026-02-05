@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use App\Models\Cart;
 use App\Models\Order;
-
+use App\Models\Wishlist;
 class UserController extends Controller
 {
     public function Register(Request $req)
@@ -86,14 +86,24 @@ class UserController extends Controller
         //     ->distinct()
         //     ->get();
 
-        $order = Order::join('carts', 'orders.cart_id', '=', 'carts.id')
-            ->leftJoin('cartitems', 'carts.id', '=', 'cartitems.cart_id')
-            ->leftJoin('products', 'cartitems.product_id', '=', 'products.id')
+        // $order = Order::join('carts', 'orders.cart_id', '=', 'carts.id')
+        //     ->leftJoin('cartitems', 'carts.id', '=', 'cartitems.cart_id')
+        //     ->leftJoin('products', 'cartitems.product_id', '=', 'products.id')
+        //     ->join('addresses', 'orders.address_id', '=', 'addresses.id')
+        //     ->where('products.added_by', Auth::user()->id)
+        //     ->where('cartitems.status', 'ordered')
+        //     ->select('orders.*','orders.id as oid', 'products.name as product_name', 'cartitems.quantity as quantity', 'products.image as product_image', 'products.price as pprice','addresses.*')
+        //     ->get();
+
+        $order= Order::join('carts', 'orders.id', '=', 'carts.order_id')
+            ->join('products', 'carts.product_id', '=', 'products.id')
             ->join('addresses', 'orders.address_id', '=', 'addresses.id')
             ->where('products.added_by', Auth::user()->id)
-            ->where('cartitems.status', 'ordered')
-            ->select('orders.*','orders.id as oid', 'products.name as product_name', 'cartitems.quantity as quantity', 'products.image as product_image', 'products.price as pprice','addresses.*')
+            ->where('carts.status', 'ordered')
+            ->select('orders.*','orders.id as oid', 'products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice','addresses.*')
             ->get();
+        
+    
     // dd($order);
         return Inertia::render('Seller',
             [
@@ -122,9 +132,17 @@ class UserController extends Controller
             ->select('orders.*', 'orders.id as oid','products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice')
             ->get();
         // dd($orders);
+
+        $wishlists = Wishlist::join('products', 'wishlists.product_id', '=', 'products.id')
+                    ->select('products.*')
+                    ->where('user_id', Auth::user()->id)
+                    ->where('status', 'active')
+                    ->get();
+        // dd($wishlists);
         return Inertia::render('Dashboard',
             [
                 'orders' => $orders,
+                'wishlists' => $wishlists,
             ]
         );
     }

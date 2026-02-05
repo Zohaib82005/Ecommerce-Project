@@ -51,6 +51,8 @@ Route::middleware([CheckCustomer::class])->group(function () {
     Route::get('/cart/remove/{id}', [CartController::class, 'removeFromCart']);
     Route::get('/checkout', [CheckoutController::class, 'showCheckout']);
     Route::post('/success',[OrderController::class, 'success']);
+    Route::get('/addtowishlist/{id}', [OrderController::class, 'addToWishlist']);
+    Route::get('/remove-wishlist/{id}', [OrderController::class, 'removeFromWishlist']);
 });
 
 Route::get('/products', [ProductController::class, 'products']);

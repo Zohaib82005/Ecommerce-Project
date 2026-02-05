@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "../css/dashboard.css";
 import { Link, usePage } from "@inertiajs/react";
-
+import FlashMessage from "../Components/FlashMessage";
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [showNotifications, setShowNotifications] = useState(false);
@@ -14,7 +14,7 @@ const Dashboard = () => {
   });
   
   const props = usePage().props;
-  console.log(props.orders);
+  // console.log(props.orders);
   const handleSettingsChange = (e) => {
     setSettings({ ...settings, [e.target.name]: e.target.value });
   };
@@ -30,12 +30,13 @@ const Dashboard = () => {
     { id: "CB10983", product: "Laptop Stand", status: "Delivered", date: "Jan 20, 2026", amount: "$45", image: "💻" },
   ];
 
-  const wishlistItems = [
-    { id: 1, name: "Bluetooth Speaker", price: "$89", image: "🔊", inStock: true },
-    { id: 2, name: "Mechanical Keyboard", price: "$159", image: "⌨️", inStock: true },
-    { id: 3, name: "Gaming Mouse", price: "$79", image: "🖱️", inStock: false },
-  ];
+  // const wishlistItems = [
+  //   { id: 1, name: "Bluetooth Speaker", price: "$89", image: "🔊", inStock: true },
+  //   { id: 2, name: "Mechanical Keyboard", price: "$159", image: "⌨️", inStock: true },
+  //   { id: 3, name: "Gaming Mouse", price: "$79", image: "🖱️", inStock: false },
+  // ];
 
+    const wishlistItems = props.wishlists;
   const savedAddresses = [
     { id: 1, type: "Home", address: "House 23, Street 7, Islamabad", default: true },
     { id: 2, type: "Office", address: "Plaza 5, Blue Area, Islamabad", default: false },
@@ -43,6 +44,7 @@ const Dashboard = () => {
 
   return (
     <div className="customer-profile-layout">
+      <FlashMessage />
       {/* Overlay for mobile sidebar */}
       {sidebarOpen && (
         <div 
@@ -89,7 +91,7 @@ const Dashboard = () => {
             >
               <i className="bi bi-bag-check-fill"></i>
               <span>My Orders</span>
-              <span className="badge bg-primary ms-auto">3</span>
+              <span className="badge bg-primary ms-auto">{props.orders.length}</span>
             </li>
             <li 
               onClick={() => { setActiveTab("wishlist"); setSidebarOpen(false); }} 
@@ -204,7 +206,7 @@ const Dashboard = () => {
                       <i className="bi bi-cart-fill"></i>
                     </div>
                     <div className="stat-content">
-                      <h3 className="stat-number">18</h3>
+                      <h3 className="stat-number">{props.orders.length}</h3>
                       <p className="stat-label">Total Orders</p>
                     </div>
                     <div className="stat-trend positive">
@@ -234,7 +236,7 @@ const Dashboard = () => {
                       <i className="bi bi-check-circle-fill"></i>
                     </div>
                     <div className="stat-content">
-                      <h3 className="stat-number">14</h3>
+                      <h3 className="stat-number">{props.orders.length}</h3>
                       <p className="stat-label">Completed</p>
                     </div>
                     <div className="stat-trend positive">
@@ -440,14 +442,14 @@ const Dashboard = () => {
                 <div className="wishlist-grid">
                   {wishlistItems.map((item) => (
                     <div key={item.id} className="wishlist-card">
-                      <button className="wishlist-remove">
+                      <Link className="wishlist-remove" href={`/remove-wishlist/${item.id}`}>
                         <i className="bi bi-x-lg"></i>
-                      </button>
-                      <div className="wishlist-icon">{item.image}</div>
+                      </Link>
+                      <img src={`/storage/${item.image}`} className="wishlist-icon"/>
                       <h5 className="wishlist-name">{item.name}</h5>
                       <p className="wishlist-price">{item.price}</p>
                       <div className="wishlist-stock">
-                        {item.inStock ? (
+                        {(item.instock > 0) ? (
                           <span className="text-success">
                             <i className="bi bi-check-circle-fill"></i> In Stock
                           </span>
@@ -457,10 +459,17 @@ const Dashboard = () => {
                           </span>
                         )}
                       </div>
-                      <button className="btn btn-primary w-100 mt-3">
+                      {(item.instock > 0) ? (
+                        <button className="btn btn-primary w-100 mt-3">
                         <i className="bi bi-cart-plus me-2"></i>
                         Add to Cart
                       </button>
+                      ) : (<button className="btn btn-secondary w-100 mt-3" disabled>
+                          <i className="bi bi-cart-plus me-2"></i>
+                          Add to Cart
+                        </button>)
+                      }
+                      
                     </div>
                   ))}
                 </div>

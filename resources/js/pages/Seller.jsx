@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../css/seller.css";
 import { useForm, usePage, Link } from "@inertiajs/react";
-import FlashMessage from "../components/FlashMessage";
+import FlashMessage from '../components/FlashMessage.jsx';
 
 // import ValidationErrors from "../Components/ValidationErrors";
 
