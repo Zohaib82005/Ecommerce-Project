@@ -80,10 +80,15 @@ class ProductController extends Controller
 
     public function products()
     {
-        $products = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
-            ->select('products.*', 'categories.category as category')
-            ->get();
-        $categories = Category::all();
+        try{
+            $products = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
+                ->select('products.*', 'categories.category as category')
+                ->where('products.status', 'Approved')
+                ->get();
+            $categories = Category::all();
+        }catch(\Exception $e){
+            return "We are facing some issues. Please try again later.";
+        }
 
         return Inertia::render('Product',
             [

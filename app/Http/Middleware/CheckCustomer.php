@@ -16,8 +16,12 @@ class CheckCustomer
      */
     public function handle(Request $request, Closure $next): Response
     {
-       if(Auth::user()->role == 'Customer'){
-            return $next($request);
+        try{
+            if(Auth::user()->role == 'Customer'){
+                    return $next($request);
+            }
+        }catch(\Exception $e){
+            return redirect('/login');
         }
         return redirect()->back();
     }

@@ -3,8 +3,6 @@ import "../css/seller.css";
 import { useForm, usePage, Link } from "@inertiajs/react";
 import FlashMessage from '../components/FlashMessage.jsx';
 
-// import ValidationErrors from "../Components/ValidationErrors";
-
 const Seller = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -245,7 +243,7 @@ const Seller = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Total Orders</p>
-                    <h3 className="stat-value">312</h3>
+                    <h3 className="stat-value">{props.orders.length}</h3>
                     <div className="stat-trend positive">
                       <i className="bi bi-arrow-up"></i> 8%
                     </div>
@@ -258,7 +256,7 @@ const Seller = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Pending Orders</p>
-                    <h3 className="stat-value">8</h3>
+                    <h3 className="stat-value">{props.orders.length}</h3>
                     <div className="stat-trend neutral">
                       <i className="bi bi-dash"></i> 0%
                     </div>

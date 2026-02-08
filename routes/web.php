@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\AdminController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -37,8 +38,10 @@ Route::middleware([CheckSeller::class])->group(function () {
 
 //admin routes
 Route::middleware([CheckAdmin::class])->group(function () {
-    Route::get('/admin', [UserController::class, 'adminDashboard']);
+    Route::get('/admin', [AdminController::class, 'index']);
     Route::post('/addcate', [ProductController::class, 'addcate']);
+    Route::get('/approve/{id}', [AdminController::class, 'approveProduct']);
+    Route::get('/reject/{id}', [AdminController::class, 'rejectProduct']);
 });
 
 

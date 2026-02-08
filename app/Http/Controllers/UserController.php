@@ -34,11 +34,13 @@ class UserController extends Controller
 
     public function Login(Request $req)
     {
+
         $req->validate([
             'email' => 'required',
             'password' => 'required',
         ]);
         // dd($req);
+        
         $cred = Auth::attempt(['email' => $req->email, 'password' => $req->password]);
         if ($cred) {
             if (Auth::user()->role == 'Seller') {
@@ -54,16 +56,7 @@ class UserController extends Controller
         return redirect()->back()->withErrors('Incorrect email or password');
     }
 
-    public function adminDashboard()
-    {
-        $categories = Category::select('category', 'id')->get();
-
-        return Inertia::render('Admin',
-            [
-                'categories' => $categories,
-            ]
-        );
-    }
+    
 
     public function sellerDashboard(){
         $categories = Category::select('category', 'id')->get();
@@ -100,6 +93,7 @@ class UserController extends Controller
             ->join('addresses', 'orders.address_id', '=', 'addresses.id')
             ->where('products.added_by', Auth::user()->id)
             ->where('carts.status', 'ordered')
+
             ->select('orders.*','orders.id as oid', 'products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice','addresses.*')
             ->get();
         
