@@ -1,23 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../css/cart.css";
 import Footer from '../components/Footer';
 import Navbar from '../Components/Navbar';
 import { Link, usePage } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
 const Cart = () => {
-  const products = usePage().props.products;
-  console.log(products);
+  const products = usePage().props.products || [];
+  const [cartItems, setCartItems] = useState(products);
+  useEffect(() => {
+    setCartItems(products);
+  }, [products]);
   // State management
- 
-
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [savedForLater, setSavedForLater] = useState([]);
 
   // Calculate totals
-  const subtotal = products.reduce((total, item) => total + item.price * item.quantity, 0);
-  const savings = products.reduce(
-    (total, item) => total + (item.originalPrice - item.price) * item.quantity,
+  const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  const savings = cartItems.reduce(
+    (total, item) => total + ((item.originalPrice || 0) - item.price) * item.quantity,
     0
   );
   const shipping = subtotal > 99 ? 0 : 5;
@@ -26,26 +27,28 @@ const Cart = () => {
   const total = subtotal + shipping + tax - discount;
 
   // Functions
-  const updateQuantity = (id, newQty) => {
+  const updateQuantity = (cartItemId, newQty) => {
     if (newQty < 1) return;
-    setCartItems(products.map(item => 
-      item.id === id ? { ...item, qty: newQty } : item
+    setCartItems(cartItems.map(item => 
+      (item.cart_item_id || item.cartitem_id) === cartItemId ? { ...item, quantity: newQty } : item
     ));
   };
 
-  const removeItem = (id) => {
-    setCartItems(cartItems.filter(item => item.id !== id));
+  const removeItem = (cartItemId) => {
+    setCartItems(cartItems.filter(item => (item.cart_item_id || item.cartitem_id) !== cartItemId));
   };
 
-  const saveForLater = (id) => {
-    const item = products.find(item => item.id === id);
+  const saveForLater = (cartItemId) => {
+    const item = cartItems.find(i => (i.cart_item_id || i.cartitem_id) === cartItemId);
+    if (!item) return;
     setSavedForLater([...savedForLater, item]);
-    removeItem(id);
+    removeItem(cartItemId);
   };
 
   const moveToCart = (id) => {
     const item = savedForLater.find(item => item.id === id);
-    setCartItems([...products, item]);
+    if (!item) return;
+    setCartItems([...cartItems, item]);
     setSavedForLater(savedForLater.filter(item => item.id !== id));
   };
 
@@ -70,12 +73,12 @@ const Cart = () => {
         <div className="container py-4 py-lg-5">
           {/* Page Header */}
           <div className="cart-header">
-            <div className="header-content">
+              <div className="header-content">
               <h1 className="cart-title">
                 <i className="bi bi-cart3 me-3"></i>
                 Shopping Cart
               </h1>
-              <p className="cart-subtitle">{products.length} items in your cart</p>
+              <p className="cart-subtitle">{cartItems.length} items in your cart</p>
             </div>
             <Link href="/products" className="btn btn-outline-primary">
               <i className="bi bi-arrow-left me-2"></i>
@@ -83,7 +86,7 @@ const Cart = () => {
             </Link>
           </div>
 
-          {products.length === 0 ? (
+          {cartItems.length === 0 ? (
             /* Empty Cart */
             <div className="empty-cart">
               <div className="empty-cart-icon">
@@ -128,8 +131,8 @@ const Cart = () => {
 
                 {/* Cart Items List */}
                 <div className="cart-items-list">
-                  {products.map((item) => (
-                    <div key={item.id} className={`cart-item-card ${!(item.instock > 0) ? 'out-of-stock' : ''}`}>
+                  {cartItems.map((item) => (
+                    <div key={(item.cart_item_id || item.cartitem_id) || item.id} className={`cart-item-card ${!(item.instock > 0) ? 'out-of-stock' : ''}`}>
                       <div className="cart-item-content">
                         {/* Image */}
                         <div className="item-image">
@@ -153,10 +156,10 @@ const Cart = () => {
                               <span className="item-category">{item.category}</span>
                             </div>
                             
-                            {item.originalPrice > item.price && (
+                            {(item.originalPrice || 0) > item.price && (
                               <div className="item-savings">
                                 <span className="saved-amount">
-                                  You save ${((item.originalPrice - item.price) * item.qty).toFixed(2)}
+                                  You save ${(( (item.originalPrice || 0) - item.price) * item.quantity).toFixed(2)}
                                 </span>
                               </div>
                             )}
@@ -165,14 +168,16 @@ const Cart = () => {
                             <div className="item-actions-mobile d-md-none">
                               <button 
                                 className="btn-action"
-                                onClick={() => saveForLater(item.id)}
+                                onClick={() => saveForLater(item.cart_item_id || item.cartitem_id)}
                               >
                                 <i className="bi bi-heart"></i>
                                 Save for Later
+
                               </button>
                               <Link 
                                 className="btn-action text-danger"
-                                href={`/cart/remove/${item.id}`}
+                                href={`/cart/remove/${item.cart_item_id || item.cartitem_id}`}
+                                onClick={() => console.log(item.cart_item_id || item.cartitem_id)}
                               >
                                 <i className="bi bi-trash"></i>
                                 Remove
@@ -186,8 +191,8 @@ const Cart = () => {
                             <div className="quantity-selector">
                               <button
                                 className="qty-btn"
-                                onClick={() => updateQuantity(item.id, item.qty - 1)}
-                                disabled={item.qty <= 1}
+                                onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity - 1)}
+                                disabled={item.quantity <= 1}
                               >
                                 <i className="bi bi-dash"></i>
                               </button>
@@ -199,7 +204,7 @@ const Cart = () => {
                               />
                               <button
                                 className="qty-btn"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity + 1)}
                                 disabled={!item.instock}
                               >
                                 <i className="bi bi-plus"></i>
@@ -209,8 +214,8 @@ const Cart = () => {
                             {/* Price */}
                             <div className="item-price">
                               <div className="price-current">${(item.price * item.quantity).toFixed(2)}</div>
-                              {item.originalPrice > item.price && (
-                                <div className="price-original">${(item.originalPrice * item.quantity).toFixed(2)}</div>
+                              {(item.originalPrice || 0) > item.price && (
+                                <div className="price-original">${((item.originalPrice || 0) * item.quantity).toFixed(2)}</div>
                               )}
                             </div>
 
@@ -218,14 +223,14 @@ const Cart = () => {
                             <div className="item-actions d-none d-md-flex">
                               <button
                                 className="btn-icon"
-                                onClick={() => saveForLater(item.id)}
+                                onClick={() => saveForLater(item.cart_item_id || item.cartitem_id)}
                                 title="Save for Later"
                               >
                                 <i className="bi bi-heart"></i>
                               </button>
                               <Link
                                 className="btn-icon btn-remove"
-                                href={`/cart/remove/${item.cartitem_id}`}
+                                href={`/cart/remove/${item.cart_item_id || item.cartitem_id}`}
                                 title="Remove"
                               >
                                 <i className="bi bi-trash"></i>
@@ -315,7 +320,7 @@ const Cart = () => {
                     <h5 className="summary-title">Order Summary</h5>
 
                     <div className="summary-row">
-                      <span>Subtotal ({products.length} items)</span>
+                      <span>Subtotal ({cartItems.length} items)</span>
                       <span>${subtotal.toFixed(2)}</span>
                     </div>
 

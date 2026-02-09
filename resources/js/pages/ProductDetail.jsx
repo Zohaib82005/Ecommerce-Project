@@ -162,7 +162,7 @@ const ProductDetail = () => {
 
                 {/* Thumbnail Gallery */}
                 <div className="thumbnail-gallery">
-                  {productData.images.map((img, index) => (
+                  {/* {productData.images.map((img, index) => (
                     <div
                       key={index}
                       className={`thumbnail-item ${selectedImage === index ? 'active' : ''}`}
@@ -170,7 +170,7 @@ const ProductDetail = () => {
                     >
                       <img src={img} alt={`View ${index + 1}`} />
                     </div>
-                  ))}
+                  ))} */}
                 </div>
               </div>
             </div>

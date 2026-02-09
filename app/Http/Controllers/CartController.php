@@ -63,12 +63,14 @@ class CartController extends Controller
     //update status to removed
     public function removeFromCart($id)
     {
-        $cartItem = Cartitem::find($id);
-        
+        // dd($id);
+        $cartItem = Cart::find($id);
         if ($cartItem) {
             
             $cartItem->update(['status' => 'removed']);
             return redirect()->back()->with('success', 'Item removed from cart successfully!');
         }
+
+        return redirect()->back()->with('error', 'Cart item not found!');
     }
 }

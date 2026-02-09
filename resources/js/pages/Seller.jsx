@@ -51,19 +51,24 @@ const Seller = () => {
   // Form for status update
   const statusForm = useForm({
     order_id: '',
+    product_id: [],
     status: ''
   });
 
   // Open modal
   const openStatusModal = (order) => {
-    console.log(order);
+    // Collect all product IDs for this order
+    const productIds = props.orders
+      .filter(o => o.oid === order.oid)
+      .map(o => o.pid);
+    
     setSelectedOrder(order);
     statusForm.setData({
       order_id: order.oid,
+      product_id: productIds,
       status: order.status
     });
 
-    console.log(statusForm.data);
     setShowStatusModal(true);
   };
 
@@ -77,7 +82,7 @@ const Seller = () => {
   // Update status
   function handleStatusUpdate (e)  {
     e.preventDefault();
-    console.log(statusForm.data);
+    // console.log(statusForm.data);
     // return;
     statusForm.post(`/orders/update-status`, {
       onSuccess: () => {
@@ -578,69 +583,80 @@ const Seller = () => {
         <div className="tab-content-wrapper">
           {props.orders && props.orders.length > 0 ? (
             <div className="orders-grid">
-              {props.orders.map((order, index) => (
-                <div key={order.id || index} className="order-card">
-                  <div className="order-header">
-                    <strong className="order-id">Order #{order.oid}</strong>
-                    <span className={`status-badge ${order.status.toLowerCase()}`}>
-                      {order.status}
-                    </span>
-                  </div>
-                  
-                  <div className="order-body">
-                    <div className="order-product-info">
-                      <img 
-                        src={`http://localhost:8000/storage/${order.product_image}`} 
-                        alt={order.product_name}
-                        className="order-product-image"
-                      />
-                      <div>
-                        <p className="order-product">{order.product_name}</p>
-                        <p className="order-quantity">Qty: {order.quantity}</p>
+              {/* Group orders by order ID */}
+              {Array.from(
+                new Map(
+                  props.orders.map(order => [order.oid, order])
+                ).values()
+              ).map((groupedOrder, index) => {
+                const productsInOrder = props.orders.filter(o => o.oid === groupedOrder.oid);
+                return (
+                  <div key={groupedOrder.oid || index} className="order-card">
+                    <div className="order-header">
+                      <strong className="order-id">Order #{groupedOrder.oid}</strong>
+                      <span className={`status-badge ${groupedOrder.status.toLowerCase()}`}>
+                        {groupedOrder.status}
+                      </span>
+                    </div>
+                    
+                    <div className="order-body">
+                      {/* Display all products in this order */}
+                      {productsInOrder.map((product, prodIdx) => (
+                        <div key={prodIdx} className="order-product-info">
+                          <img 
+                            src={`/storage/${product.product_image}`} 
+                            alt={product.product_name}
+                            className="order-product-image"
+                          />
+                          <div>
+                            <p className="order-product">{product.product_name}</p>
+                            <p className="order-quantity">Qty: {product.quantity}</p>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="order-details">
+                        <p className="order-meta">
+                          <i className="bi bi-calendar"></i> 
+                          {new Date(groupedOrder.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
+                        <p className="order-meta">
+                          <i className="bi bi-currency-dollar"></i> ${parseFloat(groupedOrder.total_amount).toFixed(2)}
+                        </p>
+                        <p className="order-meta">
+                          <i className="bi bi-geo-alt"></i> {groupedOrder.city}, {groupedOrder.state}
+                        </p>
+                        <p className="order-meta">
+                          <i className="bi bi-credit-card"></i> 
+                          <span className="text-capitalize">{groupedOrder.payment_method}</span>
+                        </p>
+                      </div>
+                      
+                      <div className="order-total">
+                        <strong>Total: ${parseFloat(groupedOrder.total_amount).toFixed(2)}</strong>
                       </div>
                     </div>
                     
-                    <div className="order-details">
-                      <p className="order-meta">
-                        <i className="bi bi-calendar"></i> 
-                        {new Date(order.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </p>
-                      <p className="order-meta">
-                        <i className="bi bi-currency-dollar"></i> ${parseFloat(order.pprice).toFixed(2)}
-                      </p>
-                      <p className="order-meta">
-                        <i className="bi bi-geo-alt"></i> {order.city}, {order.state}
-                      </p>
-                      <p className="order-meta">
-                        <i className="bi bi-credit-card"></i> 
-                        <span className="text-capitalize">{order.payment_method}</span>
-                      </p>
-                    </div>
-                    
-                    <div className="order-total">
-                      <strong>Total: ${parseFloat(order.total_amount).toFixed(2)}</strong>
+                    <div className="order-footer">
+                      <button 
+                        className="btn btn-sm btn-primary"
+                        onClick={() => openStatusModal(groupedOrder)}
+                      >
+                        <i className="bi bi-eye me-1"></i>
+                        View Details
+                      </button>
+                      <button className="btn btn-sm btn-outline-secondary">
+                        <i className="bi bi-printer me-1"></i>
+                        Print
+                      </button>
                     </div>
                   </div>
-                  
-                  <div className="order-footer">
-                    <button 
-                      className="btn btn-sm btn-primary"
-                      onClick={() => openStatusModal(order)}
-                    >
-                      <i className="bi bi-eye me-1"></i>
-                      View Details
-                    </button>
-                    <button className="btn btn-sm btn-outline-secondary">
-                      <i className="bi bi-printer me-1"></i>
-                      Print
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="empty-state">
@@ -701,19 +717,23 @@ const Seller = () => {
               {/* Product Details */}
               <div className="product-info-section">
                 <h5 className="section-title">Product Details</h5>
-                <div className="product-detail-card">
-                  <img 
-                    src={`http://localhost:8000/storage/${selectedOrder.product_image}`} 
-                    alt={selectedOrder.product_name}
-                    className="product-detail-image"
-                  />
-                  <div className="product-detail-info">
-                    <h6>{selectedOrder.product_name}</h6>
-                    <p className="product-price">
-                      ${parseFloat(selectedOrder.pprice).toFixed(2)} × {selectedOrder.quantity}
-                    </p>
-                  </div>
-                </div>
+                {props.orders
+                  .filter(o => o.oid === selectedOrder.oid)
+                  .map((product, idx) => (
+                    <div className="product-detail-card" key={idx}>
+                      <img 
+                        src={`http://localhost:8000/storage/${product.product_image}`} 
+                        alt={product.product_name}
+                        className="product-detail-image"
+                      />
+                      <div className="product-detail-info">
+                        <h6>{product.product_name}</h6>
+                        <p className="product-price">
+                          ${parseFloat(product.pprice).toFixed(2)} × {product.quantity}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
               </div>
 
               {/* Shipping Address */}
@@ -737,7 +757,7 @@ const Seller = () => {
               <div className="status-update-section">
                 <h5 className="section-title">Update Order Status</h5>
                 <form onSubmit={handleStatusUpdate}>
-                  {console.log(selectedOrder)}
+                  {/* {console.log(selectedOrder)} */}
                   <div className="current-status-display">
                     <span className="label">Current Status:</span>
                     <span className={`status-badge ${selectedOrder.status.toLowerCase()}`}>
@@ -808,7 +828,7 @@ const Seller = () => {
                   </div>
 
                   <div className="modal-actions">
-                    <button 
+                    <button  
                       type="button" 
                       className="btn btn-outline-secondary"
                       onClick={closeStatusModal}

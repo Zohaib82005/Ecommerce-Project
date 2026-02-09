@@ -68,7 +68,22 @@ class OrderController extends Controller
         Order::where('id', $req->order_id)->update([
             'status' => $req->status
         ]);
-        // dd($req);
+        
+        // Handle both single product_id and array of product_ids
+        if (is_array($req->product_id)) {
+            // Multiple product IDs
+            foreach ($req->product_id as $productId) {
+                Cart::where('order_id', $req->order_id)
+                    ->where('product_id', $productId)
+                    ->update(['orderstatus' => $req->status]);
+            }
+        } else {
+            // Single product ID
+            Cart::where('order_id', $req->order_id)
+                ->where('product_id', $req->product_id)
+                ->update(['orderstatus' => $req->status]);
+        }
+        
         return redirect()->back()->with('success', 'Status Updated Successfully!');
     }
 

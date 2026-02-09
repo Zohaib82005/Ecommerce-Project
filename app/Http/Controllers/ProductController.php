@@ -85,6 +85,7 @@ class ProductController extends Controller
                 ->select('products.*', 'categories.category as category')
                 ->where('products.status', 'Approved')
                 ->get();
+                // ->paginate(5);
             $categories = Category::all();
         }catch(\Exception $e){
             return "We are facing some issues. Please try again later.";

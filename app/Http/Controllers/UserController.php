@@ -40,7 +40,7 @@ class UserController extends Controller
             'password' => 'required',
         ]);
         // dd($req);
-        
+
         $cred = Auth::attempt(['email' => $req->email, 'password' => $req->password]);
         if ($cred) {
             if (Auth::user()->role == 'Seller') {
@@ -94,7 +94,7 @@ class UserController extends Controller
             ->where('products.added_by', Auth::user()->id)
             ->where('carts.status', 'ordered')
 
-            ->select('orders.*','orders.id as oid', 'products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice','addresses.*')
+            ->select('orders.*','orders.id as oid', 'products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice','products.id as pid','addresses.*')
             ->get();
         
     
@@ -123,14 +123,14 @@ class UserController extends Controller
         $orders = Order::where('orders.user_id', Auth::user()->id)
             ->join('carts', 'orders.id', '=', 'carts.order_id')
             ->join('products', 'carts.product_id', '=', 'products.id')
-            ->select('orders.*', 'orders.id as oid','products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice')
+            ->select('orders.*', 'orders.id as oid','products.name as product_name', 'carts.quantity as quantity','carts.orderstatus as cstatus', 'products.image as product_image', 'products.price as pprice')
             ->get();
         // dd($orders);
 
         $wishlists = Wishlist::join('products', 'wishlists.product_id', '=', 'products.id')
                     ->select('products.*')
                     ->where('user_id', Auth::user()->id)
-                    ->where('status', 'active')
+                    ->where('wishlists.status', 'active')
                     ->get();
         // dd($wishlists);
         return Inertia::render('Dashboard',

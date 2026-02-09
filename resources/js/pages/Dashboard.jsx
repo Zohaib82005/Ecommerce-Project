@@ -6,19 +6,19 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [showNotifications, setShowNotifications] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [settings, setSettings] = useState({ 
-    name: "Zohaib", 
+  const [settings, setSettings] = useState({
+    name: "Zohaib",
     email: "zohaib@example.com",
     phone: "+92 300 1234567",
     birthday: "1995-06-15"
   });
-  
+
   const props = usePage().props;
-  // console.log(props.orders);
+  console.log(props.orders);
   const handleSettingsChange = (e) => {
     setSettings({ ...settings, [e.target.name]: e.target.value });
   };
-  
+
   const handleSettingsSave = () => {
     alert("Settings saved successfully!");
   };
@@ -36,7 +36,7 @@ const Dashboard = () => {
   //   { id: 3, name: "Gaming Mouse", price: "$79", image: "🖱️", inStock: false },
   // ];
 
-    const wishlistItems = props.wishlists;
+  const wishlistItems = props.wishlists;
   const savedAddresses = [
     { id: 1, type: "Home", address: "House 23, Street 7, Islamabad", default: true },
     { id: 2, type: "Office", address: "Plaza 5, Blue Area, Islamabad", default: false },
@@ -47,8 +47,8 @@ const Dashboard = () => {
       <FlashMessage />
       {/* Overlay for mobile sidebar */}
       {sidebarOpen && (
-        <div 
-          className="sidebar-overlay" 
+        <div
+          className="sidebar-overlay"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
@@ -78,37 +78,37 @@ const Dashboard = () => {
 
         <nav className="sidebar-nav">
           <ul className="nav-list">
-            <li 
-              onClick={() => { setActiveTab("overview"); setSidebarOpen(false); }} 
+            <li
+              onClick={() => { setActiveTab("overview"); setSidebarOpen(false); }}
               className={`nav-item ${activeTab === "overview" ? "active" : ""}`}
             >
               <i className="bi bi-grid-fill"></i>
               <span>Dashboard</span>
             </li>
-            <li 
-              onClick={() => { setActiveTab("orders"); setSidebarOpen(false); }} 
+            <li
+              onClick={() => { setActiveTab("orders"); setSidebarOpen(false); }}
               className={`nav-item ${activeTab === "orders" ? "active" : ""}`}
             >
               <i className="bi bi-bag-check-fill"></i>
               <span>My Orders</span>
               <span className="badge bg-primary ms-auto">{props.orders.length}</span>
             </li>
-            <li 
-              onClick={() => { setActiveTab("wishlist"); setSidebarOpen(false); }} 
+            <li
+              onClick={() => { setActiveTab("wishlist"); setSidebarOpen(false); }}
               className={`nav-item ${activeTab === "wishlist" ? "active" : ""}`}
             >
               <i className="bi bi-heart-fill"></i>
               <span>Wishlist</span>
             </li>
-            <li 
-              onClick={() => { setActiveTab("addresses"); setSidebarOpen(false); }} 
+            <li
+              onClick={() => { setActiveTab("addresses"); setSidebarOpen(false); }}
               className={`nav-item ${activeTab === "addresses" ? "active" : ""}`}
             >
               <i className="bi bi-geo-alt-fill"></i>
               <span>Addresses</span>
             </li>
-            <li 
-              onClick={() => { setActiveTab("settings"); setSidebarOpen(false); }} 
+            <li
+              onClick={() => { setActiveTab("settings"); setSidebarOpen(false); }}
               className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
             >
               <i className="bi bi-gear-fill"></i>
@@ -130,8 +130,8 @@ const Dashboard = () => {
         {/* HEADER BAR */}
         <header className="content-header">
           <div className="header-left">
-            <button 
-              className="btn btn-light sidebar-toggle d-lg-none" 
+            <button
+              className="btn btn-light sidebar-toggle d-lg-none"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               <i className="bi bi-list fs-4"></i>
@@ -145,7 +145,7 @@ const Dashboard = () => {
           <div className="header-right">
             <div className="notification-bell position-relative">
               <Link href='/products' className="btn btn-primary bg-primary ">Buy Products</Link>
-              <button 
+              <button
                 className="btn btn-light position-relative"
                 onClick={() => setShowNotifications(!showNotifications)}
               >
@@ -157,8 +157,8 @@ const Dashboard = () => {
                 <div className="notification-dropdown">
                   <div className="notification-header">
                     <h6>Notifications</h6>
-                    <button 
-                      className="btn-close btn-sm" 
+                    <button
+                      className="btn-close btn-sm"
                       onClick={() => setShowNotifications(false)}
                     ></button>
                   </div>
@@ -314,123 +314,128 @@ const Dashboard = () => {
           )}
 
           {activeTab === "orders" && (
-  <div className="tab-content-wrapper fade-in">
-    <div className="section-card">
-      <div className="section-header">
-        <h4>My Orders</h4>
-        <div className="btn-group">
-          <button className="btn btn-sm btn-outline-primary active">All</button>
-          <button className="btn btn-sm btn-outline-primary">Pending</button>
-          <button className="btn btn-sm btn-outline-primary">Processing</button>
-          <button className="btn btn-sm btn-outline-primary">Completed</button>
-        </div>
-      </div>
-      
-      {(() => {
-        const groupedOrders = props.orders ? props.orders.reduce((acc, item) => {
-          const oid = item.oid;
-          if (!acc[oid]) {
-            acc[oid] = {
-              id: item.id,
-              oid: item.oid,
-              created_at: item.created_at,
-              order_status: item.order_status,
-              status: item.status,
-              payment_method: item.payment_method,
-              total_amount: item.total_amount,
-              products: []
-            };
-          }
-          acc[oid].products.push({
-            name: item.product_name,
-            quantity: item.quantity,
-            image: item.product_image,
-            price: item.pprice
-          });
-          return acc;
-        }, {}) : {};
-        
-        return Object.keys(groupedOrders).length > 0 ? (
-          <div className="orders-grid">
-            {Object.values(groupedOrders).map((order) => (
-              <div key={order.oid} className="order-card">
-                <div className="order-card-header">
-                  <div>
-                    <h6>Order #{order.oid}</h6>
-                    <p className="text-muted small">
-                      {new Date(order.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </p>
+            <div className="tab-content-wrapper fade-in">
+              <div className="section-card">
+                <div className="section-header">
+                  <h4>My Orders</h4>
+                  <div className="btn-group">
+                    <button className="btn btn-sm btn-outline-primary active">All</button>
+                    <button className="btn btn-sm btn-outline-primary">Pending</button>
+                    <button className="btn btn-sm btn-outline-primary">Processing</button>
+                    <button className="btn btn-sm btn-outline-primary">Completed</button>
                   </div>
-                  <span className={`status-badge status-${order.order_status?.toLowerCase() || order.status?.toLowerCase()}`}>
+                </div>
+
+                {(() => {
+                  const groupedOrders = props.orders ? props.orders.reduce((acc, item) => {
+                    const oid = item.oid;
+                    if (!acc[oid]) {
+                      acc[oid] = {
+                        id: item.id,
+                        oid: item.oid,
+                        created_at: item.created_at,
+                        order_status: item.order_status,
+                        status: item.status,
+                        cstatus: item.cstatus,
+                        payment_method: item.payment_method,
+                        total_amount: item.total_amount,
+                        products: []
+                      };
+                    }
+                    acc[oid].products.push({
+                      name: item.product_name,
+                      quantity: item.quantity,
+                      cstatus: item.cstatus,
+                      image: item.product_image,
+                      price: item.pprice,
+                      totalPrice: (item.quantity * item.pprice).toFixed(2)
+                    });
+                    return acc;
+                  }, {}) : {};
+
+                  return Object.keys(groupedOrders).length > 0 ? (
+                    <div className="orders-grid">
+                      {Object.values(groupedOrders).map((order) => (
+                        <div key={order.oid} className="order-card">
+                          <div className="order-card-header">
+                            <div>
+                              <h6>Order #{order.oid}</h6>
+                              <p className="text-muted small">
+                                {new Date(order.created_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                            </div>
+                            {/* <span className={`status-badge status-${order.order_status?.toLowerCase() || order.status?.toLowerCase()}`}>
                     {order.order_status || order.status}
-                  </span>
-                </div>
-                
-                <div className="order-card-body">
-                  {order.products.map((product, idx) => (
-                    <div key={idx} className="d-flex align-items-center mb-2">
-                      <div className="order-product-image">
-                        <img 
-                          src={`/storage/${product.image}`}
-                          alt={product.name}
-                        />
+                  </span> */}
+                          </div>
+
+                          <div className="order-card-body">
+                            {order.products.map((product, idx) => (
+                              <div key={idx} className="d-flex align-items-center mb-2">
+                                <div className="order-product-image">
+                                  <img
+                                    src={`/storage/${product.image}`}
+                                    alt={product.name}
+                                  />
+                                </div>
+                                <div className="flex-grow-1 ms-3">
+                                  <h5 className="product-name">{product.name}</h5>
+                                  <p className="text-muted mb-1 small">Quantity: {product.quantity}</p>
+                                  <p className="text-muted mb-0 small">Price: ${parseFloat(product.price).toFixed(2)}</p>
+                                  <span className={`status-badge status-${product.cstatus?.toLowerCase() || product.cstatus?.toLowerCase()}`}>
+                                    {product.cstatus}
+                                  </span>                      </div>
+                              </div>
+                            ))}
+                            <div className="order-total mt-3 pt-3 border-top">
+                              <div className="d-flex justify-content-between align-items-center">
+                                <p className="text-muted mb-0">Payment Method:</p>
+                                <span className="text-capitalize">{order.payment_method}</span>
+                              </div>
+                              <div className="d-flex justify-content-between align-items-center mt-2">
+                                <h5 className="mb-0">Total:</h5>
+                                <h5 className="text-primary mb-0">${parseFloat(order.total_amount).toFixed(2)}</h5>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="order-card-footer">
+                            <button className="btn btn-sm btn-outline-primary">
+                              <i className="bi bi-geo-alt me-1"></i>
+                              Track Order
+                            </button>
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={() => openStatusModal(order)}
+                            >
+                              <i className="bi bi-eye me-1"></i>
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <div className="empty-icon">
+                        <i className="bi bi-inbox"></i>
                       </div>
-                      <div className="flex-grow-1 ms-3">
-                        <h5 className="product-name">{product.name}</h5>
-                        <p className="text-muted mb-1 small">Quantity: {product.quantity}</p>
-                        <p className="text-muted mb-0 small">Price: ${parseFloat(product.price).toFixed(2)}</p>
-                      </div>
+                      <h5>No Orders Yet</h5>
+                      <p className="text-muted">You haven't placed any orders yet</p>
+                      <a href="/products" className="btn btn-primary">
+                        <i className="bi bi-shop me-2"></i>
+                        Start Shopping
+                      </a>
                     </div>
-                  ))}
-                  <div className="order-total mt-3 pt-3 border-top">
-                    <div className="d-flex justify-content-between align-items-center">
-                      <p className="text-muted mb-0">Payment Method:</p>
-                      <span className="text-capitalize">{order.payment_method}</span>
-                    </div>
-                    <div className="d-flex justify-content-between align-items-center mt-2">
-                      <h5 className="mb-0">Total:</h5>
-                      <h5 className="text-primary mb-0">${parseFloat(order.total_amount).toFixed(2)}</h5>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="order-card-footer">
-                  <button className="btn btn-sm btn-outline-primary">
-                    <i className="bi bi-geo-alt me-1"></i>
-                    Track Order
-                  </button>
-                  <button 
-                    className="btn btn-sm btn-primary"
-                    onClick={() => openStatusModal(order)}
-                  >
-                    <i className="bi bi-eye me-1"></i>
-                    View Details
-                  </button>
-                </div>
+                  );
+                })()}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <div className="empty-icon">
-              <i className="bi bi-inbox"></i>
             </div>
-            <h5>No Orders Yet</h5>
-            <p className="text-muted">You haven't placed any orders yet</p>
-            <a href="/products" className="btn btn-primary">
-              <i className="bi bi-shop me-2"></i>
-              Start Shopping
-            </a>
-          </div>
-        );
-      })()}
-    </div>
-  </div>
-)}
+          )}
           {activeTab === "wishlist" && (
             <div className="tab-content-wrapper fade-in">
               <div className="section-card">
@@ -438,14 +443,14 @@ const Dashboard = () => {
                   <h4>My Wishlist</h4>
                   <p className="text-muted">{wishlistItems.length} items</p>
                 </div>
-                
+
                 <div className="wishlist-grid">
                   {wishlistItems.map((item) => (
                     <div key={item.id} className="wishlist-card">
                       <Link className="wishlist-remove" href={`/remove-wishlist/${item.id}`}>
                         <i className="bi bi-x-lg"></i>
                       </Link>
-                      <img src={`/storage/${item.image}`} className="wishlist-icon"/>
+                      <img src={`/storage/${item.image}`} className="wishlist-icon" />
                       <h5 className="wishlist-name">{item.name}</h5>
                       <p className="wishlist-price">{item.price}</p>
                       <div className="wishlist-stock">
@@ -461,15 +466,15 @@ const Dashboard = () => {
                       </div>
                       {(item.instock > 0) ? (
                         <button className="btn btn-primary w-100 mt-3">
-                        <i className="bi bi-cart-plus me-2"></i>
-                        Add to Cart
-                      </button>
-                      ) : (<button className="btn btn-secondary w-100 mt-3" disabled>
                           <i className="bi bi-cart-plus me-2"></i>
                           Add to Cart
-                        </button>)
+                        </button>
+                      ) : (<button className="btn btn-secondary w-100 mt-3" disabled>
+                        <i className="bi bi-cart-plus me-2"></i>
+                        Add to Cart
+                      </button>)
                       }
-                      
+
                     </div>
                   ))}
                 </div>
@@ -487,7 +492,7 @@ const Dashboard = () => {
                     Add New Address
                   </button>
                 </div>
-                
+
                 <div className="addresses-grid">
                   {savedAddresses.map((address) => (
                     <div key={address.id} className="address-card">
