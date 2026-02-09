@@ -6,10 +6,40 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const props = usePage().props;
-
+  // console.log( props); // Debugging line to check props
   const category = useForm({
     category: ''
   });
+
+  // Edit user modal form
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const editForm = useForm({
+    id: '',
+    name: '',
+    email: '',
+    role: '',
+    status: ''
+  });
+
+  function openEditModal(user) {
+    editForm.setData({
+      id: user.id,
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || 'User',
+      status: user.status || ''
+    });
+    setEditModalOpen(true);
+  }
+
+  function handleEditSubmit(e) {
+    e.preventDefault();
+    editForm.post('/admin/user/update', {
+      onSuccess: () => {
+        setEditModalOpen(false);
+      }
+    });
+  }
 
   function handleCatSubmit(e) {
     e.preventDefault();
@@ -361,8 +391,8 @@ const Admin = () => {
                               <button className="btn btn-sm btn-danger">
                                 <i className="bi bi-x-lg"></i>
                               </button>
-                              <button className="btn btn-sm btn-outline-secondary">
-                                <i className="bi bi-eye"></i>
+                              <button className="btn btn-sm btn-outline-secondary" onClick={() => openEditModal(user)}>
+                                <i className="bi bi-pencil"></i>
                               </button>
                             </div>
                           </td>
@@ -744,6 +774,57 @@ const Admin = () => {
           )}
         </div>
       </main>
+      {/* Edit User Modal */}
+      {editModalOpen && (
+        <div>
+          <div className="sidebar-overlay" onClick={() => setEditModalOpen(false)}></div>
+          <div className="admin-modal" style={{position: 'fixed',left: '50%',top: '50%',transform: 'translate(-50%, -50%)',zIndex:1100,width:'480px',background:'#fff',borderRadius:'8px',boxShadow:'0 10px 30px rgba(0,0,0,0.2)'}}>
+            <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <h5 style={{margin:0}}>Edit User</h5>
+              <button className="close-sidebar" onClick={() => setEditModalOpen(false)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} style={{padding:'1rem 1.25rem'}}>
+              <div className="mb-3">
+                <label className="form-label">Name</label>
+                <input type="text" className="form-control" value={editForm.data.name} onChange={(e) => editForm.setData('name', e.target.value)} required />
+                {editForm.errors.name && <div className="text-danger small">{editForm.errors.name}</div>}
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Email</label>
+                <input type="email" className="form-control" value={editForm.data.email} onChange={(e) => editForm.setData('email', e.target.value)} required />
+                {editForm.errors.email && <div className="text-danger small">{editForm.errors.email}</div>}
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Role</label>
+                <select className="form-select" value={editForm.data.role} onChange={(e) => editForm.setData('role', e.target.value)}>
+                  <option value="Seller">Seller</option>
+                  <option value="Customer">Customer</option>
+                  <option value="Admin">Admin</option>
+                  
+                </select>
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Status</label>
+                <select className="form-select" value={editForm.data.status} onChange={(e) => editForm.setData('status', e.target.value)}>
+                  <option value="">-- Select --</option>
+                  <option>Pending</option>
+                  <option>Approved</option>
+                  <option>Rejected</option>
+                  <option>Active</option>
+                </select>
+              </div>
+              <div style={{display:'flex',gap:'0.5rem',justifyContent:'flex-end'}}>
+                <button type="button" className="btn btn-outline-secondary" onClick={() => setEditModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={editForm.processing}>
+                  {editForm.processing ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

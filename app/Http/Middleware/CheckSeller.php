@@ -16,8 +16,12 @@ class CheckSeller
      */
     public function handle(Request $request, Closure $next): Response
     {
+        try{
         if(Auth::user()->role == 'Seller'){
             return $next($request);
+        }
+        }catch(\Exception $e){
+            return redirect('/login');
         }
         return redirect()->back();
         

@@ -42,6 +42,8 @@ Route::middleware([CheckAdmin::class])->group(function () {
     Route::post('/addcate', [ProductController::class, 'addcate']);
     Route::get('/approve/{id}', [AdminController::class, 'approveProduct']);
     Route::get('/reject/{id}', [AdminController::class, 'rejectProduct']);
+    // Admin - update user (edit from admin panel)
+    Route::post('/admin/user/update', [AdminController::class, 'updateUser']);
 });
 
 

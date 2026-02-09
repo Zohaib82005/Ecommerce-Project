@@ -46,4 +46,33 @@ class AdminController extends Controller
         }
         return redirect()->back();
     }
+
+    /**
+     * Update a user's details from admin panel.
+     */
+    public function updateUser(Request $request)
+    {
+        $data = $request->validate([
+            'id' => 'required|integer|exists:users,id',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'role' => 'required|string|max:50',
+            'status' => 'nullable|string|max:50',
+        ]);
+
+        $user = User::find($data['id']);
+        if (!$user) {
+            return redirect()->back()->withErrors(['user' => 'User not found']);
+        }
+
+        $user->name = $data['name'];
+        $user->email = $data['email'];
+        $user->role = $data['role'];
+        if (isset($data['status'])) {
+            $user->status = $data['status'];
+        }
+        $user->save();
+
+        return redirect()->back()->with('success', 'User updated successfully');
+    }
 }
