@@ -274,15 +274,15 @@ const App = () => {
       <Navbar />
 
       {/* Hero Banner Carousel */}
-      <div className=" mx-auto px-2 sm:px-4 py-4 sm:py-6">
+      <div className=" mx-auto px-2 sm:px-4  sm:py-6">
         {/* Scrolling Categories Section - Like in Video */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 overflow-hidden">
+        <div className="bg-white rounded-xl   p-1 mb-6 overflow-hidden">
           <div className="flex gap-6">
             {/* Left Side - Promotional Badges (Scrolling) */}
-            <div className="hidden lg:flex flex-shrink-0 w-64 overflow-hidden">
+            <div className="hidden lg:flex flex-shrink-0 w-90 bg-gray-200  overflow-hidden">
               <div 
                 ref={promoScrollRef}
-                className="flex gap-3 animate-scroll-slow"
+                className="flex gap-3 pt-2  animate-scroll-slow"
                 style={{ transform: `translateX(-${categoryScrollPosition * 0.3}px)` }}
               >
                 {[...promoBadges, ...promoBadges].map((badge, index) => (

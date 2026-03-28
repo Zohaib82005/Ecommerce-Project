@@ -62,7 +62,7 @@ class UserController extends Controller
                 return redirect('/admin');
             }
 
-            return redirect('/dashboard');
+            return redirect('/');
 
         }
 

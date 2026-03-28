@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useForm, usePage } from "@inertiajs/react";
 import Navbar from "../Components/Navbar";
 import Footer from "../components/Footer";
@@ -7,6 +7,10 @@ import FlashMessage from "../components/FlashMessage";
 const Checkout = () => {
   const props = usePage().props;
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [addressLoading, setAddressLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("WLC10");
   const [appliedCoupon, setAppliedCoupon] = useState({ code: "WLC10", discount: 2 });
   const [paymentMethod, setPaymentMethod] = useState("cod");
@@ -16,11 +20,113 @@ const Checkout = () => {
   const formData = useForm({
     name: props.auth.user.name,
     phone: "",
+    country: "Pakistan",
     location: "",
     area: "",
-    address: "6061 NE State Hwy U, Hamilton, MO 64644, USA",
+    address: "",
     landmark: "",
   });
+
+  // Fetch addresses on component mount
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const response = await fetch("/addresses");
+        const data = await response.json();
+        setAddresses(data);
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+      } finally {
+        setAddressLoading(false);
+      }
+    };
+    
+    fetchAddresses();
+  }, []);
+
+  // Pakistan provinces
+  const pakistanProvinces = [
+    "Punjab",
+    "Sindh",
+    "Khyber Pakhtunkhwa",
+    "Balochistan",
+    "Gilgit-Baltistan",
+    "Azad Jammu and Kashmir",
+    "Islamabad",
+  ];
+
+  // Pakistan cities mapped by province
+  const pakistanCities = {
+    Punjab: [
+      "Lahore",
+      "Faisalabad",
+      "Rawalpindi",
+      "Multan",
+      "Gujranwala",
+      "Sialkot",
+      "Sheikhupura",
+      "Okara",
+      "Sahiwal",
+      "Sargodha",
+      "Bahawalpur",
+      "Jhang",
+      "Kasur",
+      "Chakwal",
+      "Attock",
+    ],
+    Sindh: [
+      "Karachi",
+      "Hyderabad",
+      "Sukkur",
+      "Larkana",
+      "Nawabshah",
+      "Mirpur Khas",
+      "Dadu",
+      "Jacobabad",
+      "Shikarpur",
+      "Badin",
+    ],
+    "Khyber Pakhtunkhwa": [
+      "Peshawar",
+      "Mingora",
+      "Abbottabad",
+      "Mardan",
+      "Kohat",
+      "Bannu",
+      "Swat",
+      "Charsadda",
+      "Nowshera",
+      "Mansehra",
+    ],
+    Balochistan: [
+      "Quetta",
+      "Gwadar",
+      "Ziaarat",
+      "Loralai",
+      "Zhob",
+      "Khuzdar",
+      "Turbat",
+      "Sibi",
+    ],
+    "Gilgit-Baltistan": [
+      "Gilgit",
+      "Skardu",
+      "Hunza",
+      "Diamer",
+      "Ghizer",
+      "Shigar",
+    ],
+    "Azad Jammu and Kashmir": [
+      "Muzaffarabad",
+      "Mirpur",
+      "Bhimber",
+      "Kotli",
+      "Poonch",
+      "Rawalakot",
+      "Mandi",
+    ],
+    Islamabad: ["Islamabad"],
+  };
 
   const orderItems = props.cartItems || [
     {
@@ -53,6 +159,68 @@ const Checkout = () => {
     formData.setData({ ...formData.data, [name]: value });
   };
 
+  // Handle address selection from modal
+  const handleSelectAddress = (address) => {
+    formData.setData({
+      ...formData.data,
+      name: address.name,
+      phone: address.phone,
+      country: address.country || "Pakistan",
+      location: address.province,
+      area: address.city,
+      address: address.address,
+      landmark: address.landmark || "",
+    });
+    setSelectedAddress(address);
+    setShowAddressModal(false);
+  };
+
+  // Check if all required address fields are filled
+  const isAddressFormValid = () => {
+    return (
+      formData.data.name &&
+      formData.data.name.trim() !== "" &&
+      formData.data.phone &&
+      formData.data.phone.trim() !== "" &&
+      formData.data.location &&
+      formData.data.location.trim() !== "" &&
+      formData.data.area &&
+      formData.data.area.trim() !== "" &&
+      formData.data.address &&
+      formData.data.address.trim() !== ""
+    );
+  };
+
+  const handleAddAddress = (e) => {
+    e.preventDefault();
+    
+    if (!isAddressFormValid()) {
+      alert("Please fill all required fields");
+      return;
+    }
+
+    // Submit address via POST request
+    formData.post("/addresses", {
+      onSuccess: async () => {
+        setShowAddressForm(false);
+        // Fetch updated addresses
+        try {
+          const response = await fetch("/addresses");
+          const data = await response.json();
+          setAddresses(data);
+        } catch (error) {
+          console.error("Error fetching addresses:", error);
+        }
+        // Reset form after successful submission
+        formData.reset();
+      },
+      onError: (errors) => {
+        console.error("Error adding address:", errors);
+        alert("Failed to add address. Please try again.");
+      },
+    });
+  };
+
   const handlePaymentMethodChange = (method) => {
     if (method === "card") {
       alert("This feature will be coming soon. Please select Cash on Delivery for now.");
@@ -78,8 +246,7 @@ const Checkout = () => {
     e.preventDefault();
     
     // Validate address details
-    if (!formData.data.address || formData.data.address.trim() === "" ||
-        formData.data.address === "6061 NE State Hwy U, Hamilton, MO 64644, USA") {
+    if (!isAddressFormValid()) {
       setAddressError(true);
       return;
     }
@@ -101,18 +268,18 @@ const Checkout = () => {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-800 mb-1">Address Details Required</h3>
+                <h3 className="text-sm font-semibold text-red-800 mb-1">Complete Address Required</h3>
                 <p className="text-sm text-red-700 mb-3">
-                  Please enter your complete address details before proceeding with payment.
+                  Please select a delivery address or add a new address before proceeding with payment.
                 </p>
                 <button
                   onClick={() => {
                     setAddressError(false);
-                    setShowAddressForm(true);
+                    setShowAddressModal(true);
                   }}
                   className="inline-flex px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors"
                 >
-                  + Add Address
+                  📍 Select Address
                 </button>
               </div>
               <button
@@ -147,49 +314,100 @@ const Checkout = () => {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-bold text-gray-900">DELIVERY DETAILS</h2>
-                  {!showAddressForm && (
-                    <button
-                      onClick={() => setShowAddressForm(true)}
-                      className="px-4 py-2 text-indigo-700 border border-indigo-700 rounded-md hover:bg-indigo-50 transition-colors text-sm font-medium"
-                    >
-                      + Add Address
-                    </button>
-                  )}
                 </div>
 
+                {/* Address Selection Modal */}
+                {showAddressModal && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto">
+                      <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-gray-900">Select an Address</h3>
+                        <button
+                          onClick={() => setShowAddressModal(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div className="p-6 space-y-3">
+                        {addresses.length === 0 ? (
+                          <p className="text-gray-600 text-center py-8">No saved addresses found. Please add a new address.</p>
+                        ) : (
+                          addresses.map((addr) => (
+                            <button
+                              key={addr.id}
+                              onClick={() => handleSelectAddress(addr)}
+                              className="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="font-semibold text-gray-900">{addr.name}</p>
+                                  <p className="text-sm text-gray-600">{addr.phone}</p>
+                                  <p className="text-sm text-gray-600">
+                                    {addr.city}, {addr.province}
+                                  </p>
+                                  <p className="text-sm text-gray-600 mt-1">{addr.address}</p>
+                                  {addr.landmark && (
+                                    <p className="text-sm text-gray-500">Landmark: {addr.landmark}</p>
+                                  )}
+                                </div>
+                                <svg className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6">
+                        <button
+                          onClick={() => {
+                            setShowAddressModal(false);
+                            setShowAddressForm(true);
+                          }}
+                          className="w-full px-6 py-2 bg-indigo-700 text-white rounded-md hover:bg-indigo-800 font-medium"
+                        >
+                          + Add New Address
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show "Select Address" button if no address is selected */}
+                {!selectedAddress && !showAddressForm && (
+                  <div className="py-8 text-center">
+                    <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p className="text-gray-600 mb-4">Please select a delivery address</p>
+                    <button
+                      onClick={() => setShowAddressModal(true)}
+                      className="px-6 py-2 bg-indigo-700 text-white rounded-md hover:bg-indigo-800 font-medium"
+                    >
+                      📍 Select Address
+                    </button>
+                  </div>
+                )}
+
+                {/* Address Form */}
                 {showAddressForm && (
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="mb-4">
                       <div className="flex gap-2 mb-3">
-                        <input
-                          type="text"
-                          placeholder="Search your landmark, location..."
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <button className="px-4 py-2 border border-indigo-700 text-indigo-700 rounded-md hover:bg-indigo-50 font-medium">
-                          LOCATE ME
+                        <button 
+                          onClick={() => setShowAddressModal(true)}
+                          className="px-4 py-2 border border-indigo-700 text-indigo-700 rounded-md hover:bg-indigo-50 font-medium"
+                        >
+                          ← Select from Saved
                         </button>
                       </div>
                       
-                      {/* Map Placeholder */}
-                      <div className="w-full h-48 bg-gray-200 rounded-md mb-4 relative overflow-hidden">
-                        <img 
-                          src="https://maps.googleapis.com/maps/api/staticmap?center=New+York,NY&zoom=12&size=600x300&key=YOUR_API_KEY" 
-                          alt="Map" 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextElementSibling.style.display = 'flex';
-                          }}
-                        />
-                        <div className="hidden absolute inset-0 items-center justify-center bg-gray-300 text-gray-600">
-                          <div className="text-center">
-                            <i className="bi bi-geo-alt text-4xl mb-2"></i>
-                            <p>Map View</p>
-                          </div>
-                        </div>
-                      </div>
-
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
@@ -210,38 +428,57 @@ const Checkout = () => {
                             value={formData.data.phone}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
-                            placeholder="+968 ********"
+                            placeholder="+92 ********"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                          <select
+                            name="country"
+                            value={formData.data.country}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="Pakistan">Pakistan</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Province *</label>
                           <select
                             name="location"
                             value={formData.data.location}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           >
-                            <option value="">Select Location</option>
-                            <option value="muscat">Muscat</option>
-                            <option value="salalah">Salalah</option>
+                            <option value="">Select Province</option>
+                            {pakistanProvinces.map((province) => (
+                              <option key={province} value={province}>
+                                {province}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Area *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
                           <select
                             name="area"
                             value={formData.data.area}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           >
-                            <option value="">Select Area</option>
-                            <option value="area1">Area 1</option>
-                            <option value="area2">Area 2</option>
+                            <option value="">Select City</option>
+                            {formData.data.location &&
+                              pakistanCities[formData.data.location]?.map((city) => (
+                                <option key={city} value={city}>
+                                  {city}
+                                </option>
+                              ))}
                           </select>
                         </div>
                       </div>
 
                       <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Enter Full Address *</label>
                         <textarea
                           name="address"
                           value={formData.data.address}
@@ -250,6 +487,18 @@ const Checkout = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           placeholder="Enter full address"
                         ></textarea>
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Landmark (Optional)</label>
+                        <input
+                          type="text"
+                          name="landmark"
+                          value={formData.data.landmark}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                          placeholder="e.g., Near City Center, Close to Market"
+                        />
                       </div>
 
                       <div className="mb-4">
@@ -263,19 +512,57 @@ const Checkout = () => {
 
                       <div className="flex gap-3">
                         <button
-                          onClick={() => setShowAddressForm(false)}
+                          onClick={() => {
+                            setShowAddressForm(false);
+                            setSelectedAddress(null);
+                          }}
                           className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
                         >
                           Cancel
                         </button>
                         <button
-                          onClick={() => setShowAddressForm(false)}
-                          className="px-6 py-2 bg-gray-300 text-gray-500 rounded-md font-medium cursor-not-allowed"
-                          disabled
+                          onClick={handleAddAddress}
+                          disabled={!isAddressFormValid()}
+                          className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                            isAddressFormValid()
+                              ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          }`}
                         >
-                          Continue
+                          Save & Continue
                         </button>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Display Selected Address */}
+                {selectedAddress && !showAddressForm && (
+                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <p className="font-semibold text-gray-900">{selectedAddress.name}</p>
+                        </div>
+                        <p className="text-sm text-gray-600">📞 {selectedAddress.phone}</p>
+                        <p className="text-sm text-gray-600">📍 {selectedAddress.city}, {selectedAddress.province}</p>
+                        <p className="text-sm text-gray-600">{selectedAddress.address}</p>
+                        {selectedAddress.landmark && (
+                          <p className="text-sm text-gray-500">Landmark: {selectedAddress.landmark}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowAddressModal(true);
+                          setSelectedAddress(null);
+                        }}
+                        className="text-indigo-700 hover:text-indigo-800 font-medium text-sm"
+                      >
+                        Change
+                      </button>
                     </div>
                   </div>
                 )}

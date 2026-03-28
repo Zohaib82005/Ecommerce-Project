@@ -8,12 +8,12 @@ class Addresse extends Model
 {
     protected $fillable = [
         'user_id',
+        'name',
         'phone',
         'address',
-        'apartment',
         'city',
-        'state',
-        'zip',
+        'province',
+        'landmark',
         'country',
     ];
 }

@@ -17,11 +17,8 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->string('phone');
             $table->text('address');
-            $table->string('apartment')->nullable();
             $table->string('city');
-            $table->string('state')->nullable();
-            $table->string('zip');
-            $table->string('country');
+            $table->string('country')->default('Pakistan');
 
             $table->timestamps();
         });

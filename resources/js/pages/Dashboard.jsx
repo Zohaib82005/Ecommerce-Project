@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import FlashMessage from "../Components/FlashMessage";
 import Navbar from '../components/Navbar';
@@ -15,6 +15,44 @@ const Dashboard = () => {
     birthday: "1995-06-15"
   });
 
+  // Address Management States
+  const [addresses, setAddresses] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [addressLoading, setAddressLoading] = useState(true);
+  const [addressForm, setAddressForm] = useState({
+    name: "",
+    phone: "",
+    country: "Pakistan",
+    location: "",
+    area: "",
+    address: "",
+    landmark: "",
+  });
+
+  // Pakistan provinces and cities
+  const pakistanProvinces = [
+    "Punjab",
+    "Sindh",
+    "Khyber Pakhtunkhwa",
+    "Balochistan",
+    "Gilgit-Baltistan",
+    "Azad Jammu and Kashmir",
+    "Islamabad",
+  ];
+
+  const pakistanCities = {
+    Punjab: ["Lahore", "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sialkot", "Sheikhupura", "Okara", "Sahiwal", "Sargodha", "Bahawalpur", "Jhang", "Kasur", "Chakwal", "Attock"],
+    Sindh: ["Karachi", "Hyderabad", "Sukkur", "Larkana", "Nawabshah", "Mirpur Khas", "Dadu", "Jacobabad", "Shikarpur", "Badin"],
+    "Khyber Pakhtunkhwa": ["Peshawar", "Mingora", "Abbottabad", "Mardan", "Kohat", "Bannu", "Swat", "Charsadda", "Nowshera", "Mansehra"],
+    Balochistan: ["Quetta", "Gwadar", "Ziaarat", "Loralai", "Zhob", "Khuzdar", "Turbat", "Sibi"],
+    "Gilgit-Baltistan": ["Gilgit", "Skardu", "Hunza", "Diamer", "Ghizer", "Shigar"],
+    "Azad Jammu and Kashmir": ["Muzaffarabad", "Mirpur", "Bhimber", "Kotli", "Poonch", "Rawalakot", "Mandi"],
+    Islamabad: ["Islamabad"],
+  };
+
   const props = usePage().props;
 
   const handleSettingsChange = (e) => {
@@ -23,6 +61,156 @@ const Dashboard = () => {
 
   const handleSettingsSave = () => {
     alert("Settings saved successfully!");
+  };
+
+  // Fetch addresses on mount
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const response = await fetch("/addresses");
+        const data = await response.json();
+        setAddresses(data);
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+      } finally {
+        setAddressLoading(false);
+      }
+    };
+    
+    fetchAddresses();
+  }, []);
+
+  // Handle address form change
+  const handleAddressFormChange = (e) => {
+    const { name, value } = e.target;
+    setAddressForm({ ...addressForm, [name]: value });
+  };
+
+  // Reset form
+  const resetAddressForm = () => {
+    setAddressForm({
+      name: "",
+      phone: "",
+      country: "Pakistan",
+      location: "",
+      area: "",
+      address: "",
+      landmark: "",
+    });
+  };
+
+  // Open edit modal
+  const openEditModal = (address) => {
+    setSelectedAddress(address);
+    setAddressForm({
+      name: address.name,
+      phone: address.phone,
+      country: address.country || "Pakistan",
+      location: address.province,
+      area: address.city,
+      address: address.address,
+      landmark: address.landmark || "",
+    });
+    setShowEditModal(true);
+  };
+
+  // Add new address
+  const handleAddAddress = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch("/addresses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content,
+        },
+        body: JSON.stringify(addressForm),
+      });
+
+      if (response.ok) {
+        const newAddress = await response.json();
+        setAddresses([...addresses, newAddress]);
+        setShowAddModal(false);
+        resetAddressForm();
+        alert("Address added successfully!");
+      } else {
+        alert("Failed to add address");
+      }
+    } catch (error) {
+      console.error("Error adding address:", error);
+      alert("Error adding address");
+    }
+  };
+
+  // Update address
+  const handleUpdateAddress = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch(`/addresses/${selectedAddress.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content,
+        },
+        body: JSON.stringify(addressForm),
+      });
+
+      if (response.ok) {
+        const updatedAddress = await response.json();
+        setAddresses(addresses.map(addr => addr.id === selectedAddress.id ? updatedAddress : addr));
+        setShowEditModal(false);
+        setSelectedAddress(null);
+        resetAddressForm();
+        alert("Address updated successfully!");
+      } else {
+        alert("Failed to update address");
+      }
+    } catch (error) {
+      console.error("Error updating address:", error);
+      alert("Error updating address");
+    }
+  };
+
+  // Delete address
+  const handleDeleteAddress = async () => {
+    try {
+      const response = await fetch(`/addresses/${selectedAddress.id}`, {
+        method: "DELETE",
+        headers: {
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content,
+        },
+      });
+
+      if (response.ok) {
+        setAddresses(addresses.filter(addr => addr.id !== selectedAddress.id));
+        setShowDeleteConfirm(false);
+        setSelectedAddress(null);
+        alert("Address deleted successfully!");
+      } else {
+        alert("Failed to delete address");
+      }
+    } catch (error) {
+      console.error("Error deleting address:", error);
+      alert("Error deleting address");
+    }
+  };
+
+  // Check if form is valid
+  const isAddressFormValid = () => {
+    return (
+      addressForm.name &&
+      addressForm.name.trim() !== "" &&
+      addressForm.phone &&
+      addressForm.phone.trim() !== "" &&
+      addressForm.location &&
+      addressForm.location.trim() !== "" &&
+      addressForm.area &&
+      addressForm.area.trim() !== "" &&
+      addressForm.address &&
+      addressForm.address.trim() !== ""
+    );
   };
 
   // Sample data
@@ -412,42 +600,395 @@ const Dashboard = () => {
             {/* ADDRESSES TAB */}
             {activeTab === "addresses" && (
               <div className="space-y-6 animate-fade-in">
+                {/* Add Address Modal */}
+                {showAddModal && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto">
+                      <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-gray-900">Add New Address</h3>
+                        <button
+                          onClick={() => {
+                            setShowAddModal(false);
+                            resetAddressForm();
+                          }}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleAddAddress} className="p-6">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                            <input
+                              type="text"
+                              name="name"
+                              value={addressForm.name}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                              placeholder="Address Label"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                            <input
+                              type="tel"
+                              name="phone"
+                              value={addressForm.phone}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                              placeholder="+92 ********"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                            <select
+                              name="country"
+                              value={addressForm.country}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="Pakistan">Pakistan</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Province *</label>
+                            <select
+                              name="location"
+                              value={addressForm.location}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">Select Province</option>
+                              {pakistanProvinces.map((province) => (
+                                <option key={province} value={province}>
+                                  {province}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                            <select
+                              name="area"
+                              value={addressForm.area}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">Select City</option>
+                              {addressForm.location &&
+                                pakistanCities[addressForm.location]?.map((city) => (
+                                  <option key={city} value={city}>
+                                    {city}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Full Address *</label>
+                          <textarea
+                            name="address"
+                            value={addressForm.address}
+                            onChange={handleAddressFormChange}
+                            rows="3"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Enter full address"
+                          ></textarea>
+                        </div>
+
+                        <div className="mb-6">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Landmark (Optional)</label>
+                          <input
+                            type="text"
+                            name="landmark"
+                            value={addressForm.landmark}
+                            onChange={handleAddressFormChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            placeholder="e.g., Near City Center"
+                          />
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAddModal(false);
+                              resetAddressForm();
+                            }}
+                            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={!isAddressFormValid()}
+                            className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                              isAddressFormValid()
+                                ? "bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            }`}
+                          >
+                            Add Address
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* Edit Address Modal */}
+                {showEditModal && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto">
+                      <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-gray-900">Edit Address</h3>
+                        <button
+                          onClick={() => {
+                            setShowEditModal(false);
+                            setSelectedAddress(null);
+                            resetAddressForm();
+                          }}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleUpdateAddress} className="p-6">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                            <input
+                              type="text"
+                              name="name"
+                              value={addressForm.name}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                              placeholder="Address Label"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                            <input
+                              type="tel"
+                              name="phone"
+                              value={addressForm.phone}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                              placeholder="+92 ********"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                            <select
+                              name="country"
+                              value={addressForm.country}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="Pakistan">Pakistan</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Province *</label>
+                            <select
+                              name="location"
+                              value={addressForm.location}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">Select Province</option>
+                              {pakistanProvinces.map((province) => (
+                                <option key={province} value={province}>
+                                  {province}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                            <select
+                              name="area"
+                              value={addressForm.area}
+                              onChange={handleAddressFormChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">Select City</option>
+                              {addressForm.location &&
+                                pakistanCities[addressForm.location]?.map((city) => (
+                                  <option key={city} value={city}>
+                                    {city}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Full Address *</label>
+                          <textarea
+                            name="address"
+                            value={addressForm.address}
+                            onChange={handleAddressFormChange}
+                            rows="3"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Enter full address"
+                          ></textarea>
+                        </div>
+
+                        <div className="mb-6">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Landmark (Optional)</label>
+                          <input
+                            type="text"
+                            name="landmark"
+                            value={addressForm.landmark}
+                            onChange={handleAddressFormChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            placeholder="e.g., Near City Center"
+                          />
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowEditModal(false);
+                              setSelectedAddress(null);
+                              resetAddressForm();
+                            }}
+                            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={!isAddressFormValid()}
+                            className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                              isAddressFormValid()
+                                ? "bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            }`}
+                          >
+                            Update Address
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {showDeleteConfirm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg max-w-sm w-full">
+                      <div className="p-6">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Address</h3>
+                        <p className="text-gray-600 mb-6">
+                          Are you sure you want to delete this address? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleDeleteAddress}
+                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 lg:p-8">
                   <div className="flex justify-between items-center mb-6">
                     <div>
                       <h1 className="text-2xl font-bold text-gray-900 mb-1">Saved Addresses</h1>
                       <p className="text-gray-600">Manage your delivery addresses</p>
                     </div>
-                    <button className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        setShowAddModal(true);
+                        resetAddressForm();
+                      }}
+                      className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                    >
                       <i className="bi bi-plus-lg"></i>
                       Add New Address
                     </button>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {savedAddresses.map((address) => (
-                      <div key={address.id} className="border border-gray-200 rounded-xl p-6 relative hover:shadow-md transition-shadow">
-                        {address.default && (
-                          <span className="absolute top-4 right-4 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                            Default
-                          </span>
-                        )}
-                        <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                          <i className="bi bi-geo-alt-fill text-2xl text-indigo-600"></i>
+                  {addresses.length > 0 ? (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {addresses.map((address) => (
+                        <div key={address.id} className="border border-gray-200 rounded-xl p-6 relative hover:shadow-md transition-shadow">
+                          <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                            <i className="bi bi-geo-alt-fill text-2xl text-indigo-600"></i>
+                          </div>
+                          <h5 className="font-semibold text-gray-900 mb-2">{address.name}</h5>
+                          <p className="text-sm text-gray-600 mb-1">📞 {address.phone}</p>
+                          <p className="text-sm text-gray-600 mb-1">📍 {address.city}, {address.province}</p>
+                          <p className="text-gray-600 mb-4 text-sm line-clamp-2">{address.address}</p>
+                          {address.landmark && (
+                            <p className="text-sm text-gray-500 mb-4">Landmark: {address.landmark}</p>
+                          )}
+                          <div className="flex gap-3">
+                            <button 
+                              onClick={() => openEditModal(address)}
+                              className="flex-1 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+                            >
+                              <i className="bi bi-pencil mr-1"></i> Edit
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setSelectedAddress(address);
+                                setShowDeleteConfirm(true);
+                              }}
+                              className="flex-1 px-4 py-2 text-sm font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                            >
+                              <i className="bi bi-trash mr-1"></i> Delete
+                            </button>
+                          </div>
                         </div>
-                        <h5 className="font-semibold text-gray-900 mb-2">{address.type}</h5>
-                        <p className="text-gray-600 mb-4">{address.address}</p>
-                        <div className="flex gap-3">
-                          <button className="px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">
-                            <i className="bi bi-pencil mr-1"></i> Edit
-                          </button>
-                          <button className="px-4 py-2 text-sm font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors">
-                            <i className="bi bi-trash mr-1"></i> Delete
-                          </button>
-                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16">
+                      <div className="w-32 h-32 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i className="bi bi-geo-alt text-5xl text-gray-400"></i>
                       </div>
-                    ))}
-                  </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Addresses Found</h3>
+                      <p className="text-gray-600 max-w-md mx-auto mb-6">
+                        You haven't added any addresses yet. Add one to get started with your orders.
+                      </p>
+                      <button 
+                        onClick={() => {
+                          setShowAddModal(true);
+                          resetAddressForm();
+                        }}
+                        className="inline-block px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        + Add Your First Address
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -11,6 +11,8 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\AddressController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -57,8 +59,23 @@ Route::middleware([CheckCustomer::class])->group(function () {
     Route::delete('/cart/remove/{id}', [CartController::class, 'removeFromCart']);
     Route::get('/checkout', [CheckoutController::class, 'showCheckout']);
     Route::post('/success',[OrderController::class, 'success']);
-    Route::get('/addtowishlist/{id}', [OrderController::class, 'addToWishlist']);
-    Route::get('/remove-wishlist/{id}', [OrderController::class, 'removeFromWishlist']);
+    Route::get('/addtowishlist/{id}', [WishlistController::class, 'addToWishlist']);
+    Route::get('/remove-wishlist/{id}', [WishlistController::class, 'removeFromWishlist']);
+    
+    // Address management routes with prefix
+    Route::prefix('addresses')->group(function () {
+        // Store new address to database
+        Route::post('/', [AddressController::class, 'store'])->name('addresses.store');
+        
+        // Get all user addresses
+        Route::get('/', [AddressController::class, 'index'])->name('addresses.index');
+        
+        // Update specific address
+        Route::put('/{id}', [AddressController::class, 'update'])->name('addresses.update');
+        
+        // Delete specific address
+        Route::delete('/{id}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+    });
 });
 
 Route::get('/products', [ProductController::class, 'products']);

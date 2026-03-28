@@ -17,10 +17,9 @@ class OrderController extends Controller
         $validated = $request->validate([
             'phone' => 'required|string',
             'address' => 'required|string',
-            'apartment' => 'nullable|string',
+            'province' => 'nullable|string',
+            'name' => 'nullable|string',
             'city' => 'required|string',
-            'state' => 'required|string',
-            'zipCode' => 'required|string',
             'country' => 'required|string',
             'paymentMethod' => 'required|string',
         ]);
@@ -36,12 +35,10 @@ class OrderController extends Controller
             'user_id' => Auth::id(),
             'phone' => $validated['phone'],
             'address' => $validated['address'],
-            'apartment' => $validated['apartment'] ?? null,
+            'name' => $validated['name'] ?? null,
             'city' => $validated['city'],
-            'state' => $validated['state'],
-            'zip' => $validated['zipCode'],
+            'province' => $validated['province'] ?? null,
             'country' => $validated['country'],
-            
         ]
         );
         Order::create([
@@ -51,6 +48,7 @@ class OrderController extends Controller
             'payment_method' => $validated['paymentMethod'],
             'status' => 'Pending'
         ]);
+
         $order = Order::where('user_id', Auth::id())->latest()->first();
         $carts = Cart::where('user_id', Auth::id())->where('status', 'active')->get();
         foreach($carts as $cart){
@@ -87,33 +85,5 @@ class OrderController extends Controller
         return redirect()->back()->with('success', 'Status Updated Successfully!');
     }
 
-    public function addToWishlist($id){
 
-        //check if already exists
-        $exists = Wishlist::select('id')->where('user_id',Auth::user()->id)->where('product_id', $id)->where('status', 'active')->first();
-        if($exists){
-            return redirect()->back()->with('error','Product Already added to Wishlist!');
-        }
-
-        $existsremoved = Wishlist::select('id')->where('user_id',Auth::user()->id)->where('product_id', $id)->where('status', 'removed')->first();
-        if($existsremoved){
-            Wishlist::where('id', $existsremoved->id)->update([
-                'status' => 'active'
-            ]);
-            return redirect()->back()->with('success','Product Added to Wishlist!');
-        }
-        Wishlist::create([
-            'user_id' => Auth::user()->id,
-            'product_id' => $id,
-        ]);
-        // return $id;
-        return redirect()->back()->with('success', 'Product added to wishlist!');
-    }
-
-    public function removeFromWishlist($id){
-        Wishlist::where('user_id', Auth::user()->id)->where('product_id', $id)->update([
-            'status' => 'removed'
-        ]);
-        return redirect()->back()->with('success', 'Product removed from wishlist!');
-    }
 }
