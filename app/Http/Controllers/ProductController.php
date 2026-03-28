@@ -7,6 +7,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+
 use Inertia\Inertia;
 class ProductController extends Controller
 {
@@ -62,7 +63,13 @@ class ProductController extends Controller
 
     public function editProduct($id)
     {
-        return '<h1>Edit Product '.$id.'</h1>';
+        $product = Product::findOrFail($id);
+        // dd($product);
+        $categories = Category::all();
+        return Inertia::render('EditProduct', [
+            'product' => $product,
+            'categories' => $categories,
+        ]);
     }
 
     public function deleteProduct($id)
@@ -87,6 +94,7 @@ class ProductController extends Controller
                 ->get();
                 // ->paginate(5);
             $categories = Category::all();
+            // dd($products);
         }catch(\Exception $e){
             return "We are facing some issues. Please try again later.";
         }

@@ -34,6 +34,7 @@ Route::middleware([CheckSeller::class])->group(function () {
     Route::get('/seller/editProduct/{id}', [ProductController::class, 'editProduct']);
     Route::get('/seller/deleteProduct/{id}', [ProductController::class, 'deleteProduct']);
     Route::post('/orders/update-status', [OrderController::class, 'updateStatus']);
+
 });
 
 //admin routes
@@ -53,7 +54,7 @@ Route::middleware([CheckCustomer::class])->group(function () {
     Route::post('/cart/add', [CartController::class, 'addToCart']);
     
     Route::get('/cart', [CartController::class, 'viewCart']);
-    Route::get('/cart/remove/{id}', [CartController::class, 'removeFromCart']);
+    Route::delete('/cart/remove/{id}', [CartController::class, 'removeFromCart']);
     Route::get('/checkout', [CheckoutController::class, 'showCheckout']);
     Route::post('/success',[OrderController::class, 'success']);
     Route::get('/addtowishlist/{id}', [OrderController::class, 'addToWishlist']);
@@ -61,10 +62,6 @@ Route::middleware([CheckCustomer::class])->group(function () {
 });
 
 Route::get('/products', [ProductController::class, 'products']);
-
-
-
-
 
 Route::get('/product/details/{id}',[ProductController::class,'productDetails']);
 

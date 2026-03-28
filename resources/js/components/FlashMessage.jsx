@@ -2,13 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import '../css/FlashMessage.css';
 
-const FlashMessage = () => {
+const FlashMessage = ({ errors = null }) => {
   const { flash } = usePage().props;
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState(null);
 // console.log(flash);
   useEffect(() => {
-    // Check for any flash message type
+    // Check for validation errors first (client-side)
+    if (errors && Object.keys(errors).length > 0) {
+      const errorMessages = Object.entries(errors).map(([field, msg]) => msg).join('\n');
+      const messageData = {
+        type: 'error',
+        text: errorMessages,
+        isError: true
+      };
+      
+      setMessage(messageData);
+      setVisible(true);
+
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => {
+        handleClose();
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+    
+    // Check for flash messages (server-side)
     if (flash?.success || flash?.error || flash?.warning || flash?.info) {
       const messageData = {
         type: flash.success ? 'success' : flash.error ? 'error' : flash.warning ? 'warning' : 'info',
@@ -25,7 +45,7 @@ const FlashMessage = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [flash]);
+  }, [flash, errors]);
 
   const handleClose = () => {
     setVisible(false);

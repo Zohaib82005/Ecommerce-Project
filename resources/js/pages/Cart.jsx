@@ -1,32 +1,27 @@
 import React, { useState, useEffect } from "react";
-import "../css/cart.css";
-import Footer from '../components/Footer';
-import Navbar from '../Components/Navbar';
-import { Link, usePage } from "@inertiajs/react";
+import { Link, usePage, router } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+
 const Cart = () => {
   const products = usePage().props.products || [];
   const [cartItems, setCartItems] = useState(products);
+  
   useEffect(() => {
     setCartItems(products);
   }, [products]);
-  // State management
+
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(null);
-  const [savedForLater, setSavedForLater] = useState([]);
 
   // Calculate totals
   const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  const savings = cartItems.reduce(
-    (total, item) => total + ((item.originalPrice || 0) - item.price) * item.quantity,
-    0
-  );
-  const shipping = subtotal > 99 ? 0 : 5;
-  const tax = subtotal * 0.08; // 8% tax
-  const discount = appliedPromo ? subtotal * 0.1 : 0; // 10% discount
-  const total = subtotal + shipping + tax - discount;
+  const processingFee = 0; // FREE
+  const shipping = 0; // FREE
+  const total = subtotal + processingFee + shipping;
 
-  // Functions
+  // Update quantity
   const updateQuantity = (cartItemId, newQty) => {
     if (newQty < 1) return;
     setCartItems(cartItems.map(item => 
@@ -34,24 +29,17 @@ const Cart = () => {
     ));
   };
 
+  // Remove item
   const removeItem = (cartItemId) => {
-    setCartItems(cartItems.filter(item => (item.cart_item_id || item.cartitem_id) !== cartItemId));
+    router.delete(`/cart/remove/${cartItemId}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setCartItems(cartItems.filter(item => (item.cart_item_id || item.cartitem_id) !== cartItemId));
+      }
+    });
   };
 
-  const saveForLater = (cartItemId) => {
-    const item = cartItems.find(i => (i.cart_item_id || i.cartitem_id) === cartItemId);
-    if (!item) return;
-    setSavedForLater([...savedForLater, item]);
-    removeItem(cartItemId);
-  };
-
-  const moveToCart = (id) => {
-    const item = savedForLater.find(item => item.id === id);
-    if (!item) return;
-    setCartItems([...cartItems, item]);
-    setSavedForLater(savedForLater.filter(item => item.id !== id));
-  };
-
+  // Apply promo code
   const applyPromoCode = () => {
     if (promoCode.toUpperCase() === "SAVE10") {
       setAppliedPromo({ code: "SAVE10", discount: 10 });
@@ -60,6 +48,7 @@ const Cart = () => {
     }
   };
 
+  // Remove promo code
   const removePromoCode = () => {
     setAppliedPromo(null);
     setPromoCode("");
@@ -68,342 +57,139 @@ const Cart = () => {
   return (
     <>
       <FlashMessage />
-      {/* <Navbar /> */}
-      <div className="cart-page">
-        <div className="container py-4 py-lg-5">
-          {/* Page Header */}
-          <div className="cart-header">
-              <div className="header-content">
-              <h1 className="cart-title">
-                <i className="bi bi-cart3 me-3"></i>
-                Shopping Cart
-              </h1>
-              <p className="cart-subtitle">{cartItems.length} items in your cart</p>
-            </div>
-            <Link href="/products" className="btn btn-outline-primary">
-              <i className="bi bi-arrow-left me-2"></i>
-              Continue Shopping
-            </Link>
-          </div>
-
+      <Navbar />
+      
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
           {cartItems.length === 0 ? (
-            /* Empty Cart */
-            <div className="empty-cart">
-              <div className="empty-cart-icon">
-                <i className="bi bi-cart-x"></i>
+            // Empty Cart State
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="mb-8">
+                <img 
+                  src="https://cdn-icons-png.flaticon.com/512/1170/1170663.png" 
+                  alt="Empty Cart" 
+                  className="w-64 h-64 object-contain"
+                />
               </div>
-              <h3>Your Cart is Empty</h3>
-              <p>Looks like you haven't added anything to your cart yet</p>
-              <Link href="/products" className="btn btn-primary btn-lg">
-                Start Shopping
+              <h1 className="text-3xl font-bold text-gray-900 mb-3 text-center">
+                Your Cart is empty
+              </h1>
+              <p className="text-gray-600 mb-8 text-center max-w-md">
+                There nothing in the cart. Let's add some items.
+              </p>
+              <Link 
+                href="/products" 
+                className="px-8 py-3 bg-indigo-700 text-white font-semibold rounded-lg hover:bg-indigo-800 transition-colors shadow-lg"
+              >
+                Keep exploring
               </Link>
             </div>
           ) : (
-            <div className="row g-4">
-              {/* LEFT: Cart Items */}
-              <div className="col-lg-8">
-                {/* Progress Bar */}
-                <div className="shipping-progress">
-                  <div className="progress-content">
-                    {shipping === 0 ? (
-                      <>
-                        <i className="bi bi-check-circle-fill text-success"></i>
-                        <span className="progress-text">
-                          Congratulations! You've qualified for <strong>FREE SHIPPING</strong>
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-truck"></i>
-                        <span className="progress-text">
-                          Add <strong>${(99 - subtotal).toFixed(2)}</strong> more to get <strong>FREE SHIPPING</strong>
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar-fill" 
-                      style={{ width: `${Math.min((subtotal / 99) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Cart Items List */}
-                <div className="cart-items-list">
-                  {cartItems.map((item) => (
-                    <div key={(item.cart_item_id || item.cartitem_id) || item.id} className={`cart-item-card ${!(item.instock > 0) ? 'out-of-stock' : ''}`}>
-                      <div className="cart-item-content">
-                        {/* Image */}
-                        <div className="item-image">
-                          <Link href="/product/details">
-                            <img src={`/storage/${item.image}`} alt={item.name} />
-                          </Link>
-                          {!item.instock && (
-                            <div className="out-of-stock-badge">Out of Stock</div>
-                          )}
-                        </div>
-
-                        {/* Details */}
-                        <div className="item-details">
-                          <div className="item-info">
-                            <Link href="/product/details" className="item-name">
-                              {item.name}
-                            </Link>
-                            <div className="item-meta">
-                              <span className="item-brand">{item.brand}</span>
-                              <span className="item-separator">•</span>
-                              <span className="item-category">{item.category}</span>
-                            </div>
-                            
-                            {(item.originalPrice || 0) > item.price && (
-                              <div className="item-savings">
-                                <span className="saved-amount">
-                                  You save ${(( (item.originalPrice || 0) - item.price) * item.quantity).toFixed(2)}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Mobile Actions */}
-                            <div className="item-actions-mobile d-md-none">
-                              <button 
-                                className="btn-action"
-                                onClick={() => saveForLater(item.cart_item_id || item.cartitem_id)}
-                              >
-                                <i className="bi bi-heart"></i>
-                                Save for Later
-
-                              </button>
-                              <Link 
-                                className="btn-action text-danger"
-                                href={`/cart/remove/${item.cart_item_id || item.cartitem_id}`}
-                                onClick={() => console.log(item.cart_item_id || item.cartitem_id)}
-                              >
-                                <i className="bi bi-trash"></i>
-                                Remove
-                              </Link>
-                            </div>
-                          </div>
-
-                          {/* Quantity & Price */}
-                          <div className="item-controls">
-                            {/* Quantity Selector */}
-                            <div className="quantity-selector">
-                              <button
-                                className="qty-btn"
-                                onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                              >
-                                <i className="bi bi-dash"></i>
-                              </button>
-                              <input
-                                type="number"
-                                className="qty-input"
-                                value={item.quantity}
-                                readOnly
-                              />
-                              <button
-                                className="qty-btn"
-                                onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity + 1)}
-                                disabled={!item.instock}
-                              >
-                                <i className="bi bi-plus"></i>
-                              </button>
-                            </div>
-
-                            {/* Price */}
-                            <div className="item-price">
-                              <div className="price-current">${(item.price * item.quantity).toFixed(2)}</div>
-                              {(item.originalPrice || 0) > item.price && (
-                                <div className="price-original">${((item.originalPrice || 0) * item.quantity).toFixed(2)}</div>
-                              )}
-                            </div>
-
-                            {/* Desktop Actions */}
-                            <div className="item-actions d-none d-md-flex">
-                              <button
-                                className="btn-icon"
-                                onClick={() => saveForLater(item.cart_item_id || item.cartitem_id)}
-                                title="Save for Later"
-                              >
-                                <i className="bi bi-heart"></i>
-                              </button>
-                              <Link
-                                className="btn-icon btn-remove"
-                                href={`/cart/remove/${item.cart_item_id || item.cartitem_id}`}
-                                title="Remove"
-                              >
-                                <i className="bi bi-trash"></i>
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+            // Cart with Items
+            <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+              {/* Left: Cart Items */}
+              <div className="lg:col-span-2 space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">MY CART</h2>
+                
+                {cartItems.map((item) => (
+                  <div key={item.cart_item_id || item.cartitem_id} className="bg-white rounded-lg shadow-sm p-6 flex flex-col sm:flex-row gap-6">
+                    {/* Product Image */}
+                    <div className="w-full sm:w-32 h-32 flex-shrink-0">
+                      <img 
+                        src={`/storage/${item.image}`} 
+                        alt={item.name}
+                        className="w-full h-full object-contain rounded-md"
+                      />
                     </div>
-                  ))}
-                </div>
 
-                {/* Saved for Later */}
-                {savedForLater.length > 0 && (
-                  <div className="saved-for-later-section">
-                    <h5 className="section-title">
-                      <i className="bi bi-heart me-2"></i>
-                      Saved for Later ({savedForLater.length})
-                    </h5>
-                    <div className="saved-items-grid">
-                      {savedForLater.map((item) => (
-                        <div key={item.id} className="saved-item-card">
-                          <img src={`/storage/${item.image}`} alt={item.name} />
-                          <div className="saved-item-info">
-                            <h6>{item.name}</h6>
-                            <p className="price">${item.price}</p>
-                          </div>
-                          <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => moveToCart(item.id)}
+                    {/* Product Details */}
+                    <div className="flex-1">
+                      <h3 className="text-gray-900 font-medium mb-2 line-clamp-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-lg font-bold text-gray-900 mb-4">
+                        OMR {item.price}
+                      </p>
+
+                      <div className="flex items-center justify-between">
+                        {/* Quantity Controls */}
+                        <div className="flex items-center border border-gray-300 rounded-md">
+                          <button 
+                            onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                            className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-md"
                           >
-                            Move to Cart
+                            −
+                          </button>
+                          <span className="px-4 py-1 text-gray-900 font-medium border-x border-gray-300">
+                            {item.quantity}
+                          </span>
+                          <button 
+                            onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity + 1)}
+                            className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md"
+                          >
+                            +
                           </button>
                         </div>
-                      ))}
+
+                        {/* Remove Button */}
+                        <button 
+                          onClick={() => removeItem(item.cart_item_id || item.cartitem_id)}
+                          className="flex items-center gap-2 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          <span className="text-sm font-medium">Remove</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {/* Promo Banner */}
-                <div className="promo-banner">
-                  <div className="promo-icon">🔥</div>
-                  <div className="promo-content">
-                    <h5>Limited Time Offer!</h5>
-                    <p>Get <strong>10% OFF</strong> on orders above $150. Use code: <strong>SAVE10</strong></p>
-                  </div>
-                  <Link href="/products" className="btn btn-light">
-                    Shop More
-                  </Link>
-                </div>
+                ))}
               </div>
 
-              {/* RIGHT: Order Summary */}
-              <div className="col-lg-4">
-                <div className="order-summary-sticky">
-                  {/* Promo Code */}
-                  <div className="promo-code-section">
-                    <h6 className="section-title">Have a Promo Code?</h6>
-                    {appliedPromo ? (
-                      <div className="applied-promo">
-                        <div className="promo-info">
-                          <i className="bi bi-check-circle-fill"></i>
-                          <span>Code <strong>{appliedPromo.code}</strong> applied!</span>
-                        </div>
-                        <button className="btn-remove-promo" onClick={removePromoCode}>
-                          <i className="bi bi-x-lg"></i>
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="promo-input-group">
-                        <input
-                          type="text"
-                          className="promo-input"
-                          placeholder="Enter promo code"
-                          value={promoCode}
-                          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        />
-                        <button className="btn-apply-promo" onClick={applyPromoCode}>
-                          Apply
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Order Summary */}
-                  <div className="order-summary-card">
-                    <h5 className="summary-title">Order Summary</h5>
-
-                    <div className="summary-row">
-                      <span>Subtotal ({cartItems.length} items)</span>
-                      <span>${subtotal.toFixed(2)}</span>
+              {/* Right: Price Details */}
+              <div className="mt-8 lg:mt-0">
+                <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">Price Details</h3>
+                  
+                  <div className="space-y-4">
+                    {/* Subtotal */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span className="font-semibold text-gray-900">OMR {subtotal.toFixed(2)}</span>
                     </div>
 
-                    {savings > 0 && (
-                      <div className="summary-row savings">
-                        <span>Total Savings</span>
-                        <span>-${savings.toFixed(2)}</span>
-                      </div>
-                    )}
-
-                    <div className="summary-row">
-                      <span>Shipping</span>
-                      <span className={shipping === 0 ? 'text-success' : ''}>
-                        {shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
-                      </span>
+                    {/* Processing Fee */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Processing Fee</span>
+                      <span className="font-semibold text-green-600">FREE</span>
                     </div>
 
-                    <div className="summary-row">
-                      <span>Tax (8%)</span>
-                      <span>${tax.toFixed(2)}</span>
+                    {/* Shipping */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Shipping</span>
+                      <span className="font-semibold text-green-600">FREE</span>
                     </div>
 
-                    {appliedPromo && (
-                      <div className="summary-row discount">
-                        <span>Discount ({appliedPromo.discount}%)</span>
-                        <span>-${discount.toFixed(2)}</span>
+                    {/* Divider */}
+                    <div className="border-t border-gray-200 pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-900 font-semibold">
+                          Total <span className="text-gray-500 font-normal text-sm">(Inclusive of VAT)</span>
+                        </span>
+                        <span className="text-xl font-bold text-gray-900">OMR {total.toFixed(2)}</span>
                       </div>
-                    )}
-
-                    <div className="summary-divider"></div>
-
-                    <div className="summary-row total">
-                      <span>Total</span>
-                      <span>${total.toFixed(2)}</span>
                     </div>
 
                     {/* Checkout Button */}
-                    <Link href="/checkout" className="btn btn-primary btn-checkout">
-                      <i className="bi bi-lock-fill me-2"></i>
+                    <Link 
+                      href="/checkout"
+                      className="w-full block text-center px-6 py-3 bg-indigo-700 text-white font-semibold rounded-lg hover:bg-indigo-800 transition-colors mt-6"
+                    >
                       Proceed to Checkout
                     </Link>
-
-                    {/* Payment Methods */}
-                    <div className="payment-methods">
-                      <span className="payment-label">We Accept:</span>
-                      <div className="payment-icons">
-                        <i className="bi bi-credit-card-2-front"></i>
-                        <i className="bi bi-paypal"></i>
-                        <i className="bi bi-google"></i>
-                        <i className="bi bi-apple"></i>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Benefits */}
-                  <div className="benefits-section">
-                    <div className="benefit-item">
-                      <i className="bi bi-truck"></i>
-                      <div className="benefit-text">
-                        <strong>Free Shipping</strong>
-                        <span>On orders over $99</span>
-                      </div>
-                    </div>
-                    <div className="benefit-item">
-                      <i className="bi bi-arrow-repeat"></i>
-                      <div className="benefit-text">
-                        <strong>Easy Returns</strong>
-                        <span>30-day return policy</span>
-                      </div>
-                    </div>
-                    <div className="benefit-item">
-                      <i className="bi bi-shield-check"></i>
-                      <div className="benefit-text">
-                        <strong>Secure Payment</strong>
-                        <span>100% secure checkout</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Security Badge */}
-                  <div className="security-badge">
-                    <i className="bi bi-shield-fill-check"></i>
-                    <span>Safe & Secure Checkout</span>
                   </div>
                 </div>
               </div>
@@ -411,6 +197,7 @@ const Cart = () => {
           )}
         </div>
       </div>
+
       <Footer />
     </>
   );

@@ -1,95 +1,56 @@
 import React, { useState } from "react";
-import "../css/productDetail.css";
 import { usePage, Link, useForm } from "@inertiajs/react";
 import Navbar from "../Components/Navbar";
 import Footer from "../components/Footer";
 import FlashMessage from "../components/FlashMessage";
+
 const ProductDetail = () => {
   const { product } = usePage().props;
   const cart = useForm({
     product_id: product?.id || null,
     quantity: 1,
-
   });
-  // State management
+
   const [selectedImage, setSelectedImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
   const [isWishlisted, setIsWishlisted] = useState(false);
- 
-  // Sample data (replace with actual product data)
+
   const productData = {
-    name: product?.name || "Wireless Noise Cancelling Headphones",
-    price: product?.price || 129.00,
-    originalPrice:  product?.price  * 2,
-    rating: 4.8,
-    reviewCount: 124,
-    inStock: true,
-    stockCount: product?.instock,
-    description: "Experience premium sound quality with active noise cancellation, long battery life, and a comfortable over-ear design perfect for daily use.",
-    category: "Electronics",
-    brand: "Premium Audio",
-    sku: "WH-1000XM5",
+    name: product?.name || "2024 New Mini Flip Mobile Phone Dual SIM, Small Display, Foldable Cell Phone, Unlocked, Purple",
+    price: product?.price || 7.00,
+    originalPrice: 11.48,
+    rating: 4.3,
+    reviewCount: 192,
+    inStock: product?.instock > 0,
+    stockCount: product?.instock || 50,
+    brand: "Generic",
+    seller: "OurShopee",
+    deliveryDate: "Wed, Apr 01",
+    discount: 39,
+    savings: 5,
+    description: "Experience the convenience of a foldable mobile phone with dual SIM support. Perfect for those who prefer a compact device with essential features.",
+    category: "Mobiles & Tablets",
+    subcategory: "Mobile Phones",
     images: [
-      product?.image ? `/storage/${product.image}` : "https://images.unsplash.com/photo-1505740420928-5e560c06d30e",
-      "https://images.unsplash.com/photo-1484704849700-f032a568e944",
-      "https://images.unsplash.com/photo-1545127398-14699f92334b",
-      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a",
+      product?.image ? `/storage/${product.image}` : "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd",
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
+      "https://images.unsplash.com/photo-1512054502232-120bbc5a0e32",
+      "https://images.unsplash.com/photo-1565849904461-04a58ad377e0",
     ],
-    features: [
-      { icon: "🎧", title: "Active Noise Cancellation", desc: "Advanced ANC technology" },
-      { icon: "🔋", title: "40 Hours Battery Life", desc: "All-day listening" },
-      { icon: "📡", title: "Bluetooth 5.3", desc: "Stable connection" },
-      { icon: "⚡", title: "Fast Charging", desc: "3 hours in 10 minutes" },
-    ],
-    specifications: [
-      { label: "Driver Size", value: "40mm" },
-      { label: "Frequency Response", value: "20Hz - 20kHz" },
-      { label: "Impedance", value: "32 Ohms" },
-      { label: "Weight", value: "250g" },
-      { label: "Connectivity", value: "Bluetooth 5.3 / 3.5mm" },
-      { label: "Battery", value: "40 hours (ANC on)" },
-    ],
-    reviews: [
-      {
-        id: 1,
-        author: "John Doe",
-        rating: 5,
-        date: "2 days ago",
-        comment: "Amazing sound quality and very comfortable! The noise cancellation works perfectly.",
-        helpful: 24,
-        verified: true,
-      },
-      {
-        id: 2,
-        author: "Sarah Smith",
-        rating: 4,
-        date: "1 week ago",
-        comment: "Battery life is excellent, totally worth it. Only minor issue is they're a bit tight at first.",
-        helpful: 18,
-        verified: true,
-      },
-      {
-        id: 3,
-        author: "Mike Johnson",
-        rating: 5,
-        date: "2 weeks ago",
-        comment: "Best headphones I've ever owned. The bass is incredible and they're so comfortable.",
-        helpful: 31,
-        verified: false,
-      },
-    ],
+    coupon: {
+      code: "WLC10",
+      discount: 2,
+      minCartValue: 10,
+    },
+    cashback: 1.5,
   };
 
-  // Functions
-
-   function handleCartAdd(e){
+  function handleCartAdd(e) {
     e.preventDefault();
-    cart.setData('quantity', quantity);
-    console.log(cart.data.quantity);
-    // return;
+    cart.setData('quantity', cart.data.quantity);
     cart.post('/cart/add');
   }
+
   const incrementQuantity = () => {
     if (cart.data.quantity < productData.stockCount) {
       cart.setData('quantity', cart.data.quantity + 1);
@@ -101,232 +62,236 @@ const ProductDetail = () => {
       cart.setData('quantity', cart.data.quantity - 1);
     }
   };
-// console.log(cart.data.quantity);
+
   const toggleWishlist = () => {
     setIsWishlisted(!isWishlisted);
   };
 
-  const renderStars = (rating) => {
-    return [...Array(5)].map((_, index) => (
-      <i
-        key={index}
-        className={`bi bi-star${index < Math.floor(rating) ? '-fill' : ''}`}
-      ></i>
-    ));
+  const nextImage = () => {
+    setSelectedImage((prev) => (prev + 1) % productData.images.length);
   };
 
-  const discountPercentage = Math.round(((productData.originalPrice - productData.price) / productData.originalPrice) * 100);
+  const prevImage = () => {
+    setSelectedImage((prev) => (prev - 1 + productData.images.length) % productData.images.length);
+  };
 
   return (
     <>
-      {/* <Navbar /> */}
       <FlashMessage />
-      <div className="product-detail-page">
-        <div className="container py-4 py-lg-5">
-          {/* Breadcrumb */}
-          <nav aria-label="breadcrumb" className="breadcrumb-nav">
-            <ol className="breadcrumb">
-              <li className="breadcrumb-item">
-                <Link href="/">Home</Link>
-              </li>
-              <li className="breadcrumb-item">
-                <Link href="/products">{productData.category}</Link>
-              </li>
-              <li className="breadcrumb-item active" aria-current="page">
-                {productData.name}
-              </li>
-            </ol>
-          </nav>
+      <Navbar />
+      
+      <div className="min-h-screen bg-gray-50">
+        {/* Breadcrumb */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <nav className="flex text-sm overflow-x-auto">
+              <Link href="/" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">Home</Link>
+              <span className="mx-2 text-gray-400">/</span>
+              <Link href="/products" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">{productData.category}</Link>
+              <span className="mx-2 text-gray-400">/</span>
+              <span className="text-gray-600 whitespace-nowrap">{productData.subcategory}</span>
+              <span className="mx-2 text-gray-400">/</span>
+              <span className="text-indigo-700 font-medium truncate">{productData.name}</span>
+            </nav>
+          </div>
+        </div>
 
-          <div className="row g-4 g-lg-5">
-            {/* LEFT: Product Images */}
-            <div className="col-lg-6">
-              <div className="product-images-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Product Images */}
+            <div className="lg:col-span-5">
+              <div className="bg-white rounded-lg p-4">
                 {/* Main Image */}
-                <div className="main-image-container">
-                  {discountPercentage > 0 && (
-                    <div className="discount-badge">-{discountPercentage}%</div>
-                  )}
-                  {productData.inStock && (
-                    <div className="stock-badge">In Stock</div>
-                  )}
+                <div className="relative aspect-square mb-4">
                   <img
                     src={productData.images[selectedImage]}
                     alt={productData.name}
-                    className="main-product-image"
+                    className="w-full h-full object-contain"
                   />
-                  <button className="btn-zoom">
-                    <i className="bi bi-zoom-in"></i>
+                  
+                  {/* Navigation Arrows */}
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
                 </div>
 
-                {/* Thumbnail Gallery */}
-                <div className="thumbnail-gallery">
-                  {/* {productData.images.map((img, index) => (
-                    <div
+                {/* Thumbnails */}
+                <div className="flex gap-2 overflow-x-auto">
+                  {productData.images.map((img, index) => (
+                    <button
                       key={index}
-                      className={`thumbnail-item ${selectedImage === index ? 'active' : ''}`}
                       onClick={() => setSelectedImage(index)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg border-2 overflow-hidden transition-all ${
+                        selectedImage === index ? 'border-indigo-600' : 'border-gray-200 hover:border-gray-300'
+                      }`}
                     >
-                      <img src={img} alt={`View ${index + 1}`} />
-                    </div>
-                  ))} */}
+                      <img src={img} alt={`View ${index + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* RIGHT: Product Info */}
-            <div className="col-lg-6">
-              <div className="product-info-section">
-                {/* Brand & SKU */}
-                <div className="product-meta">
-                  <span className="product-brand">{productData.brand}</span>
-                  <span className="product-sku">SKU: {productData.sku}</span>
-                </div>
+            {/* Right: Product Info */}
+            <div className="lg:col-span-7">
+              <div className="bg-white rounded-lg p-6">
+                {/* Brand */}
+                <div className="text-sm text-gray-600 mb-2">{productData.brand}</div>
 
                 {/* Product Name */}
-                <h1 className="product-title">{productData.name}</h1>
+                <h1 className="text-xl font-semibold text-gray-900 mb-2">
+                  {productData.name}
+                </h1>
 
-                {/* Rating */}
-                <div className="product-rating-section">
-                  <div className="rating-stars">
-                    {renderStars(productData.rating)}
+                {/* Seller */}
+                <div className="text-sm text-gray-600 mb-4">
+                  Sold by <span className="font-medium text-gray-900">{productData.seller}</span>
+                </div>
+
+                {/* Price Section */}
+                <div className="flex items-baseline gap-3 mb-2">
+                  <span className="text-3xl font-bold text-gray-900">OMR {productData.price}</span>
+                  <span className="bg-green-100 text-green-800 text-sm font-medium px-2 py-1 rounded-full flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    You saved OMR {productData.savings}
+                  </span>
+                </div>
+
+                {/* Original Price and Discount */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-gray-400 line-through">OMR {productData.originalPrice.toFixed(2)}</span>
+                  <span className="text-green-600 font-semibold">{productData.discount}% OFF</span>
+                  <span className="text-gray-400 text-sm">(Inc. of VAT)</span>
+                </div>
+
+                {/* Delivery Info */}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600 font-medium">Delivery Expected By {productData.deliveryDate}</span>
+                    <span className="text-gray-400">|</span>
+                    <span className="text-gray-700">Shipped by <span className="font-medium">{productData.seller}</span></span>
                   </div>
-                  <span className="rating-value">{productData.rating}</span>
-                  <span className="rating-count">({productData.reviewCount} reviews)</span>
-                  <a href="#reviews" className="write-review">Write a review</a>
                 </div>
 
-                {/* Price */}
-                <div className="product-pricing">
-                  <div className="price-main">$</div>
-                  {productData.originalPrice > productData.price && (
-                    <>
-                      <div className="price-original">${productData.originalPrice.toFixed(2)}</div>
-                      <div className="price-save">Save ${(productData.originalPrice - productData.price).toFixed(2)}</div>
-                    </>
-                  )}
-                </div>
-
-                {/* Stock Status */}
-                <div className="stock-info">
-                  {productData.inStock ? (
-                    <>
-                      <i className="bi bi-check-circle-fill text-success"></i>
-                      <span className="text-success">In Stock ({productData.stockCount} available)</span>
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-x-circle-fill text-danger"></i>
-                      <span className="text-danger">Out of Stock</span>
-                    </>
-                  )}
-                </div>
-
-                {/* Description */}
-                <p className="product-description">{productData.description}</p>
-
-                {/* Features Grid */}
-                <div className="features-grid">
-                  {productData.features.map((feature, index) => (
-                    <div key={index} className="feature-item">
-                      <div className="feature-icon">{feature.icon}</div>
-                      <div className="feature-content">
-                        <div className="feature-title">{feature.title}</div>
-                        <div className="feature-desc">{feature.desc}</div>
+                {/* Available Coupons */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Available Coupons</h3>
+                  <div className="border border-gray-200 rounded-lg p-3 flex items-center justify-between bg-gradient-to-r from-orange-50 to-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <span className="text-orange-600 font-bold text-xs transform -rotate-90">DISCOUNT</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">Flat OMR {productData.coupon.discount} OFF*</div>
+                        <div className="text-sm text-gray-600">{productData.coupon.code} <span className="text-gray-400">(Min. Cart value: OMR {productData.coupon.minCartValue})</span></div>
                       </div>
                     </div>
-                  ))}
+                    <button className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-50">
+                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Quantity Selector */}
-                {/* {cart.data.quantity} */}
-                <div className="quantity-section">
-                  <label className="quantity-label">Quantity:</label>
-                  <div className="quantity-controls">
+                {/* Cashback Info */}
+                <div className="flex items-center gap-2 mb-6">
+                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                    <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm text-gray-700">
+                    Enjoy Additional <span className="font-semibold text-indigo-700">{productData.cashback}% Cashback</span> on Orders Placed Today*
+                  </span>
+                </div>
+
+                {/* Quantity and Buttons */}
+                <div className="flex gap-3 mb-6">
+                  {/* Quantity Selector */}
+                  <div className="flex items-center border border-gray-300 rounded-lg">
                     <button
-                      className="btn-quantity"
                       onClick={decrementQuantity}
                       disabled={cart.data.quantity <= 1}
+                      className="px-4 py-3 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-lg"
                     >
-                      <i className="bi bi-dash"></i>
+                      −
                     </button>
-                    <input
-                      type="number"
-                      className="quantity-input"
-                      value={cart.data.quantity}
-                      readOnly
-                    />
+                    <span className="px-4 py-3 font-semibold text-gray-900 border-x border-gray-300 min-w-[3rem] text-center">
+                      {cart.data.quantity}
+                    </span>
                     <button
-                      className="btn-quantity"
                       onClick={incrementQuantity}
                       disabled={cart.data.quantity >= productData.stockCount}
+                      className="px-4 py-3 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-r-lg"
                     >
-                      <i className="bi bi-plus"></i>
+                      +
                     </button>
                   </div>
-                  <div className="quantity-stock">
-                    Only {productData.stockCount} left!
-                  </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="action-buttons">
-                  {(productData.stockCount > 0) && (<button onClick={handleCartAdd}  className="btn btn-primary btn-add-to-cart">
-                    <i className="bi bi-cart-plus me-2"></i>
-                    Add to Cart
-                  </button>)}
-                  
-                  <Link href="/cart" className="btn-view-cart" style={{textDecoration: "none"}}>View Cart</Link>
+                  {/* Add to Cart */}
                   <button
-                    className={`btn btn-wishlist ${isWishlisted ? 'active' : ''}`}
-                    onClick={toggleWishlist}
+                    onClick={handleCartAdd}
+                    className="flex-1 bg-indigo-700 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-800 transition-colors flex items-center justify-center gap-2"
                   >
-                    <i className={`bi bi-heart${isWishlisted ? '-fill' : ''}`}></i>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    ADD TO CART
+                  </button>
+
+                  {/* Buy Now */}
+                  <button className="flex-1 bg-yellow-400 text-gray-900 font-semibold px-6 py-3 rounded-lg hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    BUY NOW
+                  </button>
+
+                  {/* Wishlist */}
+                  <button
+                    onClick={toggleWishlist}
+                    className={`w-12 h-12 rounded-lg border-2 flex items-center justify-center transition-colors ${
+                      isWishlisted ? 'border-red-500 text-red-500' : 'border-gray-300 text-gray-400 hover:border-gray-400'
+                    }`}
+                  >
+                    <svg className="w-6 h-6" fill={isWishlisted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
                   </button>
                 </div>
 
-                {/* Delivery & Services */}
-                <div className="services-section">
-                  <div className="service-item">
-                    <i className="bi bi-truck"></i>
-                    <div className="service-content">
-                      <div className="service-title">Free Delivery</div>
-                      <div className="service-desc">On orders over $50. Arrives in 2-3 days</div>
+                {/* App Promotion Banner */}
+                <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-pink-800 rounded-lg p-4 text-white relative overflow-hidden">
+                  <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold mb-1">Order via App & Get Extra</h3>
+                      <div className="text-3xl font-bold text-yellow-400">3% Discount</div>
+                    </div>
+                    <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded mb-1">3%</div>
+                        <div className="text-xs font-bold">OFF</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="service-item">
-                    <i className="bi bi-arrow-repeat"></i>
-                    <div className="service-content">
-                      <div className="service-title">Easy Returns</div>
-                      <div className="service-desc">30-day return policy for your peace of mind</div>
-                    </div>
-                  </div>
-                  <div className="service-item">
-                    <i className="bi bi-shield-check"></i>
-                    <div className="service-content">
-                      <div className="service-title">Warranty</div>
-                      <div className="service-desc">2-year manufacturer warranty included</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Share */}
-                <div className="share-section">
-                  <span className="share-label">Share:</span>
-                  <div className="share-buttons">
-                    <button className="btn-share facebook">
-                      <i className="bi bi-facebook"></i>
-                    </button>
-                    <button className="btn-share twitter">
-                      <i className="bi bi-twitter"></i>
-                    </button>
-                    <button className="btn-share pinterest">
-                      <i className="bi bi-pinterest"></i>
-                    </button>
-                    <button className="btn-share whatsapp">
-                      <i className="bi bi-whatsapp"></i>
-                    </button>
+                  <div className="absolute inset-0 opacity-20">
+                    <div className="absolute right-0 top-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+                    <div className="absolute left-0 bottom-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
                   </div>
                 </div>
               </div>
@@ -334,136 +299,135 @@ const ProductDetail = () => {
           </div>
 
           {/* Tabs Section */}
-          <div className="row mt-5">
-            <div className="col-12">
-              <div className="product-tabs-section">
-                {/* Tab Navigation */}
-                <ul className="tab-navigation">
-                  <li
-                    className={activeTab === "description" ? "active" : ""}
-                    onClick={() => setActiveTab("description")}
-                  >
-                    Description
-                  </li>
-                  <li
-                    className={activeTab === "specifications" ? "active" : ""}
-                    onClick={() => setActiveTab("specifications")}
-                  >
-                    Specifications
-                  </li>
-                  <li
-                    className={activeTab === "reviews" ? "active" : ""}
-                    onClick={() => setActiveTab("reviews")}
-                  >
-                    Reviews ({productData.reviewCount})
-                  </li>
-                </ul>
+          <div className="mt-8 bg-white rounded-lg">
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200">
+              <nav className="flex gap-8 px-6">
+                <button
+                  onClick={() => setActiveTab("description")}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === "description"
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Description
+                </button>
+                <button
+                  onClick={() => setActiveTab("specifications")}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === "specifications"
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Specifications
+                </button>
+                <button
+                  onClick={() => setActiveTab("reviews")}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === "reviews"
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Reviews ({productData.reviewCount})
+                </button>
+              </nav>
+            </div>
 
-                {/* Tab Content */}
-                <div className="tab-content-area">
-                  {/* Description Tab */}
-                  {activeTab === "description" && (
-                    <div className="tab-pane active">
-                      <h3 className="tab-title">Product Description</h3>
-                      <p className="tab-text">
-                        These wireless headphones are designed for users who value comfort and sound clarity.
-                        With premium materials, intelligent noise cancellation, and long-lasting battery
-                        performance, they're perfect for work, travel, and entertainment.
-                      </p>
-                      <p className="tab-text">
-                        The advanced active noise cancellation technology adapts to your environment,
-                        ensuring you enjoy crystal-clear audio whether you're on a busy street or in a
-                        quiet office. The ergonomic design with memory foam ear cushions provides all-day
-                        comfort, while the premium materials ensure durability.
-                      </p>
-                      <h4 className="tab-subtitle">Key Highlights:</h4>
-                      <ul className="highlight-list">
-                        <li>Premium 40mm drivers for exceptional audio quality</li>
-                        <li>Adaptive noise cancellation that adjusts to your environment</li>
-                        <li>Up to 40 hours of continuous playback with ANC enabled</li>
-                        <li>Quick charge feature: 3 hours of playback in just 10 minutes</li>
-                        <li>Multi-device connectivity for seamless switching</li>
-                        <li>Foldable design with premium carrying case included</li>
-                      </ul>
+            {/* Tab Content */}
+            <div className="p-6">
+              {activeTab === "description" && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Description</h3>
+                  <p className="text-gray-600 leading-relaxed mb-4">{productData.description}</p>
+                  <p className="text-gray-600 leading-relaxed">
+                    This compact flip phone combines classic design with modern functionality. 
+                    Featuring dual SIM support, it's perfect for separating work and personal calls. 
+                    The foldable design protects the screen and keypad when not in use, making it 
+                    ideal for travel and daily carry.
+                  </p>
+                </div>
+              )}
+
+              {activeTab === "specifications" && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Technical Specifications</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="text-sm text-gray-600 mb-1">Display</div>
+                      <div className="font-medium text-gray-900">Small External Display</div>
                     </div>
-                  )}
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="text-sm text-gray-600 mb-1">SIM Type</div>
+                      <div className="font-medium text-gray-900">Dual SIM</div>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="text-sm text-gray-600 mb-1">Network</div>
+                      <div className="font-medium text-gray-900">Unlocked</div>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="text-sm text-gray-600 mb-1">Color</div>
+                      <div className="font-medium text-gray-900">Purple</div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                  {/* Specifications Tab */}
-                  {activeTab === "specifications" && (
-                    <div className="tab-pane active">
-                      <h3 className="tab-title">Technical Specifications</h3>
-                      <div className="specifications-table">
-                        {productData.specifications.map((spec, index) => (
-                          <div key={index} className="spec-row">
-                            <div className="spec-label">{spec.label}</div>
-                            <div className="spec-value">{spec.value}</div>
-                          </div>
-                        ))}
+              {activeTab === "reviews" && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="text-4xl font-bold text-gray-900">{productData.rating}</div>
+                      <div>
+                        <div className="flex text-yellow-400 mb-1">
+                          {[...Array(5)].map((_, i) => (
+                            <svg key={i} className="w-5 h-5" fill={i < Math.floor(productData.rating) ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <div className="text-sm text-gray-600">Based on {productData.reviewCount} reviews</div>
                       </div>
                     </div>
-                  )}
+                    <button className="bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-800 transition-colors">
+                      Write a Review
+                    </button>
+                  </div>
 
-                  {/* Reviews Tab */}
-                  {activeTab === "reviews" && (
-                    <div className="tab-pane active" id="reviews">
-                      <div className="reviews-header">
-                        <div className="reviews-summary">
-                          <div className="average-rating">
-                            <div className="rating-number">{productData.rating}</div>
-                            <div className="rating-stars-large">
-                              {renderStars(productData.rating)}
+                  <div className="space-y-6">
+                    {[1, 2, 3].map((review) => (
+                      <div key={review} className="border-b border-gray-200 pb-6">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-semibold text-gray-600">
+                              U{review}
                             </div>
-                            <div className="rating-text">Based on {productData.reviewCount} reviews</div>
+                            <div>
+                              <div className="font-medium text-gray-900">User {review}</div>
+                              <div className="text-sm text-gray-500">{review} week{review > 1 ? 's' : ''} ago</div>
+                            </div>
+                          </div>
+                          <div className="flex text-yellow-400">
+                            {[...Array(5)].map((_, i) => (
+                              <svg key={i} className="w-4 h-4" fill={i < 4 ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                              </svg>
+                            ))}
                           </div>
                         </div>
-                        <button className="btn btn-primary btn-write-review">
-                          <i className="bi bi-pencil-square me-2"></i>
-                          Write a Review
-                        </button>
+                        <p className="text-gray-600">Great product! Very compact and convenient for daily use. The flip design is nostalgic and practical.</p>
                       </div>
-
-                      <div className="reviews-list">
-                        {productData.reviews.map((review) => (
-                          <div key={review.id} className="review-item">
-                            <div className="review-header">
-                              <div className="reviewer-info">
-                                <div className="reviewer-avatar">
-                                  {review.author.charAt(0)}
-                                </div>
-                                <div className="reviewer-details">
-                                  <div className="reviewer-name">
-                                    {review.author}
-                                    {review.verified && (
-                                      <span className="verified-badge">
-                                        <i className="bi bi-patch-check-fill"></i> Verified Purchase
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="review-date">{review.date}</div>
-                                </div>
-                              </div>
-                              <div className="review-rating">
-                                {renderStars(review.rating)}
-                              </div>
-                            </div>
-                            <p className="review-comment">{review.comment}</p>
-                            <div className="review-footer">
-                              <button className="btn-helpful">
-                                <i className="bi bi-hand-thumbs-up"></i>
-                                Helpful ({review.helpful})
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+
       <Footer />
     </>
   );

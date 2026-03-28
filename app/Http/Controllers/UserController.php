@@ -16,16 +16,29 @@ class UserController extends Controller
 {
     public function Register(Request $req)
     {
+        // dd($req);
         $req->validate([
-            'name' => 'required',
+            'first_name' => 'required',
+            'last_name' => 'required',
+            'phone' => 'required',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|confirmed',
         ]);
+        // dd($req);
+        if (!$req->agree_terms) {
+            return redirect()->back()->withErrors('You must agree to the terms and conditions');
+        }
         $pass = Hash::make($req->password);
         User::insert([
-            'name' => $req->name,
+            
+            'first_name' => $req->first_name,
+            'last_name' => $req->last_name,
+            'name' => $req->first_name . ' ' . $req->last_name,
+            'phone' => $req->phone,
+            'terms_agreed' => $req->agree_terms ? true : false,
             'email' => $req->email,
             'password' => $pass,
+
         ]);
 
         return redirect('/login');
