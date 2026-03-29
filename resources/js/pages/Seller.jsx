@@ -9,19 +9,83 @@ const Seller = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   
+  // States for categories
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [subSubcategories, setSubSubcategories] = useState([]);
+  
   const product = useForm({
     name: '',
     price: '',
     instock: '',
     desc: '',
     image: null,
-    category_id: ''
+    image1: null,
+    image2: null,
+    image3: null,
+    category_id: '',
+    subcategory_id: '',
+    sub_subcategory_id: ''
   });
 
   const props = usePage().props;
 
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Fetch subcategories when category changes
+  const handleCategoryChange = async (e) => {
+    const categoryId = e.target.value;
+    product.setData('category_id', categoryId);
+    product.setData('subcategory_id', '');
+    product.setData('sub_subcategory_id', '');
+    setSubcategories([]);
+    setSubSubcategories([]);
+
+    if (categoryId) {
+      try {
+        const response = await fetch(`/api/subcategories/${categoryId}`);
+        const data = await response.json();
+        console.log('Fetched subcategories:', data);
+        setSubcategories(data);
+      } catch (error) {
+        console.error('Error fetching subcategories:', error);
+      }
+    }
+  };
+
+  // Fetch sub-subcategories when subcategory changes
+  const handleSubcategoryChange = async (e) => {
+    const subcategoryId = e.target.value;
+    product.setData('subcategory_id', subcategoryId);
+    product.setData('sub_subcategory_id', '');
+    setSubSubcategories([]);
+
+    if (subcategoryId) {
+      try {
+        const response = await fetch(`/api/sub-subcategories/${subcategoryId}`);
+        const data = await response.json();
+        setSubSubcategories(data);
+      } catch (error) {
+        console.error('Error fetching sub-subcategories:', error);
+      }
+    }
+  };
+
   function addproductsubmit(e) {
     e.preventDefault();
+    
     product.post('/addProduct', {
       onSuccess: () => {
         product.reset();
@@ -493,17 +557,52 @@ const Seller = () => {
                     </div>
 
                     <div className="col-md-6">
-                      <label className="form-label">Category *</label>
+                      <label className="form-label">Main Category *</label>
                       <select
                         className="form-select"
                         value={product.data.category_id}
-                        onChange={(e) => product.setData('category_id', e.target.value)}
+                        onChange={handleCategoryChange}
                         required
                       >
-                        <option value="">Select Category</option>
-                        {props.categories?.map((item, index) => (
+                        <option value="">Select Main Category</option>
+                        {categories?.map((item, index) => (
                           <option value={item.id} key={index}>
                             {item.category}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="col-md-6">
+                      <label className="form-label">Category *</label>
+                      <select
+                        className="form-select"
+                        value={product.data.subcategory_id}
+                        onChange={handleSubcategoryChange}
+                        required
+                        disabled={!product.data.category_id}
+                      >
+                        <option value="">Select Category</option>
+                        {subcategories?.map((item, index) => (
+                          <option value={item.id} key={index}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="col-md-6">
+                      <label className="form-label">Sub Category</label>
+                      <select
+                        className="form-select"
+                        value={product.data.sub_subcategory_id}
+                        onChange={(e) => product.setData('sub_subcategory_id', e.target.value)}
+                        disabled={!product.data.subcategory_id}
+                      >
+                        <option value="">Select Sub Category (Optional)</option>
+                        {subSubcategories?.map((item, index) => (
+                          <option value={item.id} key={index}>
+                            {item.name}
                           </option>
                         ))}
                       </select>
@@ -522,7 +621,7 @@ const Seller = () => {
                     </div>
 
                     <div className="col-12">
-                      <label className="form-label">Product Image *</label>
+                      <label className="form-label">Product Image * (Main Image)</label>
                       <div className="file-upload-wrapper">
                         <input
                           type="file"
@@ -543,6 +642,42 @@ const Seller = () => {
                             <span>{product.data.image.name}</span>
                           </div>
                         )}
+                      </div>
+                    </div>
+
+                    <div className="col-12">
+                      <label className="form-label">Additional Product Images (Optional - Up to 3)</label>
+                      <div className="row g-3">
+                        {[
+                          { key: 'image1', label: 'Image 1' },
+                          { key: 'image2', label: 'Image 2' },
+                          { key: 'image3', label: 'Image 3' }
+                        ].map((img) => (
+                          <div key={img.key} className="col-md-4">
+                            <div className="file-upload-wrapper">
+                              <input
+                                type="file"
+                                id={img.key}
+                                className="file-input"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  product.setData(img.key, e.target.files[0]);
+                                }}
+                              />
+                              <label htmlFor={img.key} className="file-label">
+                                <i className="bi bi-cloud-upload"></i>
+                                <span>{img.label}</span>
+                                <small>Optional</small>
+                              </label>
+                              {product.data[img.key] && (
+                                <div className="file-preview">
+                                  <i className="bi bi-check-circle-fill text-success"></i>
+                                  <span>{product.data[img.key].name}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
 

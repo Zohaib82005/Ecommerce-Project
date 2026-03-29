@@ -11,4 +11,14 @@ class Subcategory extends Model
         'name',
         
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function subSubcategories()
+    {
+        return $this->hasMany(Sub_subcategory::class);
+    }
 }

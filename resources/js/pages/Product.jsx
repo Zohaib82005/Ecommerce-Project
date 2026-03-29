@@ -459,7 +459,7 @@ const Product = () => {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">
-                    Showing Results for <span className="text-indigo-700">Products</span> ({filteredProducts.length})
+                    {searchQuery && (<>Showing Results for <span className="text-indigo-700">{searchQuery}</span> ({filteredProducts.length})</>)}
                   </h3>
                 </div>
                 

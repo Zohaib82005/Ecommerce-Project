@@ -7,8 +7,27 @@ const Admin = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const props = usePage().props;
   // console.log( props); // Debugging line to check props
+  const [categoryLevel, setCategoryLevel] = useState("main"); // "main", "sub", "subsub"
+  const [selectedMainCategory, setSelectedMainCategory] = useState("");
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  
   const category = useForm({
-    category: ''
+    category: '',
+    parent_id: null,
+    level: 'main', // 'main', 'sub', 'subsub'
+    image: null
+  });
+  
+  const subCategory = useForm({
+    name: '',
+    category_id: '',
+    image: null
+  });
+  
+  const subSubCategory = useForm({
+    name: '',
+    subcategory_id: '',
+    image: null
   });
 
   // Edit user modal form
@@ -43,11 +62,51 @@ const Admin = () => {
 
   function handleCatSubmit(e) {
     e.preventDefault();
-    category.post('/addcate', {
-      onSuccess: () => {
-        category.reset();
+    
+    if (categoryLevel === "main") {
+      category.post('/addcate', {
+        onSuccess: () => {
+          category.reset();
+          alert('Main category added successfully!');
+        },
+        onError: () => {
+          alert('Failed to add main category');
+        }
+      });
+    } else if (categoryLevel === "sub") {
+      if (!subCategory.data.category_id) {
+        alert('Please select a main category');
+        return;
       }
-    });
+      
+      subCategory.post('/add-subcategory', {
+        onSuccess: () => {
+          subCategory.reset();
+          setSelectedMainCategory('');
+          alert('Sub category added successfully!');
+        },
+        onError: () => {
+          alert('Failed to add sub category');
+        }
+      });
+    } else if (categoryLevel === "subsub") {
+      if (!subSubCategory.data.subcategory_id) {
+        alert('Please select a sub category');
+        return;
+      }
+      
+      subSubCategory.post('/add-sub-subcategory', {
+        onSuccess: () => {
+          subSubCategory.reset();
+          setSelectedMainCategory('');
+          setSelectedSubCategory('');
+          alert('Sub-sub category added successfully!');
+        },
+        onError: () => {
+          alert('Failed to add sub-sub category');
+        }
+      });
+    }
   }
 
   // Sample data (replace with props data when available)
@@ -476,46 +535,271 @@ const Admin = () => {
           {activeTab === "category" && (
             <div className="category-section">
               <div className="row g-4">
-                <div className="col-lg-4">
+                <div className="col-lg-5">
                   <div className="form-card">
                     <div className="form-header">
                       <h4>Add New Category</h4>
-                      <p>Create a new product category</p>
+                      <p>Manage hierarchical category structure</p>
                     </div>
-                    <form onSubmit={handleCatSubmit} className="category-form">
-                      <div className="mb-3">
-                        <label className="form-label">Category Name *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="e.g., Electronics, Fashion"
-                          value={category.data.category}
-                          onChange={(e) => category.setData('category', e.target.value)}
-                          required
-                        />
-                      </div>
+
+                    {/* Category Level Tabs */}
+                    <div className="nav nav-pills mb-3" role="tablist" style={{ gap: '0.5rem', marginBottom: '1.5rem' }}>
                       <button
-                        type="submit"
-                        className="btn btn-primary w-100"
-                        disabled={category.processing}
+                        className={`btn btn-sm ${categoryLevel === 'main' ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => {
+                          setCategoryLevel('main');
+                          setSelectedMainCategory('');
+                          setSelectedSubCategory('');
+                          category.reset();
+                          subCategory.reset();
+                          subSubCategory.reset();
+                        }}
                       >
-                        {category.processing ? (
-                          <>
-                            <span className="spinner-border spinner-border-sm me-2"></span>
-                            Adding...
-                          </>
-                        ) : (
-                          <>
-                            <i className="bi bi-plus-lg me-2"></i>
-                            Add Category
-                          </>
-                        )}
+                        Main Category
                       </button>
-                    </form>
+                      <button
+                        className={`btn btn-sm ${categoryLevel === 'sub' ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => {
+                          setCategoryLevel('sub');
+                          setSelectedSubCategory('');
+                          subCategory.reset();
+                          subSubCategory.reset();
+                        }}
+                      >
+                        Sub Category
+                      </button>
+                      <button
+                        className={`btn btn-sm ${categoryLevel === 'subsub' ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => {
+                          setCategoryLevel('subsub');
+                          subSubCategory.reset();
+                        }}
+                      >
+                        Sub-Sub Category
+                      </button>
+                    </div>
+
+                    {/* Main Category Form */}
+                    {categoryLevel === 'main' && (
+                      <form onSubmit={handleCatSubmit} className="category-form">
+                        <div className="mb-3">
+                          <label className="form-label">Main Category Name *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="e.g., Electronics, Fashion"
+                            value={category.data.category}
+                            onChange={(e) => category.setData('category', e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label">Category Image (Optional)</label>
+                          <div className="input-group">
+                            <input
+                              type="file"
+                              className="form-control"
+                              accept="image/*"
+                              onChange={(e) => category.setData('image', e.target.files[0])}
+                            />
+                          </div>
+                          {category.data.image && (
+                            <small className="text-success mt-1 d-block">
+                              ✓ Image selected: {category.data.image.name}
+                            </small>
+                          )}
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="btn btn-primary w-100"
+                          disabled={category.processing}
+                        >
+                          {category.processing ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-2"></span>
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-plus-lg me-2"></i>
+                              Add Main Category
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Sub Category Form */}
+                    {categoryLevel === 'sub' && (
+                      <form onSubmit={handleCatSubmit} className="category-form">
+                        <div className="mb-3">
+                          <label className="form-label">Select Main Category *</label>
+                          <select
+                            className="form-select"
+                            value={subCategory.data.category_id}
+                            onChange={(e) => {
+                              subCategory.setData('category_id', e.target.value);
+                              setSelectedMainCategory(e.target.value);
+                            }}
+                            required
+                          >
+                            <option value="">-- Choose a main category --</option>
+                            {props.categories?.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.category}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label">Sub Category Name *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="e.g., Smartphones, Laptops"
+                            value={subCategory.data.name}
+                            onChange={(e) => subCategory.setData('name', e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label">Sub Category Image (Optional)</label>
+                          <div className="input-group">
+                            <input
+                              type="file"
+                              className="form-control"
+                              accept="image/*"
+                              onChange={(e) => subCategory.setData('image', e.target.files[0])}
+                            />
+                          </div>
+                          {subCategory.data.image && (
+                            <small className="text-success mt-1 d-block">
+                              ✓ Image selected: {subCategory.data.image.name}
+                            </small>
+                          )}
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="btn btn-primary w-100"
+                          disabled={subCategory.processing || !subCategory.data.category_id}
+                        >
+                          {subCategory.processing ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-2"></span>
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-plus-lg me-2"></i>
+                              Add Sub Category
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Sub-Sub Category Form */}
+                    {categoryLevel === 'subsub' && (
+                      <form onSubmit={handleCatSubmit} className="category-form">
+                        <div className="mb-3">
+                          <label className="form-label">Select Main Category *</label>
+                          <select
+                            className="form-select"
+                            value={selectedMainCategory}
+                            onChange={(e) => {
+                              setSelectedMainCategory(e.target.value);
+                              setSelectedSubCategory('');
+                              subSubCategory.setData('subcategory_id', '');
+                            }}
+                            required
+                          >
+                            <option value="">-- Choose a main category --</option>
+                            {props.categories?.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.category}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label">Select Sub Category *</label>
+                          <select
+                            className="form-select"
+                            value={subSubCategory.data.subcategory_id}
+                            onChange={(e) => {
+                              subSubCategory.setData('subcategory_id', e.target.value);
+                              setSelectedSubCategory(e.target.value);
+                            }}
+                            disabled={!selectedMainCategory}
+                            required
+                          >
+                            <option value="">-- Choose a sub category --</option>
+                            {selectedMainCategory && props.subcategories?.filter(s => s.category_id == selectedMainCategory).map((subcat) => (
+                              <option key={subcat.id} value={subcat.id}>
+                                {subcat.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label">Sub-Sub Category Name *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="e.g., iPhone, Android"
+                            value={subSubCategory.data.name}
+                            onChange={(e) => subSubCategory.setData('name', e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label">Sub-Sub Category Image (Optional)</label>
+                          <div className="input-group">
+                            <input
+                              type="file"
+                              className="form-control"
+                              accept="image/*"
+                              onChange={(e) => subSubCategory.setData('image', e.target.files[0])}
+                            />
+                          </div>
+                          {subSubCategory.data.image && (
+                            <small className="text-success mt-1 d-block">
+                              ✓ Image selected: {subSubCategory.data.image.name}
+                            </small>
+                          )}
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="btn btn-primary w-100"
+                          disabled={subSubCategory.processing || !subSubCategory.data.subcategory_id}
+                        >
+                          {subSubCategory.processing ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-2"></span>
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-plus-lg me-2"></i>
+                              Add Sub-Sub Category
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </div>
 
-                <div className="col-lg-8">
+                <div className="col-lg-7">
                   <div className="table-card">
                     <div className="table-header">
                       <h5>All Categories ({props.categories?.length || 0})</h5>
@@ -530,40 +814,109 @@ const Admin = () => {
                           <tr>
                             <th>ID</th>
                             <th>Category Name</th>
+                            <th>Type</th>
                             <th>Products</th>
                             <th>Status</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
+                          {/* Main Categories */}
                           {props.categories?.map((item, index) => (
-                            <tr key={index}>
-                              <td>#{item.id}</td>
-                              <td>
-                                <div className="category-name">
-                                  <i className="bi bi-tag-fill me-2"></i>
-                                  <strong>{item.category}</strong>
-                                </div>
-                              </td>
-                              <td>
-                                <span className="badge bg-info">
-                                  {props.products?.filter(p => p.category_id === item.id).length || 0}
-                                </span>
-                              </td>
-                              <td>
-                                <span className="status-badge status-active">Active</span>
-                              </td>
-                              <td>
-                                <div className="action-buttons">
-                                  <button className="btn btn-sm btn-outline-primary">
-                                    <i className="bi bi-pencil"></i>
-                                  </button>
-                                  <button className="btn btn-sm btn-outline-danger">
-                                    <i className="bi bi-trash"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
+                            <React.Fragment key={`main-${index}`}>
+                              <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
+                                <td>#{item.id}</td>
+                                <td>
+                                  <div className="category-name">
+                                    <i className="bi bi-tag-fill me-2"></i>
+                                    <strong>{item.category}</strong>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className="badge bg-primary">Main</span>
+                                </td>
+                                <td>
+                                  <span className="badge bg-info">
+                                    {props.products?.filter(p => p.category_id === item.id).length || 0}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="status-badge status-active">Active</span>
+                                </td>
+                                <td>
+                                  <div className="action-buttons">
+                                    <button className="btn btn-sm btn-outline-primary">
+                                      <i className="bi bi-pencil"></i>
+                                    </button>
+                                    <button className="btn btn-sm btn-outline-danger">
+                                      <i className="bi bi-trash"></i>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                              
+                              {/* Sub Categories */}
+                              {props.subcategories?.filter(s => s.category_id === item.id).map((subcat, subindex) => (
+                                <React.Fragment key={`sub-${subindex}`}>
+                                  <tr style={{ backgroundColor: '#fafafa', paddingLeft: '2rem' }}>
+                                    <td style={{ paddingLeft: '2rem' }}></td>
+                                    <td>
+                                      <div className="category-name">
+                                        <i className="bi bi-list me-2"></i>
+                                        {subcat.name}
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <span className="badge bg-success">Sub</span>
+                                    </td>
+                                    <td>-</td>
+                                    <td>
+                                      <span className="status-badge status-active">Active</span>
+                                    </td>
+                                    <td>
+                                      <div className="action-buttons">
+                                        <button className="btn btn-sm btn-outline-primary">
+                                          <i className="bi bi-pencil"></i>
+                                        </button>
+                                        <button className="btn btn-sm btn-outline-danger">
+                                          <i className="bi bi-trash"></i>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  
+                                  {/* Sub-Sub Categories */}
+                                  {props.subSubcategories?.filter(ss => ss.subcategory_id === subcat.id).map((subsubcat, subsubindex) => (
+                                    <tr key={`subsub-${subsubindex}`} style={{ backgroundColor: '#ffffff', paddingLeft: '4rem' }}>
+                                      <td style={{ paddingLeft: '4rem' }}></td>
+                                      <td>
+                                        <div className="category-name">
+                                          <i className="bi bi-dot me-2"></i>
+                                          {subsubcat.name}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <span className="badge bg-warning">Sub-Sub</span>
+                                      </td>
+                                      <td>-</td>
+                                      <td>
+                                        <span className="status-badge status-active">Active</span>
+                                      </td>
+                                      <td>
+                                        <div className="action-buttons">
+                                          <button className="btn btn-sm btn-outline-primary">
+                                            <i className="bi bi-pencil"></i>
+                                          </button>
+                                          <button className="btn btn-sm btn-outline-danger">
+                                            <i className="bi bi-trash"></i>
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </React.Fragment>
+                              ))}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>

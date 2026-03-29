@@ -1,294 +1,282 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Navbar from '../components/Navbar';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Footer from '../components/Footer';
+import Navbar from '../components/Navbar';
+// ─── Scroll Animation Hook ───────────────────────────────────────────────────
+const useScrollAnimation = () => {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
 
-const App = () => {
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, visible];
+};
+
+// ─── Animated Section Wrapper ────────────────────────────────────────────────
+const AnimatedSection = ({ children, className = '', delay = 0 }) => {
+  const [ref, visible] = useScrollAnimation();
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(40px)',
+        transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+const carouselBanners = [
+  {
+    id: 1, badge: 'EXCLUSIVE DEALS', badgeStyle: { background: '#f59e0b', color: '#1a0533' },
+    title: 'GET UP TO 40% OFF', subtitle: 'On Pre-Owned Products',
+    desc: 'Certified Quality & Smart Savings',
+    gradient: 'linear-gradient(135deg, #1a0533 0%, #4c1d95 60%, #7c3aed 100%)',
+    btnStyle: { background: '#f59e0b', color: '#1a0533' }, emoji: '🛍️',
+  },
+  {
+    id: 2, badge: 'FLASH SALE', badgeStyle: { background: '#ef4444', color: '#fff' },
+    title: 'FLASH SALE LIVE NOW', subtitle: 'Limited time only',
+    desc: 'Up to 70% discount on trending items',
+    gradient: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 60%, #ef4444 100%)',
+    btnStyle: { background: '#f59e0b', color: '#7f1d1d' }, emoji: '⚡',
+  },
+  {
+    id: 3, badge: 'SEASONAL OFFER', badgeStyle: { background: '#10b981', color: '#fff' },
+    title: 'SEASONAL BONANZA', subtitle: 'Biggest sale of the year',
+    desc: 'Limited time offers on all categories',
+    gradient: 'linear-gradient(135deg, #064e3b 0%, #059669 60%, #10b981 100%)',
+    btnStyle: { background: '#f59e0b', color: '#064e3b' }, emoji: '🎉',
+  },
+  {
+    id: 4, badge: '3% CASHBACK', badgeStyle: { background: '#3b82f6', color: '#fff' },
+    title: 'MEGA CLEARANCE', subtitle: 'Stock clearance sale',
+    desc: 'Up to 80% off — while stocks last',
+    gradient: 'linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 60%, #3b82f6 100%)',
+    btnStyle: { background: '#f59e0b', color: '#1e3a5f' }, emoji: '🔥',
+  },
+];
+
+const categories = [
+  { id: 1, name: 'Home & Kitchen', icon: '🏠', color: '#FF6B6B' },
+  { id: 2, name: 'Fashion', icon: '👔', color: '#4ECDC4' },
+  { id: 3, name: 'Health & Beauty', icon: '💄', color: '#45B7D1' },
+  { id: 4, name: 'Toys & Games', icon: '🎮', color: '#96CEB4' },
+  { id: 5, name: 'Sports & Fitness', icon: '🚴', color: '#DDA0DD' },
+  { id: 6, name: 'Baby & Mother Care', icon: '🍼', color: '#98D8C8' },
+  { id: 7, name: 'Tools & Hardware', icon: '🔧', color: '#F7DC6F' },
+  { id: 8, name: 'Pet Supplies', icon: '🐾', color: '#BB8FCE' },
+  { id: 9, name: 'Home Furnishing', icon: '🛋️', color: '#85C1E2' },
+  { id: 10, name: 'Stationery', icon: '📚', color: '#F8B739' },
+  { id: 11, name: 'Automotive', icon: '🚗', color: '#52BE80' },
+  { id: 12, name: 'School Essentials', icon: '🎒', color: '#AF7AC5' },
+  { id: 13, name: 'Mobile Phones', icon: '📱', color: '#EC7063' },
+  { id: 14, name: 'Laptops', icon: '💻', color: '#5DADE2' },
+  { id: 15, name: 'Gaming', icon: '🕹️', color: '#82E0AA' },
+];
+
+const promoBadges = [
+  { id: 1, text: 'TIME TO PARTY', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)' },
+  { id: 2, text: 'GRAB IT CLEARANCE', gradient: 'linear-gradient(135deg, #f59e0b, #f97316)' },
+  { id: 3, text: 'PRE-OWNED PRODUCTS', gradient: 'linear-gradient(135deg, #ec4899, #db2777)' },
+  { id: 4, text: 'Saver ZONE', gradient: 'linear-gradient(135deg, #fbbf24, #f59e0b)' },
+  { id: 5, text: 'Deal of the Day', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
+  { id: 6, text: 'PRO GADGETS', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
+  { id: 7, text: 'Perfume Fiesta', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
+];
+
+const makeProducts = (names) => names.map((name, i) => ({
+  id: i + 1, name,
+  price: `PKR ${(Math.floor(Math.random() * 50) + 1) * 999}`,
+  originalPrice: `PKR ${(Math.floor(Math.random() * 70) + 30) * 999}`,
+  discount: `${Math.floor(Math.random() * 25) + 15}%`,
+}));
+
+const topPicks = makeProducts(['Wireless Mouse', 'Mechanical Keyboard', 'Webcam HD 1080p', 'USB Hub 7-Port', 'Monitor Stand', 'Laptop Cooling Pad']);
+const dealsOfTheDay = makeProducts(['Smart Watch Pro', 'Fitness Tracker', 'Power Bank 20000mAh', 'Phone Case Premium', 'Screen Protector', 'Charging Cable']);
+const dealsYouMightLike = makeProducts(['Gaming Mouse Pad XL', 'LED Desk Lamp', 'Phone Holder Stand', 'Cable Organizer', 'Laptop Sleeve 15"', 'Wireless Charger']);
+const perfumes = makeProducts(['Creed Aventus 100ml', 'La Perla Fragrance', 'La Perla Oud 100ml', 'Hugo Boss Bottled', 'Hugo Boss Black', 'Gift Set']);
+const games = makeProducts(['PlayStation 5', 'Xbox Series X', 'Gaming Controller', 'VR Headset', 'Gaming Headset Pro', 'Gaming Keyboard RGB']);
+const mobilePhones = makeProducts(['Xiaomi Mobile', 'New Unlck Design Flip', 'Apple iPhone 15 Pro', 'Samsung Galaxy A26', 'Dell 2IN1 Mixed', 'Apple iPhone 15 Pro Max']);
+const brandOfWeek = makeProducts(['Apple Pencil Pro 2nd', 'Apple MXL82LL/A USB-C', 'Apple MXL82LL/A USB-C', 'Apple MXL82LL/A USB-C 4.5W']);
+const laptops = makeProducts(['Apple MacBook Pro M5', 'Apple MacBook Pro M5 18"', 'Dell Pro 24 All-in-One', 'Dell Pro 24 All-in-One', 'Dell Pro 24 All-in-One 60', 'Dell Pro 24 All-in-One']);
+const healthCare = makeProducts(['Oharmonic Digital Personal Scale', 'Belur Lumbar Black Relief Pad', 'KANPHO Digital Mattress', 'KANPHO Portable Travel Scale', 'KANPHO Smart Scale', 'Oharmonic Digital Scale']);
+const gamingChairs = makeProducts(['Next Level Dedicated Height...', 'Max Strength Ergonomic...', 'Max Strength Office Gaming...', 'Max Strength Gaming Chair...', 'Max Strength Gaming...', 'Max Strength Ergonomic...']);
+const speakers = makeProducts(['Xiaomi DeskTop Speaker', 'Tango Nainino Mini Smart', 'JBL Portable Bluetooth Speaker', 'Impex 8-inch Portable', 'Xiaomi Sound Outdoor Speaker', 'Other Speaker']);
+
+// ─── Product Card ─────────────────────────────────────────────────────────────
+const ProductCard = ({ product, delay = 0 }) => {
+  const [ref, visible] = useScrollAnimation();
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      ref={ref}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="bg-white rounded-xl cursor-pointer relative overflow-hidden"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.95)',
+        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
+        boxShadow: hovered ? '0 20px 40px rgba(109,40,217,0.15)' : '0 2px 8px rgba(0,0,0,0.08)',
+      }}
+    >
+      {/* Discount badge */}
+      {product.discount && (
+        <div className="absolute top-2 left-2 z-10 text-white text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: '#ef4444', fontSize: '10px' }}>
+          {product.discount} OFF
+        </div>
+      )}
+      {/* Wishlist */}
+      <button
+        className="absolute top-2 right-2 z-10 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center transition-all"
+        style={{ opacity: hovered ? 1 : 0, transform: hovered ? 'scale(1)' : 'scale(0.8)' }}
+      >
+        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+        </svg>
+      </button>
+
+      {/* Image placeholder */}
+      <div
+        className="bg-gray-50 flex items-center justify-center transition-transform duration-300"
+        style={{ height: '140px', transform: hovered ? 'scale(1.05)' : 'scale(1)' }}
+      >
+        <span className="text-5xl opacity-30">📷</span>
+      </div>
+
+      <div className="p-3">
+        <p className="text-gray-800 text-xs font-medium mb-1 line-clamp-2" style={{ minHeight: '32px', fontSize: '11px' }}>{product.name}</p>
+        <div className="flex flex-wrap items-center gap-1 mb-1">
+          <div className="flex text-yellow-400 text-xs">{'★★★★★'}</div>
+          <span className="text-gray-400 text-xs">(4.2)</span>
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-bold text-xs" style={{ color: '#059669' }}>{product.price}</span>
+          <span className="text-gray-400 line-through text-xs">{product.originalPrice}</span>
+        </div>
+        <p className="text-xs mb-2" style={{ color: '#7c3aed' }}>You saved ₨ {Math.floor(Math.random() * 200) + 50}</p>
+        <button
+          className="w-full py-1.5 rounded-lg text-white text-xs font-semibold transition-all"
+          style={{
+            background: hovered ? 'linear-gradient(135deg, #7c3aed, #4c1d95)' : 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+            transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
+          }}
+        >
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Section with Side Image Card ────────────────────────────────────────────
+const ProductSection = ({ title, products, sideColor = '#7c3aed', sideEmoji = '🛒', sideLabel = 'UP TO 60% OFF' }) => {
+  const [ref, visible] = useScrollAnimation();
+  return (
+    <div ref={ref} className="mb-12" style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(40px)', transition: 'all 0.6s ease' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800">{title}</h2>
+        <button className="flex items-center gap-1 text-sm font-semibold transition" style={{ color: '#7c3aed' }}>
+          View All
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+        {/* Side card */}
+        <div className="hidden lg:flex flex-col items-center justify-center rounded-xl text-white p-4 text-center" style={{ background: sideColor, minHeight: '220px' }}>
+          <div className="text-4xl mb-3">{sideEmoji}</div>
+          <p className="font-black text-lg leading-tight">{sideLabel}</p>
+        </div>
+        {/* Products */}
+        {products.map((p, i) => (
+          <ProductCard key={p.id} product={p} delay={i * 60} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Welcome Component ───────────────────────────────────────────────────
+const Welcome = () => {
+  // const [currentSlide, setCurrentSlide] = useState(0);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [categoryScrollPosition, setCategoryScrollPosition] = useState(0);
   const categoryScrollRef = useRef(null);
   const promoScrollRef = useRef(null);
 
-  // Carousel Banners
-  const carouselBanners = [
-    {
-      id: 1,
-      badge: "EXCLUSIVE DEALS",
-      badgeColor: "bg-yellow-400 text-purple-900",
-      title: "GET EXCLUSIVE DEALS",
-      description: "Up to 50% off on selected items",
-      gradient: "from-purple-900 to-purple-700",
-      buttonColor: "bg-yellow-400 text-purple-900",
-      emoji: "🛍️",
-    },
-    {
-      id: 2,
-      badge: "FLASH SALE",
-      badgeColor: "bg-red-400 text-white",
-      title: "FLASH SALE LIVE NOW",
-      description: "Up to 70% discount on trending items",
-      gradient: "from-red-800 to-red-600",
-      buttonColor: "bg-yellow-400 text-red-800",
-      emoji: "⚡",
-    },
-    {
-      id: 3,
-      badge: "SEASONAL OFFER",
-      badgeColor: "bg-green-400 text-green-900",
-      title: "SEASONAL BONANZA",
-      description: "Limited time offers on all categories",
-      gradient: "from-green-800 to-green-600",
-      buttonColor: "bg-yellow-400 text-green-800",
-      emoji: "🎉",
-    },
-    {
-      id: 4,
-      badge: "LIMITED TIME",
-      badgeColor: "bg-blue-400 text-blue-900",
-      title: "MEGA CLEARANCE SALE",
-      description: "Stock clearance - Up to 80% off",
-      gradient: "from-blue-800 to-blue-600",
-      buttonColor: "bg-yellow-400 text-blue-800",
-      emoji: "🔥",
-    },
-  ];
-
-  // Category Data with Images
-  const categories = [
-    { id: 1, name: "Home & Kitchen Appliances", icon: "🏠", image: "https://via.placeholder.com/80x80/FF6B6B/FFFFFF?text=Home" },
-    { id: 2, name: "Fashion", icon: "👔", image: "https://via.placeholder.com/80x80/4ECDC4/FFFFFF?text=Fashion" },
-    { id: 3, name: "Health & Beauty", icon: "💄", image: "https://via.placeholder.com/80x80/45B7D1/FFFFFF?text=Beauty" },
-    { id: 4, name: "Toys & Games", icon: "🎮", image: "https://via.placeholder.com/80x80/96CEB4/FFFFFF?text=Toys" },
-    { id: 5, name: "Sports, Fitness & Cycling", icon: "🚴", image: "https://via.placeholder.com/80x80/DDA0DD/FFFFFF?text=Sports" },
-    { id: 6, name: "Baby & Mother care", icon: "🍼", image: "https://via.placeholder.com/80x80/98D8C8/FFFFFF?text=Baby" },
-    { id: 7, name: "Tools & Hardware Equipments", icon: "🔧", image: "https://via.placeholder.com/80x80/F7DC6F/FFFFFF?text=Tools" },
-    { id: 8, name: "Pet Supplies", icon: "🐾", image: "https://via.placeholder.com/80x80/BB8FCE/FFFFFF?text=Pets" },
-    { id: 9, name: "Home Furnishing & Accessories", icon: "🛋️", image: "https://via.placeholder.com/80x80/85C1E2/FFFFFF?text=Furniture" },
-    { id: 10, name: "Stationery & Office Supplies", icon: "📚", image: "https://via.placeholder.com/80x80/F8B739/FFFFFF?text=Office" },
-    { id: 11, name: "Automotive", icon: "🚗", image: "https://via.placeholder.com/80x80/52BE80/FFFFFF?text=Auto" },
-    { id: 12, name: "School Essentials", icon: "🎒", image: "https://via.placeholder.com/80x80/AF7AC5/FFFFFF?text=School" },
-    { id: 13, name: "Mobile Phones", icon: "📱", image: "https://via.placeholder.com/80x80/EC7063/FFFFFF?text=Mobile" },
-    { id: 14, name: "Laptops", icon: "💻", image: "https://via.placeholder.com/80x80/5DADE2/FFFFFF?text=Laptop" },
-    { id: 15, name: "Gaming", icon: "🎮", image: "https://via.placeholder.com/80x80/82E0AA/FFFFFF?text=Gaming" },
-  ];
-
-  // Promotional Badges
-  const promoBadges = [
-    { id: 1, text: "TIME TO PARTY", color: "bg-gradient-to-br from-red-400 to-red-600", textColor: "text-white" },
-    { id: 2, text: "GRAB IT CLEARANCE", color: "bg-gradient-to-br from-yellow-400 to-orange-500", textColor: "text-white" },
-    { id: 3, text: "PRE-OWNED PRODUCTS", color: "bg-gradient-to-br from-red-500 to-pink-600", textColor: "text-white" },
-    { id: 4, text: "Saver ZONE", color: "bg-gradient-to-br from-yellow-300 to-yellow-500", textColor: "text-purple-900" },
-    { id: 5, text: "Deal of the Day", color: "bg-gradient-to-br from-green-400 to-green-600", textColor: "text-white" },
-    { id: 6, text: "PRO GADGETS", color: "bg-gradient-to-br from-purple-500 to-purple-700", textColor: "text-white" },
-    { id: 7, text: "Perfume Fiesta", color: "bg-gradient-to-br from-blue-400 to-blue-600", textColor: "text-white" },
-  ];
-
-  // Auto-scroll categories
+  // Auto-advance carousel
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (categoryScrollRef.current) {
-        const scrollWidth = categoryScrollRef.current.scrollWidth;
-        const clientWidth = categoryScrollRef.current.clientWidth;
-        const newPosition = categoryScrollPosition + 1;
-        
-        if (newPosition >= scrollWidth - clientWidth) {
-          setCategoryScrollPosition(0);
-        } else {
-          setCategoryScrollPosition(newPosition);
-        }
-      }
-    }, 30);
+    const timer = setInterval(() => setCurrentSlide(p => (p + 1) % carouselBanners.length), 4000);
+    return () => clearInterval(timer);
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [categoryScrollPosition]);
-
-  // Auto-scroll promo badges
+  // Smooth scrolling animation with seamless looping
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (promoScrollRef.current) {
-        const scrollWidth = promoScrollRef.current.scrollWidth;
-        const clientWidth = promoScrollRef.current.clientWidth;
-        const newPosition = categoryScrollPosition * 0.5; // Slower speed for promo badges
-        
-        if (newPosition >= scrollWidth - clientWidth) {
-          promoScrollRef.current.scrollLeft = 0;
-        } else {
-          promoScrollRef.current.scrollLeft = newPosition;
-        }
-      }
-    }, 30);
-
-    return () => clearInterval(interval);
-  }, [categoryScrollPosition]);
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % carouselBanners.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + carouselBanners.length) % carouselBanners.length);
-  };
-
-  // Mock product data
-  const gamingChairs = [
-    { id: 1, name: "Gaming Chair Pro X1", price: "PKR 25,999", originalPrice: "PKR 35,999", discount: "28%", image: "chair1" },
-    { id: 2, name: "Ergonomic Gaming Chair", price: "PKR 18,499", originalPrice: "PKR 24,999", discount: "26%", image: "chair2" },
-    { id: 3, name: "RGB Gaming Chair Elite", price: "PKR 32,999", originalPrice: "PKR 42,999", discount: "23%", image: "chair3" },
-    { id: 4, name: "Racing Style Chair", price: "PKR 21,999", originalPrice: "PKR 29,999", discount: "27%", image: "chair4" },
-    { id: 5, name: "Executive Gaming Desk", price: "PKR 15,999", originalPrice: "PKR 22,999", discount: "30%", image: "desk1" },
-    { id: 6, name: "L-Shaped Gaming Desk", price: "PKR 28,999", originalPrice: "PKR 38,999", discount: "26%", image: "desk2" },
-  ];
-
-  const speakers = [
-    { id: 1, name: "RGB Gaming Speaker", price: "PKR 8,999", originalPrice: "PKR 12,999", discount: "31%", image: "speaker1" },
-    { id: 2, name: "Bluetooth Speaker Pro", price: "PKR 5,499", originalPrice: "PKR 7,999", discount: "31%", image: "speaker2" },
-    { id: 3, name: "Wireless Earbuds", price: "PKR 3,999", originalPrice: "PKR 5,999", discount: "33%", image: "earbuds1" },
-    { id: 4, name: "Gaming Headset RGB", price: "PKR 6,999", originalPrice: "PKR 9,999", discount: "30%", image: "headset1" },
-    { id: 5, name: "Soundbar System", price: "PKR 12,999", originalPrice: "PKR 17,999", discount: "28%", image: "soundbar1" },
-    { id: 6, name: "Portable Speaker Mini", price: "PKR 2,499", originalPrice: "PKR 3,999", discount: "38%", image: "speaker3" },
-  ];
-
-  const topPicks = [
-    { id: 1, name: "Wireless Mouse", price: "PKR 1,299", originalPrice: "PKR 1,999", discount: "35%", image: "mouse1" },
-    { id: 2, name: "Mechanical Keyboard", price: "PKR 4,999", originalPrice: "PKR 6,999", discount: "29%", image: "keyboard1" },
-    { id: 3, name: "Webcam HD 1080p", price: "PKR 3,499", originalPrice: "PKR 4,999", discount: "30%", image: "webcam1" },
-    { id: 4, name: "USB Hub 7-Port", price: "PKR 1,899", originalPrice: "PKR 2,799", discount: "32%", image: "usbhub1" },
-    { id: 5, name: "Monitor Stand", price: "PKR 2,299", originalPrice: "PKR 3,299", discount: "30%", image: "stand1" },
-    { id: 6, name: "Laptop Cooling Pad", price: "PKR 1,599", originalPrice: "PKR 2,399", discount: "33%", image: "cooling1" },
-  ];
-
-  const dealsOfTheDay = [
-    { id: 1, name: "Smart Watch Pro", price: "PKR 8,999", originalPrice: "PKR 12,999", discount: "31%", image: "watch1" },
-    { id: 2, name: "Fitness Tracker", price: "PKR 3,499", originalPrice: "PKR 4,999", discount: "30%", image: "fitness1" },
-    { id: 3, name: "Power Bank 20000mAh", price: "PKR 2,999", originalPrice: "PKR 4,499", discount: "33%", image: "powerbank1" },
-    { id: 4, name: "Phone Case Premium", price: "PKR 599", originalPrice: "PKR 999", discount: "40%", image: "case1" },
-    { id: 5, name: "Screen Protector", price: "PKR 399", originalPrice: "PKR 699", discount: "43%", image: "screen1" },
-    { id: 6, name: "Charging Cable", price: "PKR 499", originalPrice: "PKR 899", discount: "44%", image: "cable1" },
-  ];
-
-  const dealsYouMightLike = [
-    { id: 1, name: "Gaming Mouse Pad XL", price: "PKR 899", originalPrice: "PKR 1,499", discount: "40%", image: "mousepad1", badge: "40% OFF" },
-    { id: 2, name: "LED Desk Lamp", price: "PKR 1,299", originalPrice: "PKR 1,999", discount: "35%", image: "lamp1", badge: "35% OFF" },
-    { id: 3, name: "Phone Holder Stand", price: "PKR 599", originalPrice: "PKR 999", discount: "40%", image: "holder1", badge: "40% OFF" },
-    { id: 4, name: "Cable Organizer", price: "PKR 399", originalPrice: "PKR 799", discount: "50%", image: "organizer1", badge: "50% OFF" },
-    { id: 5, name: "Laptop Sleeve 15 inch", price: "PKR 1,199", originalPrice: "PKR 1,899", discount: "37%", image: "sleeve1", badge: "37% OFF" },
-    { id: 6, name: "Wireless Charger", price: "PKR 1,599", originalPrice: "PKR 2,499", discount: "36%", image: "charger1", badge: "36% OFF" },
-  ];
-
-  const perfumes = [
-    { id: 1, name: "Luxury Perfume 100ml", price: "PKR 4,999", originalPrice: "PKR 6,999", discount: "29%", image: "perfume1" },
-    { id: 2, name: "Designer Fragrance", price: "PKR 5,999", originalPrice: "PKR 7,999", discount: "25%", image: "perfume2" },
-    { id: 3, name: "Eau de Parfum", price: "PKR 3,999", originalPrice: "PKR 5,499", discount: "27%", image: "perfume3" },
-    { id: 4, name: "Body Spray Premium", price: "PKR 1,299", originalPrice: "PKR 1,899", discount: "32%", image: "spray1" },
-    { id: 5, name: "Attar Collection", price: "PKR 2,499", originalPrice: "PKR 3,499", discount: "29%", image: "attar1" },
-    { id: 6, name: "Gift Set Perfume", price: "PKR 6,999", originalPrice: "PKR 9,999", discount: "30%", image: "giftset1" },
-  ];
-
-  const games = [
-    { id: 1, name: "PlayStation 5 Console", price: "PKR 125,999", originalPrice: "PKR 145,999", discount: "14%", image: "ps5" },
-    { id: 2, name: "Xbox Series X", price: "PKR 115,999", originalPrice: "PKR 135,999", discount: "15%", image: "xbox" },
-    { id: 3, name: "Gaming Controller", price: "PKR 8,999", originalPrice: "PKR 11,999", discount: "25%", image: "controller1" },
-    { id: 4, name: "VR Headset", price: "PKR 65,999", originalPrice: "PKR 85,999", discount: "23%", image: "vr1" },
-    { id: 5, name: "Gaming Headset Pro", price: "PKR 9,999", originalPrice: "PKR 13,999", discount: "29%", image: "headset2" },
-    { id: 6, name: "Gaming Keyboard RGB", price: "PKR 7,999", originalPrice: "PKR 10,999", discount: "27%", image: "keyboard2" },
-  ];
-
-  const mobilePhones = [
-    { id: 1, name: "iPhone 15 Pro Max", price: "PKR 385,999", originalPrice: "PKR 425,999", discount: "9%", image: "iphone15" },
-    { id: 2, name: "Samsung Galaxy S24", price: "PKR 285,999", originalPrice: "PKR 325,999", discount: "12%", image: "s24" },
-    { id: 3, name: "OnePlus 12", price: "PKR 185,999", originalPrice: "PKR 215,999", discount: "14%", image: "oneplus12" },
-    { id: 4, name: "Google Pixel 8 Pro", price: "PKR 225,999", originalPrice: "PKR 265,999", discount: "15%", image: "pixel8" },
-    { id: 5, name: "Xiaomi 14 Ultra", price: "PKR 195,999", originalPrice: "PKR 235,999", discount: "17%", image: "xiaomi14" },
-    { id: 6, name: "OPPO Find X7", price: "PKR 165,999", originalPrice: "PKR 195,999", discount: "15%", image: "oppo1" },
-  ];
-
-  const brandOfWeek = [
-    { id: 1, name: "iPhone 15 Pro", price: "PKR 325,999", originalPrice: "PKR 365,999", discount: "11%", image: "iphone15pro" },
-    { id: 2, name: "Apple Watch Ultra 2", price: "PKR 185,999", originalPrice: "PKR 215,999", discount: "14%", image: "watchultra" },
-    { id: 3, name: "AirPods Pro 2", price: "PKR 55,999", originalPrice: "PKR 65,999", discount: "15%", image: "airpodspro" },
-    { id: 4, name: "iPad Pro M2", price: "PKR 225,999", originalPrice: "PKR 265,999", discount: "15%", image: "ipadpro" },
-  ];
-
-  const laptops = [
-    { id: 1, name: "MacBook Pro 16 M3", price: "PKR 685,999", originalPrice: "PKR 765,999", discount: "10%", image: "macbookpro" },
-    { id: 2, name: "Dell XPS 15", price: "PKR 385,999", originalPrice: "PKR 445,999", discount: "13%", image: "dellxps" },
-    { id: 3, name: "HP Spectre x360", price: "PKR 325,999", originalPrice: "PKR 385,999", discount: "16%", image: "hpspectre" },
-    { id: 4, name: "Lenovo ThinkPad X1", price: "PKR 365,999", originalPrice: "PKR 425,999", discount: "14%", image: "thinkpad" },
-    { id: 5, name: "ASUS ROG Zephyrus", price: "PKR 425,999", originalPrice: "PKR 495,999", discount: "14%", image: "asusrog" },
-    { id: 6, name: "MSI Gaming Laptop", price: "PKR 385,999", originalPrice: "PKR 455,999", discount: "15%", image: "msi" },
-  ];
-
-  const healthCare = [
-    { id: 1, name: "Blood Pressure Monitor", price: "PKR 8,999", originalPrice: "PKR 11,999", discount: "25%", image: "bp1" },
-    { id: 2, name: "Digital Thermometer", price: "PKR 1,299", originalPrice: "PKR 1,899", discount: "32%", image: "thermo1" },
-    { id: 3, name: "Pulse Oximeter", price: "PKR 2,499", originalPrice: "PKR 3,499", discount: "29%", image: "oximeter1" },
-    { id: 4, name: "First Aid Kit", price: "PKR 3,999", originalPrice: "PKR 5,499", discount: "27%", image: "firstaid1" },
-    { id: 5, name: "Vitamin Supplements", price: "PKR 2,999", originalPrice: "PKR 3,999", discount: "25%", image: "vitamins1" },
-    { id: 6, name: "Face Mask Pack", price: "PKR 899", originalPrice: "PKR 1,399", discount: "36%", image: "mask1" },
-  ];
-
-  const ProductCard = ({ product }) => (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 p-2 sm:p-4 group cursor-pointer">
-      <div className="relative mb-2 sm:mb-3">
-        <div className="bg-gray-100 rounded-lg h-32 sm:h-48 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-          <span className="text-gray-400 text-4xl sm:text-6xl">📷</span>
-        </div>
-        {product.discount && (
-          <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-            {product.discount} OFF
-          </span>
-        )}
-        <button className="absolute top-2 right-2 w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-red-50">
-          <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-        </button>
-      </div>
-      <h5 className="font-medium text-gray-800 mb-1 sm:mb-2 line-clamp-2 text-xs h-6 sm:h-8">{product.name}</h5>
-      <div className="flex items-center gap-2 mb-2 sm:mb-3">
-        <span className="text-green-600 font-bold text-xs sm:text-sm">{product.price}</span>
-        <span className="text-gray-400 text-xs line-through text-xs">{product.originalPrice}</span>
-      </div>
-      <button className="w-full bg-purple-600 text-white py-1 sm:py-2 rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors duration-300">
-        Add to Cart
-      </button>
-    </div>
-  );
-
-  const SectionHeader = ({ title, onViewAll }) => (
-    <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{title}</h2>
-      <button 
-        onClick={onViewAll}
-        className="text-purple-600 font-semibold hover:text-purple-800 transition-colors flex items-center gap-1 text-sm sm:text-base"
-      >
-        View All
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-    </div>
-  );
+    let animationFrameId;
+    let scrollPos = 0;
+    const itemWidth = 120; // approximate width of each category item (w-20 + gap)
+    const totalWidth = categories.length * itemWidth; // one set of categories
+    
+    const animate = () => {
+      scrollPos += 1;
+      // Reset to 0 after reaching the end of one full scroll cycle
+      setCategoryScrollPosition(scrollPos % totalWidth);
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <>
+    <Navbar />
+    <div className="min-h-screen" style={{ background: '#f8f7fa', fontFamily: "'Poppins', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes pulse-badge { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+        @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        .ticker-track { animation: ticker 30s linear infinite; display: flex; }
+        .ticker-track:hover { animation-play-state: paused; }
+        @keyframes fadeInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+        .fade-in-down { animation: fadeInDown 0.6s ease forwards; }
+        @keyframes countdownPulse { 0%,100%{color:#ef4444} 50%{color:#f97316} }
+      `}</style>
 
-      {/* Hero Banner Carousel */}
-      <div className=" mx-auto px-2 sm:px-4  sm:py-6">
-        {/* Scrolling Categories Section - Like in Video */}
-        <div className="bg-white rounded-xl   p-1 mb-6 overflow-hidden">
+      <div className="px-1  py">
+
+        {/* ── Scrolling Categories Section - Previous Design ── */}
+        <div className="bg-white rounded-xl p-1 mb-6 overflow-hidden">
           <div className="flex gap-6">
             {/* Left Side - Promotional Badges (Scrolling) */}
-            <div className="hidden lg:flex flex-shrink-0 w-90 bg-gray-200  overflow-hidden">
+            <div className="hidden lg:flex flex-shrink-0 w-48 bg-gray-100 overflow-hidden rounded-lg">
               <div 
                 ref={promoScrollRef}
-                className="flex gap-3 pt-2  animate-scroll-slow"
+                className="flex gap-3 p-2"
                 style={{ transform: `translateX(-${categoryScrollPosition * 0.3}px)` }}
               >
                 {[...promoBadges, ...promoBadges].map((badge, index) => (
                   <div 
                     key={`${badge.id}-${index}`}
-                    className={`${badge.color} ${badge.textColor} rounded-xl p-3 flex-shrink-0 w-32 h-24 flex items-center justify-center text-center font-bold text-xs shadow-md`}
+                    className="rounded-xl p-3 flex-shrink-0 w-32 h-24 flex items-center justify-center text-center font-bold text-xs text-white shadow-md"
+                    style={{ background: badge.gradient }}
                   >
                     {badge.text}
                   </div>
@@ -303,22 +291,20 @@ const App = () => {
             <div className="flex-1 overflow-hidden">
               <div 
                 ref={categoryScrollRef}
-                className="flex gap-4"
+                className="flex gap-3"
                 style={{ transform: `translateX(-${categoryScrollPosition}px)` }}
               >
                 {[...categories, ...categories].map((category, index) => (
                   <div 
                     key={`${category.id}-${index}`}
-                    className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group min-w-[100px]"
+                    className="flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer group min-w-[70px]"
                   >
-                    <div className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden group-hover:scale-110 transition-transform duration-300 shadow-md">
-                      <img 
-                        src={category.image} 
-                        alt={category.name}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden group-hover:scale-110 transition-transform duration-300 shadow-md flex items-center justify-center text-xl"
+                      style={{ background: category.color + '22', border: `2px solid ${category.color}44` }}
+                    >
+                      {category.icon}
                     </div>
-                    <span className="text-xs text-center text-gray-700 font-medium line-clamp-2 max-w-[100px]">
+                    <span className="text-xs text-center text-gray-700 font-medium line-clamp-2 max-w-[70px]">
                       {category.name}
                     </span>
                   </div>
@@ -328,288 +314,344 @@ const App = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {/* Carousel - Col Span 2 */}
-          <div className="col-span-1 md:col-span-2 relative">
-            <div className="relative h-48 sm:h-64 md:h-80 overflow-hidden rounded-2xl">
-              {/* Carousel Slides */}
-              {carouselBanners.map((banner, index) => (
-                <div
-                  key={banner.id}
-                  className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-                    index === currentSlide ? "opacity-100" : "opacity-0"
-                  }`}
-                >
-                  <div className={`bg-gradient-to-r ${banner.gradient} rounded-2xl p-8 text-white relative overflow-hidden h-full flex items-center`}>
-                    <div className="relative z-10 w-full">
-                      <span className={`${banner.badgeColor} px-2 py-1 rounded-full text-xs sm:text-sm font-bold mb-2 sm:mb-4 inline-block`}>
-                        {banner.badge}
-                      </span>
-                      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4">{banner.title}</h1>
-                      <p className="text-sm sm:text-base md:text-xl mb-3 sm:mb-6">{banner.description}</p>
-                      <button className={`${banner.buttonColor} px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base rounded-lg font-bold hover:shadow-lg transition`}>
-                        Shop Now
-                      </button>
+        {/* ── Hero Carousel + Cashback Card ── */}
+        <AnimatedSection className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Carousel — 2 cols */}
+          <div className="md:col-span-2 relative rounded-2xl overflow-hidden" style={{ height: '300px', boxShadow: '0 10px 40px rgba(109,40,217,0.2)' }}>
+            {carouselBanners.map((banner, i) => (
+              <div
+                key={banner.id}
+                className="absolute inset-0 flex items-center"
+                style={{
+                  background: banner.gradient,
+                  opacity: i === currentSlide ? 1 : 0,
+                  transition: 'opacity 0.6s ease',
+                  padding: '2rem',
+                }}
+              >
+                <div className="relative z-10">
+                  <span className="inline-block px-3 py-1 rounded-full text-xs font-black mb-3" style={{ ...banner.badgeStyle, fontSize: '11px' }}>
+                    {banner.badge}
+                  </span>
+                  <h1 className="text-3xl md:text-4xl font-black text-white mb-2 leading-tight">{banner.title}</h1>
+                  <p className="text-white/80 text-sm mb-1">{banner.subtitle}</p>
+                  <p className="text-white/60 text-xs mb-5">{banner.desc}</p>
+                  <button className="px-6 py-2.5 rounded-xl font-bold text-sm transition hover:scale-105 hover:shadow-lg" style={banner.btnStyle}>
+                    Shop Now →
+                  </button>
+                </div>
+                <div className="absolute right-8 top-1/2 -translate-y-1/2 text-8xl opacity-20 select-none">{banner.emoji}</div>
+              </div>
+            ))}
+
+            {/* Arrows */}
+            {[
+              { dir: 'prev', icon: 'M15 19l-7-7 7-7', pos: 'left-3' },
+              { dir: 'next', icon: 'M9 5l7 7-7 7', pos: 'right-3' },
+            ].map(btn => (
+              <button
+                key={btn.dir}
+                onClick={() => setCurrentSlide(p => btn.dir === 'next' ? (p + 1) % carouselBanners.length : (p - 1 + carouselBanners.length) % carouselBanners.length)}
+                className={`absolute ${btn.pos} top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white/90 rounded-full shadow-lg flex items-center justify-center hover:bg-white transition`}
+              >
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={btn.icon}/></svg>
+              </button>
+            ))}
+
+            {/* Dots */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              {carouselBanners.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentSlide(i)}
+                  className="h-2 rounded-full transition-all"
+                  style={{ width: i === currentSlide ? '24px' : '8px', background: i === currentSlide ? '#f59e0b' : 'rgba(255,255,255,0.5)' }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Cashback + App Cards */}
+          <div className="flex flex-col gap-4">
+            <div
+              className="flex-1 rounded-2xl p-6 text-white relative overflow-hidden flex flex-col justify-center cursor-pointer hover:scale-[1.02] transition-transform"
+              style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ef4444 100%)', boxShadow: '0 10px 30px rgba(249,115,22,0.3)' }}
+            >
+              <h2 className="text-3xl font-black mb-1" style={{ color: '#1a0533' }}>3% Cashback</h2>
+              <p className="text-sm mb-1" style={{ color: '#1a0533', opacity: 0.8 }}>On every Purchase</p>
+              <p className="text-xs mb-4" style={{ color: '#1a0533', opacity: 0.7 }}>On all purchases above PKR 5000</p>
+              <button className="px-5 py-2 rounded-xl font-bold text-sm w-fit transition hover:opacity-90" style={{ background: '#1a0533', color: '#f59e0b' }}>
+                Get up to 3% Cashback on your First Order
+              </button>
+              <div className="absolute -right-4 -bottom-4 text-7xl opacity-20 select-none">💰</div>
+            </div>
+          </div>
+        </AnimatedSection>
+
+        {/* ── Trending Deals Row (Image 1 center section) ── */}
+        <AnimatedSection className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Trending Deals */}
+          <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="font-bold text-sm text-gray-800">Trending Deals</span>
+              <span className="text-xs px-2 py-0.5 rounded-full text-white font-semibold" style={{ background: '#ef4444', fontSize: '10px' }}>● Offline for you</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[{ icon: '🏠', label: 'Home Appliances', color: '#8b5cf6' }, { icon: '🎧', label: 'Accessories', color: '#3b82f6' }, { icon: '💻', label: 'Pre-owned Laptops', color: '#10b981' }, { icon: '📱', label: 'Pre-owned Mobiles', color: '#f59e0b' }].map((item, i) => (
+                <div key={i} className="rounded-xl p-3 cursor-pointer hover:scale-105 transition-transform text-center" style={{ background: item.color + '15', border: `1px solid ${item.color}33` }}>
+                  <div className="text-2xl mb-1">{item.icon}</div>
+                  <p className="text-xs font-semibold text-gray-700">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Special Deals */}
+          <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-bold text-sm text-gray-800">Special Deals</span>
+              <span className="text-xs" style={{ color: '#7c3aed', cursor: 'pointer' }}>View All ›</span>
+            </div>
+            <div className="space-y-3">
+              {topPicks.slice(0, 2).map((p, i) => (
+                <div key={i} className="flex gap-3 p-2 rounded-xl hover:bg-purple-50 transition cursor-pointer">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-3xl opacity-30">📷</div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-700 line-clamp-2 font-medium">{p.name}</p>
+                    <div className="flex text-yellow-400 text-xs mt-0.5">★★★★☆</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
+                      <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
                     </div>
-                    <div className="absolute right-0 top-0 w-1/2 h-full opacity-20 flex items-center justify-end">
-                      <div className="text-6xl sm:text-8xl md:text-9xl">{banner.emoji}</div>
-                    </div>
+                    <p className="text-xs font-semibold mt-0.5" style={{ color: '#7c3aed' }}>You saved ₨ {Math.floor(Math.random()*150)+50}</p>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
 
-              {/* Navigation Arrows */}
-              <button
-                onClick={prevSlide}
-                className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={nextSlide}
-                className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+          {/* iPhone / Best Electronics */}
+          <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+            <div className="grid grid-cols-2 gap-3 h-full">
+              <div className="rounded-xl p-3 flex flex-col justify-between" style={{ background: 'linear-gradient(135deg, #f8f7fa, #e5e7eb)' }}>
+                <div>
+                  <p className="font-black text-gray-800 text-sm">iPhone</p>
+                  <p className="text-xs text-gray-500 mt-1">LOWEST PRICE GUARANTEED</p>
+                  <p className="text-xs text-gray-500">Get Assured Cashback up to <span className="font-bold text-orange-500">3%</span></p>
+                </div>
+                <div className="text-4xl text-center">📱</div>
+              </div>
+              <div className="rounded-xl p-3 flex flex-col justify-between" style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)' }}>
+                <div>
+                  <p className="font-black text-gray-800 text-sm">Best Electronics</p>
+                  <p className="text-xs text-gray-500 mt-1">Top brands at best prices</p>
+                </div>
+                <div className="text-4xl text-center">💻</div>
+              </div>
+              <div className="col-span-2 rounded-xl p-3" style={{ background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}>
+                <p className="font-black text-sm text-pink-800">Fragrance Deals</p>
+                <p className="text-xs text-pink-600 mt-1">Up to 60% off on all perfumes</p>
+                <div className="flex gap-1 mt-2">
+                  {['🌸', '🌺', '🌻'].map((e, i) => <span key={i} className="text-xl">{e}</span>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </AnimatedSection>
 
-              {/* Dot Indicators */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
-                {carouselBanners.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentSlide(index)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentSlide ? "bg-white w-8" : "bg-white bg-opacity-50"
-                    }`}
-                  />
+        {/* ── Tab Section (Deals of the Day tabs) ── */}
+        <AnimatedSection className="mb-8">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+            {['Deals Of The Day', 'Bundle Deals', 'Exciting Offers', 'Top Selling', 'Saver Zone', 'Clearance Deals'].map((tab, i) => (
+              <button
+                key={i}
+                className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                style={i === 0 ? { background: 'linear-gradient(135deg, #7c3aed, #4c1d95)', color: '#fff' } : { background: '#fff', color: '#6b7280', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </AnimatedSection>
+
+        {/* ── Top Picks ── */}
+        <ProductSection title="Top Picks" products={topPicks} sideColor="linear-gradient(135deg, #7c3aed, #4c1d95)" sideEmoji="🏆" sideLabel="TOP PICKS" />
+
+        {/* ── Deals of the Day ── */}
+        <ProductSection title="Deals Of The Day" products={dealsOfTheDay} sideColor="linear-gradient(135deg, #dc2626, #991b1b)" sideEmoji="⏰" sideLabel="UP TO 70% OFF" />
+
+        {/* ── Deals You Might Like ── */}
+        <AnimatedSection className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800">Deals You Might Like</h2>
+            <button className="flex items-center gap-1 text-sm font-semibold" style={{ color: '#7c3aed' }}>View All <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg></button>
+          </div>
+          {/* Promo banner cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+            {[
+              { label: 'Skin Care', sub: 'Up to 60% off', color: '#10b981', emoji: '🧴' },
+              { label: 'My List', sub: 'Saved Items', color: '#8b5cf6', emoji: '📋' },
+              { label: 'Sports-Fitness', sub: 'Up to 50% off', color: '#f59e0b', emoji: '🏋️' },
+              { label: 'Gaming Accessories', sub: 'Up to 60% off', color: '#3b82f6', emoji: '🎮' },
+            ].map((item, i) => (
+              <AnimatedSection
+                key={i} delay={i * 80}
+                className="rounded-xl p-4 cursor-pointer hover:scale-105 transition-transform text-white flex items-center gap-3"
+                style={{ background: `linear-gradient(135deg, ${item.color}cc, ${item.color})` }}
+              >
+                <span className="text-3xl">{item.emoji}</span>
+                <div>
+                  <p className="font-bold text-sm">{item.label}</p>
+                  <p className="text-xs opacity-80">{item.sub}</p>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+          {/* Limited time deals banner */}
+          <div className="rounded-2xl p-4 mb-4 flex flex-col md:flex-row gap-4" style={{ background: 'linear-gradient(135deg, #1a0533, #4c1d95)' }}>
+            <div className="flex-1">
+              <span className="text-white font-black text-lg">Limited Time Deals</span>
+              <div className="flex gap-2 mt-2">
+                {['00', '24', '44', '11'].map((t, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="bg-red-500 text-white font-black text-lg px-2 py-1 rounded-lg">{t}</span>
+                    {i < 3 && <span className="text-yellow-400 font-black">:</span>}
+                  </div>
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Cashback Card - Col Span 1 */}
-          <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-4 sm:p-6 md:p-8 text-purple-900 relative overflow-hidden h-48 sm:h-64 md:h-80 flex flex-col justify-center">
-            <div className="relative z-10">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">3% Cashback</h2>
-              <p className="text-xs sm:text-sm md:text-base mb-2 sm:mb-4">On all purchases above PKR 5000</p>
-              <button className="bg-purple-900 text-white px-3 sm:px-4 md:px-6 py-1 sm:py-2 text-xs sm:text-sm rounded-lg font-bold hover:bg-purple-800 transition">
-                Learn More
-              </button>
-            </div>
-            <div className="absolute -right-4 -bottom-4 text-6xl sm:text-7xl md:text-8xl opacity-30">💰</div>
-          </div>
-        </div>
-
-        {/* Category Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-8">
-          <div className="bg-gradient-to-br from-green-400 to-green-600 rounded-xl p-3 sm:p-6 text-white cursor-pointer hover:scale-105 transition-transform">
-            <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">📱</div>
-            <h5 className="font-bold text-sm sm:text-lg">Mobile Phones</h5>
-            <p className="text-xs sm:text-sm opacity-90">Up to 30% off</p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl p-3 sm:p-6 text-white cursor-pointer hover:scale-105 transition-transform">
-            <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">💻</div>
-            <h5 className="font-bold text-sm sm:text-lg">Laptops</h5>
-            <p className="text-xs sm:text-sm opacity-90">Special Offers</p>
-          </div>
-          <div className="bg-gradient-to-br from-pink-400 to-pink-600 rounded-xl p-3 sm:p-6 text-white cursor-pointer hover:scale-105 transition-transform">
-            <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🎮</div>
-            <h5 className="font-bold text-sm sm:text-lg">Gaming</h5>
-            <p className="text-xs sm:text-sm opacity-90">New Arrivals</p>
-          </div>
-          <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl p-3 sm:p-6 text-white cursor-pointer hover:scale-105 transition-transform">
-            <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🎧</div>
-            <h5 className="font-bold text-sm sm:text-lg">Audio</h5>
-            <p className="text-xs sm:text-sm opacity-90">Best Deals</p>
-          </div>
-        </div>
-
-        {/* Top Picks */}
-        <div className="mb-12">
-          <SectionHeader title="Top Picks" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {topPicks.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-
-        {/* Deals Of The Day */}
-        <div className="mb-12">
-          <SectionHeader title="Deals Of The Day" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {dealsOfTheDay.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-
-        {/* Deals You Might Like */}
-        <div className="mb-12">
-          <SectionHeader title="Deals You Might Like" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {dealsYouMightLike.map(product => (
-              <div key={product.id} className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 p-2 sm:p-4 group cursor-pointer relative">
-                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                  {product.badge}
-                </div>
-                <div className="relative mb-2 sm:mb-3 mt-6">
-                  <div className="bg-gray-100 rounded-lg h-32 sm:h-48 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-                    <span className="text-gray-400 text-4xl sm:text-6xl">📷</span>
-                  </div>
-                </div>
-                <h5 className="font-medium text-gray-800 mb-1 sm:mb-2 line-clamp-2 text-xs h-6 sm:h-8">{product.name}</h5>
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <span className="text-green-600 font-bold text-xs sm:text-sm">{product.price}</span>
-                  <span className="text-gray-400 text-xs line-through">{product.originalPrice}</span>
-                </div>
-                <button className="w-full bg-purple-600 text-white py-1 sm:py-2 rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors duration-300">
-                  Add to Cart
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Perfumes Section */}
-        <div className="mb-12">
-          <SectionHeader title="Perfumes" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {perfumes.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-
-        {/* Games Section - Image 3 */}
-        <div className="mb-12">
-          <SectionHeader title="Games" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {games.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-
-        {/* Mobile Phones Section */}
-        <div className="mb-12">
-          <SectionHeader title="Mobile Phones" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {mobilePhones.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-
-        {/* Brand of the Week - Orange Banner */}
-        <div className="mb-12">
-          <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-red-500 rounded-2xl p-4 sm:p-8 text-white relative overflow-hidden">
-            <div className="relative z-10 text-center mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-4xl font-bold mb-2">BRAND OF THE WEEK</h2>
-              <p className="text-sm sm:text-xl opacity-90">Apple Products - Up to 20% Off</p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 relative z-10">
-              {brandOfWeek.map(product => (
-                <div key={product.id} className="bg-white rounded-xl p-2 sm:p-4 text-gray-800">
-                  <div className="bg-gray-100 rounded-lg h-24 sm:h-40 flex items-center justify-center mb-2 sm:mb-3">
-                    <span className="text-gray-400 text-3xl sm:text-5xl">📷</span>
-                  </div>
-                  <h5 className="font-medium text-xs mb-1 sm:mb-2 line-clamp-2 h-6">{product.name}</h5>
-                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                    <span className="text-green-600 font-bold text-xs">{product.price}</span>
-                    <span className="text-gray-400 text-xs line-through">{product.originalPrice}</span>
-                  </div>
-                  <button className="w-full bg-purple-600 text-white py-1 sm:py-2 rounded-lg text-xs font-medium hover:bg-purple-700 transition">
-                    Add to Cart
-                  </button>
+            <div className="flex gap-3">
+              {[{ d: '50%', label: 'Speakers' }, { d: '70%', label: 'Watches' }, { d: '40%', label: 'Perfumes' }].map((item, i) => (
+                <div key={i} className="bg-white/10 rounded-xl p-3 flex flex-col items-center justify-center text-white cursor-pointer hover:bg-white/20 transition min-w-[80px]">
+                  <span className="font-black text-yellow-400 text-lg">UP TO</span>
+                  <span className="font-black text-2xl">{item.d}</span>
+                  <span className="text-xs opacity-80">{item.label}</span>
                 </div>
               ))}
             </div>
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full -mr-48 -mt-48"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full -ml-32 -mb-32"></div>
+            {/* Perfume */}
+            <div className="rounded-xl overflow-hidden min-w-[150px] relative" style={{ background: 'linear-gradient(135deg, #831843, #ec4899)' }}>
+              <div className="p-3 text-white">
+                <p className="font-black">PERFUME</p>
+                <p className="text-sm">Up to 40% OFF</p>
+                <p className="text-xs opacity-80">HEALTH-BEAUTY Up to 50% off</p>
+              </div>
+              <div className="absolute right-2 bottom-2 text-3xl">🌸</div>
+            </div>
           </div>
-        </div>
-
-        {/* Laptops Section */}
-        <div className="mb-12">
-          <SectionHeader title="Laptops" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {laptops.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {dealsYouMightLike.map((p, i) => <ProductCard key={p.id} product={p} delay={i * 60} />)}
           </div>
-        </div>
+        </AnimatedSection>
 
-        {/* Health Care Products Section */}
-        <div className="mb-12">
-          <SectionHeader title="Health Care Products" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {healthCare.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+        {/* ── Perfumes ── */}
+        <ProductSection title="Perfumes" products={perfumes} sideColor="linear-gradient(135deg, #831843, #db2777)" sideEmoji="🌸" sideLabel="UP TO 70% OFF" />
+
+        {/* ── Games ── */}
+        <ProductSection title="Games" products={games} sideColor="linear-gradient(135deg, #065f46, #10b981)" sideEmoji="🎮" sideLabel="UP TO 60% OFF" />
+
+        {/* ── Mobile Phones ── */}
+        <ProductSection title="Mobile Phones" products={mobilePhones} sideColor="linear-gradient(135deg, #1e3a5f, #2563eb)" sideEmoji="📱" sideLabel="UP TO 60% OFF" />
+
+        {/* ── Brand of the Week ── */}
+        <AnimatedSection className="mb-12">
+          <div className="rounded-2xl p-6 md:p-8 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c, #f97316)', boxShadow: '0 20px 60px rgba(234,88,12,0.4)' }}>
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full -ml-32 -mb-32"></div>
+            <div className="relative z-10 text-center mb-6">
+              <h2 className="text-3xl md:text-5xl font-black text-white">
+                BRAND <span style={{ color: '#f59e0b' }}>OF THE</span> WEEK
+              </h2>
+              <p className="text-orange-100 text-lg mt-2">Apple Products — Up to 20% Off</p>
+              <button className="mt-3 px-6 py-2 rounded-full font-bold text-sm" style={{ background: '#f59e0b', color: '#7c2d12' }}>
+                More From Apple →
+              </button>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
+              {brandOfWeek.map((p, i) => (
+                <AnimatedSection key={p.id} delay={i * 100} className="bg-white rounded-2xl p-3 hover:scale-105 transition-transform cursor-pointer">
+                  <div className="bg-gray-50 rounded-xl h-36 flex items-center justify-center mb-3 text-5xl opacity-30">📷</div>
+                  <p className="text-gray-800 text-xs font-semibold line-clamp-2 mb-2">{p.name}</p>
+                  <div className="flex items-center gap-1 mb-2">
+                    <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
+                    <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
+                  </div>
+                  <button className="w-full py-2 rounded-xl text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #7c3aed, #4c1d95)' }}>Add to Cart</button>
+                </AnimatedSection>
+              ))}
+            </div>
           </div>
-        </div>
+        </AnimatedSection>
 
-        {/* Gaming Chairs & Desks - Image 1 */}
-        <div className="mb-12">
-          <SectionHeader title="Gaming Chairs & Desks" onViewAll={() => {}} />
-          
-          {/* Purple Banner */}
-          <div className="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 rounded-2xl p-4 sm:p-8 text-white mb-8 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* ── Laptops ── */}
+        <ProductSection title="Laptops" products={laptops} sideColor="linear-gradient(135deg, #1e3a5f, #1d4ed8)" sideEmoji="💻" sideLabel="UP TO 60% OFF" />
+
+        {/* ── Health Care ── */}
+        <ProductSection title="Health Care Products" products={healthCare} sideColor="linear-gradient(135deg, #14532d, #16a34a)" sideEmoji="❤️" sideLabel="UP TO 60% OFF" />
+
+        {/* ── LIVE Update Banner ── */}
+        <AnimatedSection className="mb-8">
+          <div className="rounded-2xl p-6 md:p-8 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a0533, #2d0a4e, #4c1d95)' }}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
-                <span className="bg-yellow-400 text-purple-900 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold mb-2 sm:mb-4 inline-block">
-                  NEW UPDATE
-                </span>
-                <h2 className="text-3xl sm:text-5xl font-bold mb-2 sm:mb-4">LIVE</h2>
-                <p className="text-sm sm:text-xl mb-4 sm:mb-6">Shopping Made Simple</p>
-                <button className="bg-yellow-400 text-purple-900 px-4 sm:px-8 py-2 sm:py-3 text-sm sm:text-base rounded-lg font-bold hover:bg-yellow-300 transition">
-                  Shop Now
-                </button>
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-black mb-3" style={{ background: '#f59e0b', color: '#1a0533' }}>NEW UPDATE</span>
+                <h2 className="text-5xl font-black text-white mb-2" style={{ textShadow: '0 0 40px rgba(139,92,246,0.5)' }}>LIVE</h2>
+                <p className="text-purple-200 text-lg mb-4">Shopping Made Simple</p>
+                <button className="px-8 py-3 rounded-xl font-bold" style={{ background: '#f59e0b', color: '#1a0533' }}>Shop Now</button>
               </div>
-              <div className="flex gap-2 sm:gap-4 flex-shrink-0">
-                <div className="bg-white bg-opacity-20 backdrop-blur rounded-xl p-4 sm:p-6 text-center">
-                  <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">📱</div>
-                  <p className="text-xs sm:text-sm">Scan Here</p>
-                  <p className="text-xs opacity-80">To Update on Mobile</p>
+              <div className="flex gap-4">
+                <div className="rounded-2xl p-5 text-center text-white" style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}>
+                  <div className="text-4xl mb-2">📱</div>
+                  <p className="text-sm font-semibold">SCAN HERE</p>
+                  <p className="text-xs opacity-70">To Update on Mobile</p>
+                  <p className="text-xs opacity-50 mt-1">Download the App Now</p>
                 </div>
-                <div className="bg-white bg-opacity-20 backdrop-blur rounded-xl p-4 sm:p-6 text-center">
-                  <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">💻</div>
-                  <p className="text-xs sm:text-sm">Desktop</p>
-                  <p className="text-xs opacity-80">Version Available</p>
+                <div className="rounded-2xl p-5 text-center text-white" style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}>
+                  <div className="text-4xl mb-2">💻</div>
+                  <p className="text-sm font-semibold">Desktop</p>
+                  <p className="text-xs opacity-70">Version Available</p>
+                  <div className="flex gap-1 mt-2 justify-center">
+                    <div className="bg-white rounded-md px-2 py-0.5 text-xs font-bold text-black">Android</div>
+                    <div className="bg-white rounded-md px-2 py-0.5 text-xs font-bold text-black">iOS</div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
-              <div className="absolute right-20 top-10 text-9xl">🛒</div>
+            <div className="absolute top-0 right-0 text-9xl opacity-5 select-none">🛒</div>
+          </div>
+        </AnimatedSection>
+
+        {/* ── Gaming Chairs & Desks ── */}
+        <ProductSection title="Gaming Chairs & Desks" products={gamingChairs} sideColor="linear-gradient(135deg, #1a0533, #4c1d95)" sideEmoji="🪑" sideLabel="UP TO 60% OFF" />
+
+        {/* ── Speakers & Audio Devices ── */}
+        <ProductSection title="Speakers & Audio Devices" products={speakers} sideColor="linear-gradient(135deg, #7c2d12, #ea580c)" sideEmoji="🔊" sideLabel="UP TO 70% OFF" />
+
+        {/* ── 4 Category Cards ── */}
+        <AnimatedSection className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
+          {[
+            { icon: '📱', name: 'Mobile Phones', sub: 'Up to 30% off', color: '#10b981' },
+            { icon: '💻', name: 'Laptops', sub: 'Special Offers', color: '#8b5cf6' },
+            { icon: '🎮', name: 'Gaming', sub: 'New Arrivals', color: '#ec4899' },
+            { icon: '🎧', name: 'Audio', sub: 'Best Deals', color: '#3b82f6' },
+          ].map((cat, i) => (
+            <div
+              key={i}
+              className="rounded-2xl p-5 text-white cursor-pointer hover:scale-105 transition-transform"
+              style={{ background: `linear-gradient(135deg, ${cat.color}dd, ${cat.color})`, boxShadow: `0 8px 24px ${cat.color}40` }}
+            >
+              <div className="text-4xl mb-3">{cat.icon}</div>
+              <h5 className="font-bold text-base">{cat.name}</h5>
+              <p className="text-sm opacity-80">{cat.sub}</p>
             </div>
-          </div>
+          ))}
+        </AnimatedSection>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {gamingChairs.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-
-        {/* Speakers & Audio Devices */}
-        <div className="mb-12">
-          <SectionHeader title="Speakers & Audio Devices" onViewAll={() => {}} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-            {speakers.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
       </div>
-
-      <Footer />
     </div>
+      <Footer />
+    </>
   );
 };
 
-export default App;
+export default Welcome;

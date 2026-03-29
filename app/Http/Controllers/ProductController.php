@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Productimage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -34,28 +35,49 @@ class ProductController extends Controller
             'desc' => 'required',
             'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
             'category_id' => 'required',
+            'subcategory_id' => 'required',
+            'sub_subcategory_id' => 'nullable',
+            'image1' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image2' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image3' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
+        // Store main image
         if ($req->hasFile('image')) {
             $file = $req->file('image');
-
-            // Store image in storage/app/public/images
             $path = $file->store('images', 'public');
-            // dd($path);
-            // // Save image path in data array
             $data['image'] = $path;
         }
 
         // Create product
-        Product::create([
+        $product = Product::create([
             'name' => $data['name'],
             'price' => $data['price'],
             'instock' => $data['instock'],
             'description' => $data['desc'],
             'image' => $data['image'],
             'category_id' => $data['category_id'],
+            'subcategory_id' => $data['subcategory_id'],
+            'sub_subcategory_id' => $data['sub_subcategory_id'],
             'added_by' => Auth::user()->id,
+            'status' => 'Pending',
         ]);
+
+        // Handle optional extra images - save to productimages table
+        $imageFields = ['image1', 'image2', 'image3'];
+        
+        foreach ($imageFields as $field) {
+            if ($req->hasFile($field)) {
+                $file = $req->file($field);
+                $path = $file->store('images', 'public');
+                
+                // Create product image record with proper product_id
+                Productimage::create([
+                    'product_id' => $product->id,
+                    'image' => $path,
+                ]);
+            }
+        }
 
         return redirect()->back()->with('success', 'Product added successfully!');
 

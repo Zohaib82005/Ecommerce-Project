@@ -8,10 +8,15 @@ use Inertia\Inertia;
 use App\Models\User;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Subcategory;
+use App\Models\Sub_subcategory;
+
 class AdminController extends Controller
 {
     public function index(){
         $categories = Category::select('category', 'id')->get();
+        $subcategories = Subcategory::select('id', 'name', 'category_id')->get();
+        $subSubcategories = Sub_subcategory::select('id', 'name', 'subcategory_id')->get();
         $users = User::select('name', 'email', 'role', 'id', 'created_at')->get();
         $products = Product::join('categories', 'products.category_id', '=', 'categories.id')
                              ->join('users', 'products.added_by', '=', 'users.id')
@@ -21,6 +26,8 @@ class AdminController extends Controller
         return Inertia::render('Admin',
             [
                 'categories' => $categories,
+                'subcategories' => $subcategories,
+                'subSubcategories' => $subSubcategories,
                 'users' => $users,
                 'products' => $products,
                 'sellers' => $sellers

@@ -33,9 +33,9 @@ class AddressController extends Controller
             'country' => $validated['country'],
         ]);
 
-        if ($request->expectsJson()) {
-            return response()->json($address, 201);
-        }
+        // if ($request->expectsJson()) {
+        //     return response()->json($address, 201);
+        // }
 
         return back()->with('success', 'Address Added Successfully');
     }
@@ -80,9 +80,9 @@ class AddressController extends Controller
             'country' => $validated['country'],
         ]);
 
-        if ($request->expectsJson()) {
-            return response()->json($address, 200);
-        }
+        // if ($request->expectsJson()) {
+        //     return response()->json($address, 200);
+        // }
 
         return back()->with('success', 'Address Updated Successfully');
     }
@@ -98,9 +98,9 @@ class AddressController extends Controller
 
         $address->delete();
 
-        if ($request->expectsJson()) {
-            return response()->json(['message' => 'Address Deleted Successfully'], 200);
-        }
+        // if ($request->expectsJson()) {
+        //     return response()->json(['message' => 'Address Deleted Successfully'], 200);
+        // }
 
         return back()->with('success', 'Address Deleted Successfully');
     }
