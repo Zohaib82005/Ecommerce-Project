@@ -9,7 +9,7 @@ const Checkout = () => {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [addresses, setAddresses] = useState([]);
-  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [selectedAddress, setSelectedAddress] = useState();
   const [addressLoading, setAddressLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("WLC10");
   const [appliedCoupon, setAppliedCoupon] = useState({ code: "WLC10", discount: 2 });
@@ -159,6 +159,14 @@ const Checkout = () => {
     formData.setData({ ...formData.data, [name]: value });
   };
 
+  const orderData = useForm({
+    address_id: selectedAddress ? selectedAddress.id : null,
+    paymentMethod: paymentMethod,
+    total: total,
+
+  });
+
+  
   // Handle address selection from modal
   const handleSelectAddress = (address) => {
     formData.setData({
@@ -173,6 +181,9 @@ const Checkout = () => {
     });
     setSelectedAddress(address);
     setShowAddressModal(false);
+    console.log("Selected Address:", address);
+    orderData.setData("address_id", address.id);
+
   };
 
   // Check if all required address fields are filled
@@ -244,15 +255,23 @@ const Checkout = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Validate address details
-    if (!isAddressFormValid()) {
+    console.log("Submitting Order with Data:", orderData.data);
+    // Validate that an address is selected
+    if (!selectedAddress) {
       setAddressError(true);
       return;
     }
     
     setAddressError(false);
-    formData.post("/success");
+    
+    // Submit only address_id and payment method
+    orderData.post("/success", {
+      data: {
+        address_id: selectedAddress.id,
+        paymentMethod: paymentMethod,
+        total: total,
+      },
+    });
   };
 
   return (
@@ -663,7 +682,7 @@ const Checkout = () => {
             {/* Right Column */}
             <div className="mt-6 lg:mt-0 space-y-6">
               {/* Coupon */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              {/* <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-semibold text-gray-900">Coupon</h3>
                   <button className="text-sm text-indigo-700 hover:text-indigo-900 font-medium">
@@ -702,7 +721,7 @@ const Checkout = () => {
                     </button>
                   </div>
                 )}
-              </div>
+              </div> */}
 
               {/* Price Details */}
               <div className="bg-white rounded-lg shadow-sm p-6">
@@ -758,7 +777,7 @@ const Checkout = () => {
                     onClick={handleSubmit}
                     className="w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg transition-colors shadow-md mt-4"
                   >
-                    Pay Now OMR {total.toFixed(2)}
+                    Confirm Order
                   </button>
                   
                   {/* Security Badge */}

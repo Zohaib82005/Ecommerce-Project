@@ -9,6 +9,7 @@ class Product extends Model
     protected $fillable = [
         'name',
         'price',
+        'discount_price',
         'instock',
         'description',
         'image',
@@ -16,7 +17,8 @@ class Product extends Model
         'subcategory_id',
         'sub_subcategory_id',
         'added_by',
-        'status'
+        'status',
+        'total_sold'
     ];
 
     public function category()

@@ -14,14 +14,23 @@ class ProductController extends Controller
 {
     public function addcate(Request $req)
     {
-        // dd($req);
         $req->validate([
             'category' => 'required',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        Category::create([
+        $data = [
             'category' => $req->category,
-        ]);
+        ];
+
+        // Handle image upload if provided
+        if ($req->hasFile('image')) {
+            $file = $req->file('image');
+            $path = $file->store('categories', 'public');
+            $data['image'] = $path;
+        }
+
+        Category::create($data);
 
         return redirect()->back();
     }
@@ -31,6 +40,7 @@ class ProductController extends Controller
         $data = $req->validate([
             'name' => 'required',
             'price' => 'required',
+            'discount_price' => 'nullable|numeric|lt:price',
             'instock' => 'required',
             'desc' => 'required',
             'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
@@ -53,6 +63,7 @@ class ProductController extends Controller
         $product = Product::create([
             'name' => $data['name'],
             'price' => $data['price'],
+            'discount_price' => $data['discount_price'] ?? null,
             'instock' => $data['instock'],
             'description' => $data['desc'],
             'image' => $data['image'],
@@ -109,7 +120,7 @@ class ProductController extends Controller
 
     public function products()
     {
-        try{
+        
             $products = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
                 ->select('products.*', 'categories.category as category')
                 ->where('products.status', 'Approved')
@@ -117,9 +128,10 @@ class ProductController extends Controller
                 // ->paginate(5);
             $categories = Category::all();
             // dd($products);
-        }catch(\Exception $e){
-            return "We are facing some issues. Please try again later.";
-        }
+            // dd($products);
+       
+            // return "We are facing some issues. Please try again later.";
+        
 
         return Inertia::render('Product',
             [
@@ -139,8 +151,16 @@ class ProductController extends Controller
             return redirect()->back()->with('error', 'Product not found!');
         }
 
+        // Fetch product images
+        $productImages = Productimage::where('product_id', $id)->get();
+
+        // Calculate delivery date (current date + 3 days)
+        $deliveryDate = now()->addDays(3);
+
         return Inertia::render('ProductDetail', [
             'product' => $product,
+            'productImages' => $productImages,
+            'deliveryDate' => $deliveryDate,
         ]);
     }
 }

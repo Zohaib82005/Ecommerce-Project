@@ -5,6 +5,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckSeller;
 use App\Http\Middleware\CheckCustomer;
+use App\Http\Middleware\CheckRole;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\CartController;
@@ -15,10 +16,9 @@ use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ImageController;
-
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+use App\Http\Controllers\HomeController; 
+use Illuminate\Support\Facades\Auth;
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/login', function () {
     return Inertia::render('Login');
@@ -34,8 +34,8 @@ Route::post('/submitlog', [UserController::class, 'Login']);
 // Public category routes
 Route::get('/api/categories', [CategoryController::class, 'getAllCategories']);
 
-// seller routes
-Route::middleware([CheckSeller::class])->group(function () {
+// seller routes (Admins can also access these)
+Route::middleware([CheckRole::class . ':Admin,Seller'])->group(function () {
     Route::get('/seller', [UserController::class, 'sellerDashboard']);
     Route::post('/addProduct', [ProductController::class, 'addProduct']);
     Route::get('/seller/editProduct/{id}', [ProductController::class, 'editProduct']);
@@ -48,8 +48,8 @@ Route::middleware([CheckSeller::class])->group(function () {
     Route::post('/product-images/{productId}', [ImageController::class, 'uploadProductImage']);
 });
 
-//admin routes
-Route::middleware([CheckAdmin::class])->group(function () {
+//admin routes (Admin only)
+Route::middleware([CheckRole::class . ':Admin'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index']);
     Route::post('/addcate', [ProductController::class, 'addcate']);
     Route::post('/add-subcategory', [CategoryController::class, 'addSubcategory']);
@@ -61,8 +61,8 @@ Route::middleware([CheckAdmin::class])->group(function () {
 });
 
 
-// customer routes
-Route::middleware([CheckCustomer::class])->group(function () {
+// customer routes (Admins can also access these)
+Route::middleware([CheckRole::class . ':Admin,Customer'])->group(function () {
     Route::get('/dashboard',[UserController::class,'dashboard']);
     Route::post('/cart/add', [CartController::class, 'addToCart']);
     
@@ -97,3 +97,8 @@ Route::get('/super', function () {
     return Inertia::render('SuperAdminDashboard');
 });
 Route::get('/cart/count', [CartController::class, 'getCartCount']);
+
+Route::get('/logout', function () {
+    Auth::logout();
+    return redirect('/');
+});

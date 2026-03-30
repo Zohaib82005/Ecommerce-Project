@@ -252,10 +252,10 @@ const Admin = () => {
 
         {/* Sidebar Footer */}
         <div className="sidebar-footer">
-          <button className="btn btn-outline-danger w-100">
+          <Link className="btn btn-outline-danger w-100" href="/logout">
             <i className="bi bi-box-arrow-right me-2"></i>
             Logout
-          </button>
+          </Link>
         </div>
       </aside>
 

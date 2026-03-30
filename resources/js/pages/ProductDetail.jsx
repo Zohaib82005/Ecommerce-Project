@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePage, Link, useForm } from "@inertiajs/react";
 import Navbar from "../Components/Navbar";
 import Footer from "../components/Footer";
 import FlashMessage from "../components/FlashMessage";
 
 const ProductDetail = () => {
-  const { product } = usePage().props;
+  const { product, productImages, deliveryDate, auth } = usePage().props;
   const cart = useForm({
     product_id: product?.id || null,
     quantity: 1,
@@ -14,29 +14,132 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState("description");
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [productRating, setProductRating] = useState({ average_rating: 0, total_reviews: 0 });
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  
+  const reviewForm = useForm({
+    rating: 5,
+    comment: "",
+  });
+
+  // Build images array from main image and product images
+  const buildImages = () => {
+    const images = [];
+    
+    // Add main product image
+    if (product?.image) {
+      images.push(`/storage/${product.image}`);
+    }
+    
+    // Add additional product images
+    if (productImages && productImages.length > 0) {
+      productImages.forEach((img) => {
+        images.push(`/storage/${img.image}`);
+      });
+    }
+    
+    return images.length > 0 ? images : ["/storage/placeholder.jpg"];
+  };
+
+  // Fetch reviews and rating
+  useEffect(() => {
+    fetchReviews();
+    fetchProductRating();
+  }, [product?.id]);
+
+  const fetchReviews = async () => {
+    setLoadingReviews(true);
+    try {
+      const response = await fetch(`/api/reviews/product/${product?.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const fetchProductRating = async () => {
+    try {
+      const response = await fetch(`/api/reviews/rating/${product?.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProductRating(data);
+      }
+    } catch (error) {
+      console.error('Error fetching product rating:', error);
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!auth.user) {
+      alert('Please login to write a review');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content,
+        },
+        body: JSON.stringify({
+          product_id: product?.id,
+          rating: reviewForm.data.rating,
+          comment: reviewForm.data.comment,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowReviewModal(false);
+        reviewForm.setData({ rating: 5, comment: "" });
+        fetchReviews();
+        fetchProductRating();
+        alert('Review submitted successfully!');
+      } else {
+        alert(data.message || 'Error submitting review');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('Error submitting review');
+    }
+  };
+
+  // Format delivery date
+  const formatDeliveryDate = () => {
+    const date = new Date(deliveryDate);
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
 
   const productData = {
-    name: product?.name || "2024 New Mini Flip Mobile Phone Dual SIM, Small Display, Foldable Cell Phone, Unlocked, Purple",
-    price: product?.price || 7.00,
+    name: product?.name || "Product Name",
+    price: product?.price || 0.00,
+    discount_price: product?.discount_price || null,
     originalPrice: 11.48,
-    rating: 4.3,
-    reviewCount: 192,
+    rating: productRating.average_rating || 4.3,
+    reviewCount: productRating.total_reviews || 192,
     inStock: product?.instock > 0,
     stockCount: product?.instock || 50,
     brand: "Generic",
     seller: "OurShopee",
-    deliveryDate: "Wed, Apr 01",
+    deliveryDate: formatDeliveryDate(),
     discount: 39,
     savings: 5,
-    description: "Experience the convenience of a foldable mobile phone with dual SIM support. Perfect for those who prefer a compact device with essential features.",
+    description: product?.description || "No description available.",
     category: "Mobiles & Tablets",
     subcategory: "Mobile Phones",
-    images: [
-      product?.image ? `/storage/${product.image}` : "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd",
-      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
-      "https://images.unsplash.com/photo-1512054502232-120bbc5a0e32",
-      "https://images.unsplash.com/photo-1565849904461-04a58ad377e0",
-    ],
+    images: buildImages(),
     coupon: {
       code: "WLC10",
       discount: 2,
@@ -163,18 +266,18 @@ const ProductDetail = () => {
 
                 {/* Price Section */}
                 <div className="flex items-baseline gap-3 mb-2">
-                  <span className="text-3xl font-bold text-gray-900">OMR {productData.price}</span>
+                  <span className="text-3xl font-bold text-gray-900">PKR {productData.price}</span>
                   <span className="bg-green-100 text-green-800 text-sm font-medium px-2 py-1 rounded-full flex items-center gap-1">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    You saved OMR {productData.savings}
+                    You saved PKR {productData.savings}
                   </span>
                 </div>
 
                 {/* Original Price and Discount */}
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-gray-400 line-through">OMR {productData.originalPrice.toFixed(2)}</span>
+                  <span className="text-gray-400 line-through">PKR {productData.originalPrice.toFixed(2)}</span>
                   <span className="text-green-600 font-semibold">{productData.discount}% OFF</span>
                   <span className="text-gray-400 text-sm">(Inc. of VAT)</span>
                 </div>
@@ -197,8 +300,8 @@ const ProductDetail = () => {
                         <span className="text-orange-600 font-bold text-xs transform -rotate-90">DISCOUNT</span>
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">Flat OMR {productData.coupon.discount} OFF*</div>
-                        <div className="text-sm text-gray-600">{productData.coupon.code} <span className="text-gray-400">(Min. Cart value: OMR {productData.coupon.minCartValue})</span></div>
+                        <div className="font-semibold text-gray-900">Flat PKR {productData.coupon.discount} OFF*</div>
+                        <div className="text-sm text-gray-600">{productData.coupon.code} <span className="text-gray-400">(Min. Cart value: PKR {productData.coupon.minCartValue})</span></div>
                       </div>
                     </div>
                     <button className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-50">
@@ -341,13 +444,7 @@ const ProductDetail = () => {
               {activeTab === "description" && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Description</h3>
-                  <p className="text-gray-600 leading-relaxed mb-4">{productData.description}</p>
-                  <p className="text-gray-600 leading-relaxed">
-                    This compact flip phone combines classic design with modern functionality. 
-                    Featuring dual SIM support, it's perfect for separating work and personal calls. 
-                    The foldable design protects the screen and keypad when not in use, making it 
-                    ideal for travel and daily carry.
-                  </p>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{productData.description}</p>
                 </div>
               )}
 
@@ -379,7 +476,7 @@ const ProductDetail = () => {
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
-                      <div className="text-4xl font-bold text-gray-900">{productData.rating}</div>
+                      <div className="text-4xl font-bold text-gray-900">{productData.rating.toFixed(1)}</div>
                       <div>
                         <div className="flex text-yellow-400 mb-1">
                           {[...Array(5)].map((_, i) => (
@@ -391,42 +488,170 @@ const ProductDetail = () => {
                         <div className="text-sm text-gray-600">Based on {productData.reviewCount} reviews</div>
                       </div>
                     </div>
-                    <button className="bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-800 transition-colors">
+                    <button 
+                      onClick={() => setShowReviewModal(true)}
+                      className="bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-800 transition-colors"
+                    >
                       Write a Review
                     </button>
                   </div>
 
-                  <div className="space-y-6">
-                    {[1, 2, 3].map((review) => (
-                      <div key={review} className="border-b border-gray-200 pb-6">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-semibold text-gray-600">
-                              U{review}
+                  {loadingReviews ? (
+                    <div className="text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                      <p className="text-gray-600 mt-2">Loading reviews...</p>
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    <div className="space-y-6">
+                      {reviews.map((review) => (
+                        <div key={review.id} className="border-b border-gray-200 pb-6">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center font-semibold text-indigo-600">
+                                {review.user.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{review.user.name}</div>
+                                <div className="text-sm text-gray-500">
+                                  {new Date(review.created_at).toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-medium text-gray-900">User {review}</div>
-                              <div className="text-sm text-gray-500">{review} week{review > 1 ? 's' : ''} ago</div>
+                            <div className="flex text-yellow-400">
+                              {[...Array(5)].map((_, i) => (
+                                <svg key={i} className="w-4 h-4" fill={i < review.rating ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
+                              ))}
                             </div>
                           </div>
-                          <div className="flex text-yellow-400">
-                            {[...Array(5)].map((_, i) => (
-                              <svg key={i} className="w-4 h-4" fill={i < 4 ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                              </svg>
-                            ))}
-                          </div>
+                          <p className="text-gray-600">{review.comment}</p>
                         </div>
-                        <p className="text-gray-600">Great product! Very compact and convenient for daily use. The flip design is nostalgic and practical.</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-600">No reviews yet. Be the first to review this product!</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Write a Review</h2>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleReviewSubmit} className="p-6 space-y-4">
+              {/* Product Info */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="flex gap-3">
+                  <img 
+                    src={productData.images[0]} 
+                    alt={productData.name}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{productData.name}</h3>
+                    <p className="text-xs text-gray-600 mt-1">Review this product</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rating Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Your Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => reviewForm.setData('rating', star)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <svg
+                        className={`w-8 h-8 ${
+                          star <= reviewForm.data.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'
+                        }`}
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {reviewForm.data.rating === 1 && 'Poor'}
+                  {reviewForm.data.rating === 2 && 'Fair'}
+                  {reviewForm.data.rating === 3 && 'Good'}
+                  {reviewForm.data.rating === 4 && 'Very Good'}
+                  {reviewForm.data.rating === 5 && 'Excellent'}
+                </p>
+              </div>
+
+              {/* Comment Section */}
+              <div>
+                <label htmlFor="comment" className="block text-sm font-medium text-gray-900 mb-2">
+                  Your Review
+                </label>
+                <textarea
+                  id="comment"
+                  value={reviewForm.data.comment}
+                  onChange={(e) => reviewForm.setData('comment', e.target.value)}
+                  placeholder="Share your experience with this product..."
+                  rows="4"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                  required
+                  minLength="3"
+                  maxLength="1000"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {reviewForm.data.comment.length}/1000 characters
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!reviewForm.data.comment.trim() || reviewForm.processing}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {reviewForm.processing ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </>

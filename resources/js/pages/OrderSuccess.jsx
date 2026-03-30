@@ -1,6 +1,8 @@
 import React from "react";
 import "../css/ordersuccess.css";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
+import Navbar from "../Components/Navbar";
+import Footer from "../components/Footer";
 
 const OrderSuccess = () => {
   return (

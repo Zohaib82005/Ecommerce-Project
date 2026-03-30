@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
                 if (Auth::check()) {
                     return Cart::where('user_id', Auth::id())
                         ->where('status', 'active')
-                        ->sum('quantity');
+                        ->count();
                 }
                 return 0;
             },

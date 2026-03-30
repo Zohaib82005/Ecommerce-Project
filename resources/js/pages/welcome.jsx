@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from '@inertiajs/react';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 // ─── Scroll Animation Hook ───────────────────────────────────────────────────
@@ -121,64 +122,76 @@ const ProductCard = ({ product, delay = 0 }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div
-      ref={ref}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="bg-white rounded-xl cursor-pointer relative overflow-hidden"
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.95)',
-        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
-        boxShadow: hovered ? '0 20px 40px rgba(109,40,217,0.15)' : '0 2px 8px rgba(0,0,0,0.08)',
-      }}
-    >
-      {/* Discount badge */}
-      {product.discount && (
-        <div className="absolute top-2 left-2 z-10 text-white text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: '#ef4444', fontSize: '10px' }}>
-          {product.discount} OFF
-        </div>
-      )}
-      {/* Wishlist */}
-      <button
-        className="absolute top-2 right-2 z-10 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center transition-all"
-        style={{ opacity: hovered ? 1 : 0, transform: hovered ? 'scale(1)' : 'scale(0.8)' }}
-      >
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-        </svg>
-      </button>
-
-      {/* Image placeholder */}
+    <Link className='text-decoration-none' href={`/product/details/${product.id}`}>
       <div
-        className="bg-gray-50 flex items-center justify-center transition-transform duration-300"
-        style={{ height: '140px', transform: hovered ? 'scale(1.05)' : 'scale(1)' }}
+        ref={ref}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="bg-white rounded-xl cursor-pointer relative overflow-hidden"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.95)',
+          transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
+          boxShadow: hovered ? '0 20px 40px rgba(109,40,217,0.15)' : '0 2px 8px rgba(0,0,0,0.08)',
+        }}
       >
-        <span className="text-5xl opacity-30">📷</span>
-      </div>
-
-      <div className="p-3">
-        <p className="text-gray-800 text-xs font-medium mb-1 line-clamp-2" style={{ minHeight: '32px', fontSize: '11px' }}>{product.name}</p>
-        <div className="flex flex-wrap items-center gap-1 mb-1">
-          <div className="flex text-yellow-400 text-xs">{'★★★★★'}</div>
-          <span className="text-gray-400 text-xs">(4.2)</span>
-        </div>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="font-bold text-xs" style={{ color: '#059669' }}>{product.price}</span>
-          <span className="text-gray-400 line-through text-xs">{product.originalPrice}</span>
-        </div>
-        <p className="text-xs mb-2" style={{ color: '#7c3aed' }}>You saved ₨ {Math.floor(Math.random() * 200) + 50}</p>
+        {/* Discount badge */}
+        {product.discount && (
+          <div className="absolute top-2 left-2 z-10 text-white text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: '#ef4444', fontSize: '10px' }}>
+            {product.discount} OFF
+          </div>
+        )}
+        {/* Wishlist */}
         <button
-          className="w-full py-1.5 rounded-lg text-white text-xs font-semibold transition-all"
-          style={{
-            background: hovered ? 'linear-gradient(135deg, #7c3aed, #4c1d95)' : 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-            transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
-          }}
+          className="absolute top-2 right-2 z-10 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center transition-all"
+          style={{ opacity: hovered ? 1 : 0, transform: hovered ? 'scale(1)' : 'scale(0.8)' }}
+          onClick={(e) => e.preventDefault()}
         >
-          Add to Cart
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+          </svg>
         </button>
+
+        {/* Image placeholder */}
+        <div
+          className="bg-gray-50 flex items-center justify-center transition-transform duration-300"
+          style={{ height: '140px', transform: hovered ? 'scale(1.05)' : 'scale(1)' }}
+        >
+          {product.image ? (
+            <img 
+              src={`/storage/${product.image}`} 
+              alt={product.name} 
+              className="w-full h-full"
+            />
+          ) : (
+            <span className="text-5xl opacity-30">📷</span>
+          )}
+        </div>
+
+        <div className="p-3">
+          <p className="text-gray-800 text-xs font-medium mb-1 line-clamp-2" style={{ minHeight: '32px', fontSize: '11px' }}>{product.name}</p>
+          <div className="flex flex-wrap items-center gap-1 mb-1">
+            <div className="flex text-yellow-400 text-xs">{'★★★★★'}</div>
+            <span className="text-gray-400 text-xs">(4.2)</span>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-bold text-xs" style={{ color: '#059669' }}>{product.price}</span>
+            <span className="text-gray-400 line-through text-xs">{product.originalPrice}</span>
+          </div>
+          <p className="text-xs mb-2" style={{ color: '#7c3aed' }}>You saved </p>
+          <button
+            className="w-full py-1.5 rounded-lg text-white text-xs font-semibold transition-all"
+            style={{
+              background: hovered ? 'linear-gradient(135deg, #7c3aed, #4c1d95)' : 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+              transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
+            }}
+            onClick={(e) => e.preventDefault()}
+          >
+            Add to Cart
+          </button>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
@@ -211,8 +224,41 @@ const ProductSection = ({ title, products, sideColor = '#7c3aed', sideEmoji = '�
 };
 
 // ─── Main Welcome Component ───────────────────────────────────────────────────
-const Welcome = () => {
-  // const [currentSlide, setCurrentSlide] = useState(0);
+const Welcome = ({ categories: dbCategories = [], topPicks: dbTopPicks = [], dealsOfTheDay: dbDealsOfTheDay = [] }) => {
+  // Prepare categories for display - use database categories or fallback to mock
+  const displayCategories = dbCategories.length > 0 
+    ? dbCategories.map((cat, idx) => ({ 
+        id: cat.id, 
+        name: cat.name, 
+        icon: categories[idx]?.icon || '🏷️', 
+        color: categories[idx]?.color || '#7c3aed',
+        image: cat.image 
+      })) 
+    : categories;
+
+  // Prepare products - use database or fallback to mock
+  const displayTopPicks = dbTopPicks.length > 0 
+    ? dbTopPicks.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: `PKR ${p.price || 0}`,
+        originalPrice: p.discount_price ? `PKR ${p.discount_price}` : `PKR ${(p.price * 1.2).toFixed(0)}`,
+        discount: p.discount_price ? `${Math.round((1 - p.discount_price / p.price) * 100)}%` : '0%',
+        image: p.image,
+      }))
+    : topPicks;
+
+  const displayDealsOfTheDay = dbDealsOfTheDay.length > 0
+    ? dbDealsOfTheDay.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: `PKR ${p.price || 0}`,
+        originalPrice: `PKR ${(p.price * 1.2).toFixed(0)}`,
+        discount: '20%',
+        image: p.image,
+      }))
+    : dealsOfTheDay;
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [categoryScrollPosition, setCategoryScrollPosition] = useState(0);
   const categoryScrollRef = useRef(null);
@@ -229,7 +275,7 @@ const Welcome = () => {
     let animationFrameId;
     let scrollPos = 0;
     const itemWidth = 120; // approximate width of each category item (w-20 + gap)
-    const totalWidth = categories.length * itemWidth; // one set of categories
+    const totalWidth = displayCategories.length * itemWidth; // one set of categories
     
     const animate = () => {
       scrollPos += 1;
@@ -294,7 +340,7 @@ const Welcome = () => {
                 className="flex gap-3"
                 style={{ transform: `translateX(-${categoryScrollPosition}px)` }}
               >
-                {[...categories, ...categories].map((category, index) => (
+                {[...displayCategories, ...displayCategories].map((category, index) => (
                   <div 
                     key={`${category.id}-${index}`}
                     className="flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer group min-w-[70px]"
@@ -302,7 +348,7 @@ const Welcome = () => {
                     <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden group-hover:scale-110 transition-transform duration-300 shadow-md flex items-center justify-center text-xl"
                       style={{ background: category.color + '22', border: `2px solid ${category.color}44` }}
                     >
-                      {category.icon}
+                      <img src={`/storage/${category.image}`} alt={category.name} />
                     </div>
                     <span className="text-xs text-center text-gray-700 font-medium line-clamp-2 max-w-[70px]">
                       {category.name}
@@ -413,19 +459,34 @@ const Welcome = () => {
               <span className="text-xs" style={{ color: '#7c3aed', cursor: 'pointer' }}>View All ›</span>
             </div>
             <div className="space-y-3">
-              {topPicks.slice(0, 2).map((p, i) => (
-                <div key={i} className="flex gap-3 p-2 rounded-xl hover:bg-purple-50 transition cursor-pointer">
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-3xl opacity-30">📷</div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-700 line-clamp-2 font-medium">{p.name}</p>
-                    <div className="flex text-yellow-400 text-xs mt-0.5">★★★★☆</div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
-                      <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
+              {displayTopPicks.slice(0, 2).map((p, i) => (
+                <Link key={i} className='text-decoration-none' href={`/product/details/${p.id}`}>
+                  <div className="flex gap-3 p-2 rounded-xl hover:bg-purple-50 transition cursor-pointer">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-3xl 
+                     overflow-hidden">
+                      {p.image ? (
+                        <img 
+                          src={`/storage/${p.image}`} 
+                          alt={p.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>📷</span>
+                      )}
                     </div>
-                    <p className="text-xs font-semibold mt-0.5" style={{ color: '#7c3aed' }}>You saved ₨ {Math.floor(Math.random()*150)+50}</p>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-700 line-clamp-2 font-medium">{p.name}</p>
+                      <div className="flex text-yellow-400 text-xs mt-0.5">★★★★☆</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
+                        <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
+                      </div>
+                      <p className="text-xs font-semibold mt-0.5" style={{ color: '#7c3aed' }}>You saved ₨ 
+                        20
+                      </p>
+                    </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -475,10 +536,10 @@ const Welcome = () => {
         </AnimatedSection>
 
         {/* ── Top Picks ── */}
-        <ProductSection title="Top Picks" products={topPicks} sideColor="linear-gradient(135deg, #7c3aed, #4c1d95)" sideEmoji="🏆" sideLabel="TOP PICKS" />
+        <ProductSection title="Top Picks" products={displayTopPicks} sideColor="linear-gradient(135deg, #7c3aed, #4c1d95)" sideEmoji="🏆" sideLabel="TOP PICKS" />
 
         {/* ── Deals of the Day ── */}
-        <ProductSection title="Deals Of The Day" products={dealsOfTheDay} sideColor="linear-gradient(135deg, #dc2626, #991b1b)" sideEmoji="⏰" sideLabel="UP TO 70% OFF" />
+        <ProductSection title="Deals Of The Day" products={displayDealsOfTheDay} sideColor="linear-gradient(135deg, #dc2626, #991b1b)" sideEmoji="⏰" sideLabel="UP TO 70% OFF" />
 
         {/* ── Deals You Might Like ── */}
         <AnimatedSection className="mb-12">
@@ -569,15 +630,27 @@ const Welcome = () => {
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
               {brandOfWeek.map((p, i) => (
-                <AnimatedSection key={p.id} delay={i * 100} className="bg-white rounded-2xl p-3 hover:scale-105 transition-transform cursor-pointer">
-                  <div className="bg-gray-50 rounded-xl h-36 flex items-center justify-center mb-3 text-5xl opacity-30">📷</div>
-                  <p className="text-gray-800 text-xs font-semibold line-clamp-2 mb-2">{p.name}</p>
-                  <div className="flex items-center gap-1 mb-2">
-                    <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
-                    <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
-                  </div>
-                  <button className="w-full py-2 rounded-xl text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #7c3aed, #4c1d95)' }}>Add to Cart</button>
-                </AnimatedSection>
+                <Link key={p.id} className='text-decoration-none' href={`/products/${p.id}`}>
+                  <AnimatedSection delay={i * 100} className="bg-white rounded-2xl p-3 hover:scale-105 transition-transform cursor-pointer">
+                    <div className="bg-gray-50 rounded-xl h-36 flex items-center justify-center mb-3 text-5xl opacity-30 overflow-hidden">
+                      {p.image ? (
+                        <img 
+                          src={`/storage/${p.image}`} 
+                          alt={p.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>📷</span>
+                      )}
+                    </div>
+                    <p className="text-gray-800 text-xs font-semibold line-clamp-2 mb-2">{p.name}</p>
+                    <div className="flex items-center gap-1 mb-2">
+                      <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
+                      <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
+                    </div>
+                    <button className="w-full py-2 rounded-xl text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #7c3aed, #4c1d95)' }} onClick={(e) => e.preventDefault()}>Add to Cart</button>
+                  </AnimatedSection>
+                </Link>
               ))}
             </div>
           </div>

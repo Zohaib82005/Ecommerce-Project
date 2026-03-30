@@ -63,6 +63,15 @@ const Dashboard = () => {
     alert("Settings saved successfully!");
   };
 
+  // Read URL query parameter to set active tab
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabParam = searchParams.get("tab");
+    if (tabParam && ["profile", "addresses", "wishlist", "orders", "settings", "overview"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, []);
+
   // Fetch addresses on mount
   useEffect(() => {
     const fetchAddresses = async () => {

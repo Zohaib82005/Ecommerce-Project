@@ -15,8 +15,12 @@ class CheckAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
+        try{
         if(Auth::user()->role == 'Admin'){
             return $next($request);
+        }
+        }catch(\Exception $e){
+            return redirect()->back();
         }
         return redirect()->back();
     }

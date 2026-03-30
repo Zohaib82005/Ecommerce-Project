@@ -9,10 +9,16 @@ const Product = () => {
   const props = usePage().props;
   const allProducts = props.products || [];
   
+  // Calculate maximum price from products
+  const maxProductPrice = useMemo(() => {
+    if (allProducts.length === 0) return 1000;
+    return Math.ceil(Math.max(...allProducts.map(p => p.price || 0)) / 100) * 100;
+  }, [allProducts]);
+  
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [priceRange, setPriceRange] = useState([0, maxProductPrice]);
   const [minRating, setMinRating] = useState(0);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,6 +44,11 @@ const Product = () => {
       setSearchQuery(decodeURIComponent(searchParam));
     }
   }, []);
+
+  // Update priceRange when maxProductPrice changes
+  useEffect(() => {
+    setPriceRange([0, maxProductPrice]);
+  }, [maxProductPrice]);
 
   // Get unique categories and brands
   const categories = [...new Set(props.categories?.map(c => c.category) || [])];
@@ -131,7 +142,7 @@ const Product = () => {
   const clearAllFilters = () => {
     setSelectedCategories([]);
     setSelectedBrands([]);
-    setPriceRange([0, 1000]);
+    setPriceRange([0, maxProductPrice]);
     setMinRating(0);
     setShowInStockOnly(false);
     setSearchQuery("");
@@ -144,7 +155,7 @@ const Product = () => {
 
   // Count active filters
   const activeFiltersCount = selectedCategories.length + selectedBrands.length +
-    (priceRange[0] !== 0 || priceRange[1] !== 1000 ? 1 : 0) +
+    (priceRange[0] !== 0 || priceRange[1] !== maxProductPrice ? 1 : 0) +
     (minRating > 0 ? 1 : 0) +
     (showInStockOnly ? 1 : 0);
 
@@ -301,7 +312,7 @@ const Product = () => {
                           <input
                             type="number"
                             value={priceRange[1]}
-                            onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 1000])}
+                            onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || maxProductPrice])}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                             min={priceRange[0]}
                           />
@@ -313,14 +324,14 @@ const Product = () => {
                         <div 
                           className="absolute h-full bg-indigo-600 rounded-full"
                           style={{
-                            left: `${(priceRange[0] / 1000) * 100}%`,
-                            right: `${100 - (priceRange[1] / 1000) * 100}%`
+                            left: `${(priceRange[0] / maxProductPrice) * 100}%`,
+                            right: `${100 - (priceRange[1] / maxProductPrice) * 100}%`
                           }}
                         />
                         <input
                           type="range"
                           min="0"
-                          max="1000"
+                          max={maxProductPrice}
                           value={priceRange[0]}
                           onChange={(e) => {
                             const val = parseInt(e.target.value);
@@ -334,7 +345,7 @@ const Product = () => {
                         <input
                           type="range"
                           min="0"
-                          max="1000"
+                          max={maxProductPrice}
                           value={priceRange[1]}
                           onChange={(e) => {
                             const val = parseInt(e.target.value);
@@ -533,7 +544,7 @@ const Product = () => {
                           {/* Price */}
                           <div className="flex items-baseline gap-2 mb-1">
                             <span className="text-lg font-bold text-gray-900">
-                              OMR {currentPrice}
+                              PKR {currentPrice}
                             </span>
                             {discountPercent > 0 && (
                               <span className="text-xs font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
@@ -545,7 +556,7 @@ const Product = () => {
                           {/* Savings */}
                           {savings > 0 && (
                             <div className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded mb-3">
-                              You saved OMR {savings.toFixed(0)}
+                              You saved PKR {savings.toFixed(0)}
                             </div>
                           )}
 

@@ -41,7 +41,7 @@ class UserController extends Controller
 
         ]);
 
-        return redirect()->back()->with('success', 'Registration successful! You can now log in.');
+        return redirect('/');
 
     }
 

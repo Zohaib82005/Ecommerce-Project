@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Subcategory;
 use Illuminate\Http\Request;
-use App\Models\Image;
 use App\Models\Sub_subcategory;
 
 class CategoryController extends Controller
@@ -35,26 +34,23 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|string',
             'category_id' => 'required|exists:categories,id',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
         try {
-            $subcategory = Subcategory::create([
+            $data = [
                 'name' => $request->name,
                 'category_id' => $request->category_id,
-            ]);
+            ];
 
             // Handle image upload if provided
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
                 $imagePath = $image->store('subcategories', 'public');
-                
-                Image::create([
-                    'url' => $imagePath,
-                    'category_id' => null,
-                    'subcategory_id' => $subcategory->id,
-                    'sub_subcategory_id' => null,
-                ]);
+                $data['image'] = $imagePath;
             }
+
+            $subcategory = Subcategory::create($data);
             return redirect()->back()->with('success', 'Sub-category added successfully');
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -66,27 +62,23 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|string',
             'subcategory_id' => 'required|exists:subcategories,id',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
         try {
-            $subSubcategory = Sub_subcategory::create([
+            $data = [
                 'name' => $request->name,
                 'subcategory_id' => $request->subcategory_id,
-            ]);
+            ];
 
             // Handle image upload if provided
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
                 $imagePath = $image->store('sub-subcategories', 'public');
-                
-                Image::create([
-                    'url' => $imagePath,
-                    'category_id' => null,
-                    'subcategory_id' => null,
-                    'sub_subcategory_id' => $subSubcategory->id,
-                ]);
+                $data['image'] = $imagePath;
             }
 
+            $subSubcategory = Sub_subcategory::create($data);
             return redirect()->back()->with('success', 'Sub-sub-category added successfully');
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

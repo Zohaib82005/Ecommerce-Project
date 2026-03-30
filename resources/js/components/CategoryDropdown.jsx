@@ -43,6 +43,11 @@ const CategoryDropdown = () => {
   const activeTab = categories.find(cat => cat.id === activeCategory);
 
   const getCategoryImage = (subcategory) => {
+    // Check for direct image field on subcategory
+    if (subcategory.image) {
+      return subcategory.image;
+    }
+    // Fallback to images array
     if (subcategory.images && subcategory.images.length > 0) {
       return subcategory.images[0].url;
     }
@@ -158,7 +163,7 @@ const CategoryDropdown = () => {
                                 <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden group-hover:bg-purple-50 transition-colors">
                                   {imgSrc ? (
                                     <img
-                                      src={imgSrc}
+                                      src={`/storage/${imgSrc}`}
                                       alt={subcategory.name}
                                       className="w-full h-full object-cover"
                                     />

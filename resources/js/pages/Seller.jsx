@@ -17,6 +17,7 @@ const Seller = () => {
   const product = useForm({
     name: '',
     price: '',
+    discount_price: '',
     instock: '',
     desc: '',
     image: null,
@@ -542,6 +543,22 @@ const Seller = () => {
                           required
                         />
                       </div>
+                    </div>
+
+                    <div className="col-md-6">
+                      <label className="form-label">Discounted Price</label>
+                      <div className="input-with-icon">
+                        <i className="bi bi-tag-fill"></i>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="form-control"
+                          placeholder="0.00"
+                          value={product.data.discount_price}
+                          onChange={(e) => product.setData('discount_price', e.target.value)}
+                        />
+                      </div>
+                      <small className="text-muted">Leave empty if no discount</small>
                     </div>
 
                     <div className="col-md-6">
