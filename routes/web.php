@@ -62,7 +62,7 @@ Route::middleware([CheckRole::class . ':Admin'])->group(function () {
 
 
 // customer routes (Admins can also access these)
-Route::middleware([CheckRole::class . ':Admin,Customer'])->group(function () {
+Route::middleware([CheckRole::class . ':Admin,Customer,Seller'])->group(function () {
     Route::get('/dashboard',[UserController::class,'dashboard']);
     Route::post('/cart/add', [CartController::class, 'addToCart']);
     
@@ -102,3 +102,7 @@ Route::get('/logout', function () {
     Auth::logout();
     return redirect('/');
 });
+
+Route::get('/verify/otp', function () {
+    return Inertia::render('otp');
+})->name('verify-otp');

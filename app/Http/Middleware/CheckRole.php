@@ -20,10 +20,13 @@ class CheckRole
         try {
             $allowedRoles = array_map('trim', explode(',', $roles));
             
-            if (Auth::check() && in_array(Auth::user()->role, $allowedRoles)) {
+            if (Auth::check() && (Auth::user()->role == 'Admin' || Auth::user()->role == 'Seller')) {
                 return $next($request);
             }
+
+            
         } catch (\Exception $e) {
+            return "Facing Issues". $e->getMessage();
             return redirect('/login');
         }
 

@@ -21,7 +21,7 @@ class HomeController extends Controller
         // Fetch products grouped by category for various sections
         $topPicks = Product::where('status', 'Approved')
             ->orderBy('created_at', 'desc')
-            ->limit(12)
+            ->limit(6)
             ->get();
         
         $dealsOfTheDay = Product::where('status', 'Approved')

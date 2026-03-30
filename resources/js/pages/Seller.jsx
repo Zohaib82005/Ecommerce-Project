@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../css/seller.css";
-import { useForm, usePage, Link } from "@inertiajs/react";
+import { useForm, usePage, Link, router} from "@inertiajs/react";
 import FlashMessage from '../components/FlashMessage.jsx';
 
 const Seller = () => {
@@ -84,16 +84,38 @@ const Seller = () => {
     }
   };
 
-  function addproductsubmit(e) {
+ function addproductsubmit(e) {
     e.preventDefault();
-    
-    product.post('/addProduct', {
-      onSuccess: () => {
-        product.reset();
-        setActiveTab("products");
-      }
+
+    const formData = new FormData();
+    formData.append('name', product.data.name);
+    formData.append('price', product.data.price);
+    formData.append('instock', product.data.instock);
+    formData.append('desc', product.data.desc);
+    formData.append('category_id', product.data.category_id);
+    formData.append('subcategory_id', product.data.subcategory_id);
+
+    // Only append if not empty
+    if (product.data.discount_price) 
+        formData.append('discount_price', product.data.discount_price);
+    if (product.data.sub_subcategory_id) 
+        formData.append('sub_subcategory_id', product.data.sub_subcategory_id);
+
+    // Only append files if they are actual File objects
+    if (product.data.image instanceof File) 
+        formData.append('image', product.data.image);
+    if (product.data.image1 instanceof File) 
+        formData.append('image1', product.data.image1);
+    if (product.data.image2 instanceof File) 
+        formData.append('image2', product.data.image2);
+    if (product.data.image3 instanceof File) 
+        formData.append('image3', product.data.image3);
+
+    router.post('/addProduct', formData, {
+        forceFormData: true,
+        onError: (errors) => console.log(errors),
     });
-  }
+}
 
   function EditProduct(id) {
     return `/seller/editProduct/${id}`;
@@ -157,7 +179,7 @@ const Seller = () => {
   };
   return (
     <div className="seller-dashboard">
-      <FlashMessage />
+      <FlashMessage errors={product.errors}/>
       
       {/* Sidebar Overlay for Mobile */}
       {sidebarOpen && (
@@ -515,7 +537,7 @@ const Seller = () => {
             <div className="tab-content-wrapper">
               
               <div className="add-product-card">
-                <form onSubmit={addproductsubmit} className="product-form">
+                <form onSubmit={addproductsubmit} className="product-form" encType="multipart/form-data">
                   <div className="row g-4">
                     <div className="col-md-6">
                       <label className="form-label">Product Name *</label>

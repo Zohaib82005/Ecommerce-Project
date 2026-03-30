@@ -57,6 +57,7 @@ class UserController extends Controller
         $cred = Auth::attempt(['email' => $req->email, 'password' => $req->password]);
         if ($cred) {
             if (Auth::user()->role == 'Seller') {
+               
                 return redirect('/seller');
             } elseif (Auth::user()->role == 'Admin') {
                 return redirect('/admin');

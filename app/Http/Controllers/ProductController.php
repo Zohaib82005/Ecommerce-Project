@@ -8,8 +8,8 @@ use App\Models\Productimage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-
 use Inertia\Inertia;
+
 class ProductController extends Controller
 {
     public function addcate(Request $req)
@@ -37,10 +37,17 @@ class ProductController extends Controller
 
     public function addProduct(Request $req)
     {
+
+        // dd([
+        //     'files' => $req->allFiles(),
+        //     'inputs' => $req->except(['image','image1','image2','image3']),
+        //     'content_type' => $req->header('Content-Type'),
+        // ]);
+
         $data = $req->validate([
             'name' => 'required',
-            'price' => 'required',
-            'discount_price' => 'nullable|numeric|lt:price',
+            'price' => 'required|numeric',
+            'discount_price' => 'nullable|numeric|lt:price', // ← this is failing because 34 is not less than 34
             'instock' => 'required',
             'desc' => 'required',
             'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
@@ -51,7 +58,7 @@ class ProductController extends Controller
             'image2' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'image3' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
-
+        // dd($data);
         // Store main image
         if ($req->hasFile('image')) {
             $file = $req->file('image');
@@ -76,12 +83,12 @@ class ProductController extends Controller
 
         // Handle optional extra images - save to productimages table
         $imageFields = ['image1', 'image2', 'image3'];
-        
+
         foreach ($imageFields as $field) {
             if ($req->hasFile($field)) {
                 $file = $req->file($field);
                 $path = $file->store('images', 'public');
-                
+
                 // Create product image record with proper product_id
                 Productimage::create([
                     'product_id' => $product->id,
@@ -99,6 +106,7 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
         // dd($product);
         $categories = Category::all();
+
         return Inertia::render('EditProduct', [
             'product' => $product,
             'categories' => $categories,
@@ -120,18 +128,17 @@ class ProductController extends Controller
 
     public function products()
     {
-        
-            $products = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
-                ->select('products.*', 'categories.category as category')
-                ->where('products.status', 'Approved')
-                ->get();
-                // ->paginate(5);
-            $categories = Category::all();
-            // dd($products);
-            // dd($products);
-       
-            // return "We are facing some issues. Please try again later.";
-        
+
+        $products = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->select('products.*', 'categories.category as category')
+            ->where('products.status', 'Approved')
+            ->get();
+        // ->paginate(5);
+        $categories = Category::all();
+        // dd($products);
+        // dd($products);
+
+        // return "We are facing some issues. Please try again later.";
 
         return Inertia::render('Product',
             [
@@ -141,13 +148,14 @@ class ProductController extends Controller
         );
     }
 
-    public function productDetails($id){
+    public function productDetails($id)
+    {
         $product = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->select('products.*', 'categories.category as category')
             ->where('products.id', $id)
             ->first();
 
-        if (!$product) {
+        if (! $product) {
             return redirect()->back()->with('error', 'Product not found!');
         }
 
