@@ -179,16 +179,19 @@ const ProductCard = ({ product, delay = 0 }) => {
             <span className="text-gray-400 line-through text-xs">{product.originalPrice}</span>
           </div>
           <p className="text-xs mb-2" style={{ color: '#7c3aed' }}>You saved </p>
-          <button
+          <Link href={`/product/details/${product.id}`} className="text-decoration-none">
+           <button
             className="w-full py-1.5 rounded-lg text-white text-xs font-semibold transition-all"
             style={{
               background: hovered ? 'linear-gradient(135deg, #7c3aed, #4c1d95)' : 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
               transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
             }}
-            onClick={(e) => e.preventDefault()}
+            
           >
-            Add to Cart
+            View Details
           </button>
+          </Link>
+          
         </div>
       </div>
     </Link>
@@ -648,6 +651,7 @@ const Welcome = ({ categories: dbCategories = [], topPicks: dbTopPicks = [], dea
                       <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
                       <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
                     </div>
+                    <button className="w-full py-2 rounded-xl text-white text-xs font-bold mb-2" style={{ background: '#10b981' }} onClick={(e) => e.preventDefault()}>View Details</button>
                     <button className="w-full py-2 rounded-xl text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #7c3aed, #4c1d95)' }} onClick={(e) => e.preventDefault()}>Add to Cart</button>
                   </AnimatedSection>
                 </Link>
