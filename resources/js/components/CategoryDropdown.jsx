@@ -62,7 +62,7 @@ const CategoryDropdown = () => {
           setIsOpen(!isOpen);
           if (isOpen) setActiveSubcategory(null);
         }}
-        className="flex items-center gap-2 px-4  rounded-lg bg-gradient-to-r from-indigo-900 to-purple-800 hover:from-indigo-800 hover:to-purple-700 transition-all duration-200 text-white font-semibold shadow text-sm"
+        className="flex items-center gap-2 px-4  rounded-lg bg-indigo-750 transition-all duration-200 text-white font-semibold  text-sm"
       >
         {/* Grid icon */}
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

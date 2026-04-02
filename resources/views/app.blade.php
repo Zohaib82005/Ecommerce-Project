@@ -20,7 +20,7 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
         
-        <link rel="shortcut icon" href="{{ asset('download.jfif') }}" type="image/x-icon">
+        <link rel="shortcut icon" href="{{ asset('logo.png') }}" type="image/x-icon">
         {{-- <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml"> --}}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">

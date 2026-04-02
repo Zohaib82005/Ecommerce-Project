@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../css/seller.css";
 import { useForm, usePage, Link, router} from "@inertiajs/react";
 import FlashMessage from '../components/FlashMessage.jsx';
-
+import LoadingScreen from "../components/LoadingScreen.jsx";
 const Seller = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -133,7 +133,117 @@ const Seller = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
- 
+  // States for deals management
+  const [deals, setDeals] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [dealSearch, setDealSearch] = useState("");
+  const [discountType, setDiscountType] = useState("percentage");
+
+  const dealForm = useForm({
+    deal_name: '',
+    discount_type: 'percentage',
+    discount_value: '',
+    start_date: '',
+    end_date: '',
+    products: []
+  });
+
+  // Handle product checkbox in deals
+  const handleProductCheckbox = (productId) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  // Handle deal form submit
+  const handleDealSubmit = (e) => {
+    e.preventDefault();
+    
+    if (selectedProducts.length === 0) {
+      alert('Please select at least one product');
+      return;
+    }
+
+    if (!dealForm.data.deal_name) {
+      alert('Please enter a deal name');
+      return;
+    }
+
+    if (!dealForm.data.discount_value) {
+      alert('Please enter a discount value');
+      return;
+    }
+
+    if (!dealForm.data.start_date) {
+      alert('Please select a start date');
+      return;
+    }
+
+    if (!dealForm.data.end_date) {
+      alert('Please select an end date');
+      return;
+    }
+
+    // Create complete form data with products
+    const completeFormData = {
+      deal_name: dealForm.data.deal_name,
+      discount_type: dealForm.data.discount_type,
+      discount_value: dealForm.data.discount_value,
+      start_date: dealForm.data.start_date,
+      end_date: dealForm.data.end_date,
+      products: selectedProducts
+    };
+
+    // Use router.post with the complete data
+    router.post('/seller/deals/store', completeFormData, {
+      onSuccess: (page) => {
+        dealForm.reset();
+        setSelectedProducts([]);
+        // Reload deals after successful creation
+        fetchDeals();
+        alert('Deal created successfully!');
+      },
+      onError: (errors) => {
+        console.error('Deal creation errors:', errors);
+        alert('Failed to create deal. Please check the form.');
+      }
+    });
+  };
+
+  // Fetch deals from backend
+  const fetchDeals = () => {
+    fetch('/seller/deals')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          setDeals(data.deals);
+        }
+      })
+      .catch(error => console.error('Error fetching deals:', error));
+  };
+
+  // Fetch deals on component mount
+  useEffect(() => {
+    fetchDeals();
+  }, []);
+
+  // Delete a deal
+  const deleteDeal = (dealId) => {
+    if (confirm('Are you sure you want to delete this deal?')) {
+      router.delete(`/seller/deals/delete/${dealId}`, {
+        onSuccess: () => {
+          fetchDeals();
+          alert('Deal deleted successfully!');
+        },
+        onError: (errors) => {
+          console.error('Delete error:', errors);
+          alert('Failed to delete deal');
+        }
+      });
+    }
+  };
   
   // Form for status update
   const statusForm = useForm({
@@ -178,7 +288,9 @@ const Seller = () => {
     });
   };
   return (
+    
     <div className="seller-dashboard">
+      <LoadingScreen/>
       <FlashMessage errors={product.errors}/>
       
       {/* Sidebar Overlay for Mobile */}
@@ -252,6 +364,13 @@ const Seller = () => {
               <span className="badge badge-warning">8</span>
             </li>
             <li 
+              className={`nav-item ${activeTab === "deals" ? "active" : ""}`}
+              onClick={() => { setActiveTab("deals"); setSidebarOpen(false); }}
+            >
+              <i className="bi bi-lightning-fill"></i>
+              <span>Manage Deals</span>
+            </li>
+            <li 
               className={`nav-item ${activeTab === "analytics" ? "active" : ""}`}
               onClick={() => { setActiveTab("analytics"); setSidebarOpen(false); }}
             >
@@ -270,10 +389,10 @@ const Seller = () => {
 
         {/* Sidebar Footer */}
         <div className="sidebar-footer">
-          <button className="btn btn-outline-danger w-100">
+          <Link href="/logout" className="btn btn-outline-danger w-100">
             <i className="bi bi-box-arrow-right me-2"></i>
             Logout
-          </button>
+          </Link>
         </div>
       </aside>
 
@@ -294,6 +413,7 @@ const Seller = () => {
                 {activeTab === "products" && "My Products"}
                 {activeTab === "addProduct" && "Add New Product"}
                 {activeTab === "orders" && "Order Management"}
+                {activeTab === "deals" && "Manage Deals"}
                 {activeTab === "analytics" && "Analytics & Reports"}
                 {activeTab === "payouts" && "Payouts"}
               </h2>
@@ -361,7 +481,7 @@ const Seller = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Total Revenue</p>
-                    <h3 className="stat-value">$12,430</h3>
+                    <h3 className="stat-value">RM 12,430</h3>
                     <div className="stat-trend positive">
                       <i className="bi bi-arrow-up"></i> 23%
                     </div>
@@ -486,7 +606,7 @@ const Seller = () => {
                             />
                           </td>
                           <td>
-                            <span className="product-price">${item.price}</span>
+                            <span className="product-price">RM {item.price}</span>
                           </td>
                           <td>
                             <span className={`stock-quantity ${item.instock > 10 ? 'high' : item.instock > 0 ? 'low' : 'out'}`}>
@@ -799,7 +919,7 @@ const Seller = () => {
                           })}
                         </p>
                         <p className="order-meta">
-                          <i className="bi bi-currency-dollar"></i> ${parseFloat(groupedOrder.total_amount).toFixed(2)}
+                          <i className="bi bi-currency-dollar"></i> RM {parseFloat(groupedOrder.total_amount).toFixed(2)}
                         </p>
                         <p className="order-meta">
                           <i className="bi bi-geo-alt"></i> {groupedOrder.city}, {groupedOrder.state}
@@ -811,7 +931,7 @@ const Seller = () => {
                       </div>
                       
                       <div className="order-total">
-                        <strong>Total: ${parseFloat(groupedOrder.total_amount).toFixed(2)}</strong>
+                        <strong>Total: RM {parseFloat(groupedOrder.total_amount).toFixed(2)}</strong>
                       </div>
                     </div>
                     
@@ -882,7 +1002,7 @@ const Seller = () => {
                   <div className="info-row">
                     <span className="info-label">Total Amount:</span>
                     <span className="info-value text-primary fw-bold">
-                      ${parseFloat(selectedOrder.total_amount).toFixed(2)}
+                      RM {parseFloat(selectedOrder.total_amount).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -903,7 +1023,7 @@ const Seller = () => {
                       <div className="product-detail-info">
                         <h6>{product.product_name}</h6>
                         <p className="product-price">
-                          ${parseFloat(product.pprice).toFixed(2)} × {product.quantity}
+                          RM {parseFloat(product.pprice).toFixed(2)} × {product.quantity}
                         </p>
                       </div>
                     </div>
@@ -974,13 +1094,28 @@ const Seller = () => {
                       <input
                         type="radio"
                         name="status"
-                        value="Completed"
-                        checked={statusForm.data.status === 'Completed'}
+                        value="Shipped"
+                        checked={statusForm.data.status === 'Shipped'}
                         onChange={(e) => statusForm.setData('status', e.target.value)}
                       />
-                      <div className="option-card completed">
+                      <div className="option-card shipped">
+                        <i className="bi bi-box-seam"></i>
+                        <span>Shipped</span>
+                        <p>Order has been shipped</p>
+                      </div>
+                    </label>
+
+                    <label className="status-option">
+                      <input
+                        type="radio"
+                        name="status"
+                        value="Delivered"
+                        checked={statusForm.data.status === 'Delivered'}
+                        onChange={(e) => statusForm.setData('status', e.target.value)}
+                      />
+                      <div className="option-card delivered">
                         <i className="bi bi-check-circle-fill"></i>
-                        <span>Completed</span>
+                        <span>Delivered</span>
                         <p>Order has been delivered</p>
                       </div>
                     </label>
@@ -1033,6 +1168,250 @@ const Seller = () => {
           </div>
         </>
       )}
+
+          {/* DEALS MANAGEMENT */}
+          {activeTab === "deals" && (
+        <>
+          <div className="deals-management-section">
+            {/* Deal Creation Form */}
+            <div className="deals-form-container">
+              <div className="form-header">
+                <h3><i className="bi bi-lightning-fill"></i> Create New Deal</h3>
+                <p>Set up flash deals and special offers for your products</p>
+              </div>
+
+              <form onSubmit={handleDealSubmit} className="deals-form">
+                <div className="row">
+                  <div className="col-md-12">
+                    <div className="form-group">
+                      <label className="form-label">Deal Name</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="e.g., Summer Sale, Black Friday Deal"
+                        value={dealForm.data.deal_name}
+                        onChange={(e) => dealForm.setData('deal_name', e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label className="form-label">Discount Type</label>
+                      <select
+                        className="form-select"
+                        value={dealForm.data.discount_type}
+                        onChange={(e) => dealForm.setData('discount_type', e.target.value)}
+                      >
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed Amount (RM)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label className="form-label">Discount Value</label>
+                      <div className="discount-input-wrapper">
+                        <input
+                          type="number"
+                          className="form-control"
+                          placeholder="Enter discount value"
+                          value={dealForm.data.discount_value}
+                          onChange={(e) => dealForm.setData('discount_value', e.target.value)}
+                          required
+                        />
+                        <span className="discount-unit">
+                          {dealForm.data.discount_type === 'percentage' ? '%' : 'RM'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label className="form-label">Start Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        className="form-control"
+                        value={dealForm.data.start_date}
+                        onChange={(e) => dealForm.setData('start_date', e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label className="form-label">End Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        className="form-control"
+                        value={dealForm.data.end_date}
+                        onChange={(e) => dealForm.setData('end_date', e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="deal-submit-section">
+                  <div className="selected-products-badge">
+                    <i className="bi bi-check-circle"></i>
+                    <span>{selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected</span>
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-lg">
+                    <i className="bi bi-plus-lg me-2"></i>
+                    Create Deal
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Product Selection Grid */}
+            <div className="products-selection-container">
+              <div className="form-header">
+                <h3><i className="bi bi-box-seam"></i> Select Products</h3>
+                <div className="search-input">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search products..."
+                    value={dealSearch}
+                    onChange={(e) => setDealSearch(e.target.value)}
+                  />
+                  <i className="bi bi-search"></i>
+                </div>
+              </div>
+
+              <div className="products-grid">
+                {props.products && props.products.length > 0 ? (
+                  props.products
+                    .filter(product => 
+                      product.name.toLowerCase().includes(dealSearch.toLowerCase())
+                    )
+                    .map((product) => (
+                      <div key={product.id} className={`product-card ${selectedProducts.includes(product.id) ? 'selected' : ''}`}>
+                        <div className="product-checkbox">
+                          <input
+                            type="checkbox"
+                            id={`product-${product.id}`}
+                            checked={selectedProducts.includes(product.id)}
+                            onChange={() => handleProductCheckbox(product.id)}
+                          />
+                          <label htmlFor={`product-${product.id}`}></label>
+                        </div>
+                        <div className="product-image">
+                          {product.image ? (
+                            <img src={`/storage/${product.image}`} alt={product.name} />
+                          ) : (
+                            <div className="placeholder-image">
+                              <i className="bi bi-image"></i>
+                            </div>
+                          )}
+                        </div>
+                        <div className="product-info">
+                          <h6 className="product-name">{product.name}</h6>
+                          <p className="product-stock">
+                            <i className="bi bi-box"></i>
+                            Stock: {product.instock}
+                          </p>
+                          <div className="product-pricing">
+                            <span className="price">RM {parseFloat(product.price).toFixed(2)}</span>
+                            {product.discount_price && (
+                              <span className="discount-badge">{product.discount_price}% OFF</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <div className="no-products-message">
+                    <i className="bi bi-inbox"></i>
+                    <p>No products available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Active Deals Display */}
+            <div className="active-deals-container">
+              <div className="form-header">
+                <h3><i className="bi bi-star-fill"></i> Active & Upcoming Deals</h3>
+              </div>
+
+              <div className="deals-list">
+                {deals && deals.length > 0 ? (
+                  deals.map((deal) => {
+                    const now = new Date();
+                    const startDate = new Date(deal.start_date);
+                    const endDate = new Date(deal.end_date);
+                    
+                    let dealStatus = 'upcoming';
+                    let statusIcon = 'hourglass-top';
+                    let statusText = 'Upcoming';
+                    
+                    if (now >= startDate && now <= endDate) {
+                      dealStatus = 'active';
+                      statusIcon = 'lightning-fill';
+                      statusText = 'Active';
+                    } else if (now > endDate) {
+                      dealStatus = 'expired';
+                      statusIcon = 'x-circle';
+                      statusText = 'Expired';
+                    }
+
+                    return (
+                      <div key={deal.id} className="deal-item">
+                        <div className={`deal-status-badge ${dealStatus}`}>
+                          <i className={`bi bi-${statusIcon}`}></i>
+                          {statusText}
+                        </div>
+                        <div className="deal-content">
+                          <h5>{deal.title}</h5>
+                          <div className="deal-meta">
+                            <span className="deal-products">
+                              <i className="bi bi-box-seam"></i>
+                              {deal.products_count} Product{deal.products_count !== 1 ? 's' : ''}
+                            </span>
+                            <span className="deal-date">
+                              <i className="bi bi-calendar-event"></i>
+                              {dealStatus === 'expired' ? 'Ended: ' : dealStatus === 'active' ? 'Ends: ' : 'Starts: '}
+                              {dealStatus === 'active' ? new Date(deal.end_date).toLocaleDateString() : dealStatus === 'expired' ? new Date(deal.end_date).toLocaleDateString() : new Date(deal.start_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="deal-actions">
+                          {dealStatus !== 'expired' && (
+                            <button className="btn btn-sm btn-outline-primary">
+                              <i className="bi bi-pencil"></i>
+                            </button>
+                          )}
+                          <button 
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => deleteDeal(deal.id)}
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="empty-state">
+                    <i className="bi bi-inbox"></i>
+                    <p>No deals created yet. Start by creating your first deal above!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
           {/* ANALYTICS */}
           {activeTab === "analytics" && (
             <div className="tab-content-wrapper">
@@ -1040,13 +1419,13 @@ const Seller = () => {
                 <div className="analytics-card">
                   <div className="analytics-header">
                     <h6>Monthly Sales Target</h6>
-                    <span className="analytics-value">$10,000</span>
+                    <span className="analytics-value">RM 10,000</span>
                   </div>
                   <div className="progress-wrapper">
                     <div className="progress">
                       <div className="progress-bar bg-primary" style={{ width: "70%" }}></div>
                     </div>
-                    <span className="progress-label">$7,000 / $10,000 (70%)</span>
+                    <span className="progress-label">RM 7,000 / RM 10,000 (70%)</span>
                   </div>
                 </div>
 
@@ -1090,15 +1469,15 @@ const Seller = () => {
                   </div>
                   <div className="payout-info">
                     <p className="payout-label">Available Balance</p>
-                    <h2 className="payout-amount">$1,230.00</h2>
-                    <p className="payout-pending">$450.00 pending clearance</p>
+                    <h2 className="payout-amount">RM 1,230.00</h2>
+                    <p className="payout-pending">RM 450.00 pending clearance</p>
                   </div>
                 </div>
                 <div className="payout-body">
                   <div className="payout-details">
                     <div className="detail-item">
                       <span className="detail-label">Last Payout</span>
-                      <span className="detail-value">$850.00</span>
+                      <span className="detail-value">RM 850.00</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Payout Date</span>
@@ -1106,7 +1485,7 @@ const Seller = () => {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Total Earned</span>
-                      <span className="detail-value">$12,430.00</span>
+                      <span className="detail-value">RM 12,430.00</span>
                     </div>
                   </div>
                 </div>
@@ -1130,7 +1509,7 @@ const Seller = () => {
                       <p className="history-title">Payout Completed</p>
                       <p className="history-date">January 15, 2026</p>
                     </div>
-                    <div className="history-amount">+$850.00</div>
+                    <div className="history-amount">+RM 850.00</div>
                   </div>
                   <div className="history-item">
                     <div className="history-icon success">
@@ -1140,7 +1519,7 @@ const Seller = () => {
                       <p className="history-title">Payout Completed</p>
                       <p className="history-date">December 15, 2025</p>
                     </div>
-                    <div className="history-amount">+$1,200.00</div>
+                    <div className="history-amount">+RM 1,200.00</div>
                   </div>
                 </div>
               </div>

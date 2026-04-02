@@ -171,4 +171,113 @@ class ProductController extends Controller
             'deliveryDate' => $deliveryDate,
         ]);
     }
+
+    /**
+     * API endpoint - Get all categories with their products
+     */
+    public function getCategoriesWithProducts()
+    {
+        try {
+            $categories = Category::all()->map(function ($category) {
+                $products = Product::where('category_id', $category->id)
+                    ->where('status', 'Approved')
+                    ->limit(4)
+                    ->get()
+                    ->map(function ($product) {
+                        return [
+                            'id' => $product->id,
+                            'name' => $product->name,
+                            'price' => $product->price,
+                            'discount_price' => $product->discount_price ?? 0,
+                            'image' => $product->image,
+                            'savings' => $this->calculateSavings($product->price, $product->discount_price),
+                        ];
+                    });
+
+                return [
+                    'id' => $category->id,
+                    'name' => $category->category,
+                    'image' => $category->image,
+                    'productCount' => Product::where('category_id', $category->id)->where('status', 'Approved')->count(),
+                    'products' => $products,
+                ];
+            })->filter(fn($cat) => $cat['productCount'] > 0);
+
+            return response()->json([
+                'success' => true,
+                'categories' => $categories->values(),
+                'total' => $categories->count(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching categories: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * API endpoint - Get all products by category
+     */
+    public function getProductsByCategory($categoryId)
+    {
+        try {
+            $category = Category::find($categoryId);
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Category not found',
+                ], 404);
+            }
+
+            // Get paginated products - try without status filter first for debugging
+            $productsPaginated = Product::where('category_id', $categoryId)
+                ->orderBy('created_at', 'desc')
+                ->paginate(12);
+
+            $products = $productsPaginated->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'discount_price' => $product->discount_price ?? 0,
+                    'image' => $product->image,
+                    'savings' => $this->calculateSavings($product->price, $product->discount_price),
+                    'status' => $product->status, // Debug: show product status
+                ];
+            })->toArray();
+
+            return response()->json([
+                'success' => true,
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->category,
+                    'image' => $category->image,
+                ],
+                'products' => $products,
+                'pagination' => [
+                    'total' => $productsPaginated->total(),
+                    'per_page' => $productsPaginated->perPage(),
+                    'current_page' => $productsPaginated->currentPage(),
+                    'last_page' => $productsPaginated->lastPage(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching products: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper function to calculate savings
+     */
+    private function calculateSavings($price, $discount)
+    {
+        if ($discount && $price) {
+            return round($price * $discount / 100);
+        }
+        return 0;
+    }
 }

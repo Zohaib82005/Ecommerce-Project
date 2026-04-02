@@ -40,8 +40,8 @@ class UserController extends Controller
             'password' => $pass,
 
         ]);
-
-        return redirect('/');
+        session()->put('email', $req->email);
+        return redirect('/send-email');
 
     }
 

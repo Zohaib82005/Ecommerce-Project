@@ -40,4 +40,9 @@ class Product extends Model
     {
         return $this->hasMany(Productimage::class);
     }
+
+    public function flashdealProducts()
+    {
+        return $this->hasMany(Flashdeals_product::class, 'product_id');
+    }
 }
