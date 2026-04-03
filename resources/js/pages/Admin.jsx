@@ -11,6 +11,30 @@ const Admin = () => {
   const [selectedMainCategory, setSelectedMainCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
   
+  // Calculate dashboard statistics from real data
+  const calculateStats = () => {
+    const pendingUsers = props.users?.filter(u => u.status === 'Pending').length || 0;
+    const approvedUsers = props.users?.filter(u => u.status === 'Approved').length || 0;
+    const pendingProducts = props.products?.filter(p => p.status === 'Pending').length || 0;
+    const reportedOrders = props.reported_orders?.length || 0;
+    const flaggedSellers = props.sellers?.filter(s => s.status === 'Flagged').length || 0;
+    const userNotifications = pendingUsers + pendingProducts + reportedOrders + flaggedSellers;
+    
+    return {
+      pendingUsers,
+      approvedUsers,
+      pendingProducts,
+      reportedOrders,
+      flaggedSellers,
+      userNotifications,
+      totalUsers: props.users?.length || 0,
+      totalProducts: props.products?.length || 0,
+      totalSellers: props.sellers?.length || 0
+    };
+  };
+
+  const stats = calculateStats();
+  
   const category = useForm({
     category: '',
     parent_id: null,
@@ -109,44 +133,19 @@ const Admin = () => {
     }
   }
 
-  // Sample data (replace with props data when available)
-  const users = props.users || [
-    { id: 1, name: "Zohaib Ahmed", email: "zohaib@example.com", status: "Pending", role: "User", created_at: "2026-01-15" },
-    { id: 2, name: "Sarah Khan", email: "sarah@example.com", status: "Approved", role: "User", created_at: "2026-01-20" },
-    { id: 3, name: "Ali Hassan", email: "ali@example.com", status: "Pending", role: "Seller", created_at: "2026-01-25" },
-  ];
-
-  const products = props.products || [
-    { id: 1, name: "Wireless Camera", seller: "SellerX", price: 129, status: "Pending", created_at: "2026-01-28" },
-    { id: 2, name: "Smart Watch Pro", seller: "TechSeller", price: 199, status: "Pending", created_at: "2026-01-29" },
-  ];
-
-  const sellers = props.sellers || [
-    { id: 1, name: "SellerTech", products: 45, revenue: 12500, status: "Active", rating: 4.8 },
-    { id: 2, name: "TechGadgets", products: 32, revenue: 8900, status: "Active", rating: 4.5 },
-    { id: 3, name: "ElectroHub", products: 28, revenue: 6700, status: "Flagged", rating: 3.9 },
-  ];
-
-  const orders = props.reported_orders || [
-    { id: "#CB10291", customer: "John Doe", amount: 299, status: "Dispute", issue: "Product not received" },
-    { id: "#CB10292", customer: "Jane Smith", amount: 450, status: "Dispute", issue: "Wrong item delivered" },
-  ];
-
-  const reports = [
-    { id: 1, type: "Product", description: "Policy violation - misleading images", reported_by: "User123", date: "2026-01-30" },
-    { id: 2, type: "Seller", description: "Fake reviews detected", reported_by: "User456", date: "2026-01-29" },
-  ];
-
-  const logs = [
-    { id: 1, action: "Admin approved user ID 1281", admin: "Admin", timestamp: "2026-01-31 10:30 AM" },
-    { id: 2, action: "Admin rejected product ID 991", admin: "Admin", timestamp: "2026-01-31 09:15 AM" },
-    { id: 3, action: "Seller temporarily frozen", admin: "Admin", timestamp: "2026-01-30 05:45 PM" },
-  ];
-
   function approveProduct(productId) {
     // Implement product approval logic here (e.g., send request to backend)
-    console.log(`Approving product with ID: ${productId}`);
+    // console.log(`Approving product with ID: ${productId}`);
   }
+
+  // Sample data (replace with props data when available)
+  const users = props.users || [];
+  const products = props.products || [];
+  const sellers = props.sellers || [];
+  const orders = props.reported_orders || [];
+  const reports = props.reports || [];
+  const logs = props.logs || [];
+
   return (
     <div className="admin-dashboard">
       {/* Sidebar Overlay */}
@@ -202,7 +201,7 @@ const Admin = () => {
             >
               <i className="bi bi-people"></i>
               <span>User Verification</span>
-              <span className="badge bg-warning ms-auto">3</span>
+              <span className="badge bg-warning ms-auto">{stats.pendingUsers}</span>
             </li>
             <li
               className={`nav-item ${activeTab === "products" ? "active" : ""}`}
@@ -210,7 +209,7 @@ const Admin = () => {
             >
               <i className="bi bi-box-seam"></i>
               <span>Product Review</span>
-              <span className="badge bg-danger ms-auto">2</span>
+              <span className="badge bg-danger ms-auto">{stats.pendingProducts}</span>
             </li>
             <li
               className={`nav-item ${activeTab === "category" ? "active" : ""}`}
@@ -287,7 +286,7 @@ const Admin = () => {
           <div className="header-right">
             <button className="btn btn-light notification-btn position-relative">
               <i className="bi bi-bell-fill fs-5"></i>
-              <span className="notification-badge">5</span>
+              <span className="notification-badge">{stats.userNotifications}</span>
             </button>
           </div>
         </header>
@@ -305,7 +304,7 @@ const Admin = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Pending Users</p>
-                    <h3 className="stat-value">12</h3>
+                  <h3 className="stat-value">{stats.pendingUsers}</h3>
                     <span className="stat-trend">
                       <i className="bi bi-clock"></i> Awaiting approval
                     </span>
@@ -318,7 +317,7 @@ const Admin = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Pending Products</p>
-                    <h3 className="stat-value">28</h3>
+                    <h3 className="stat-value">{stats.pendingProducts}</h3>
                     <span className="stat-trend">
                       <i className="bi bi-clock"></i> Needs review
                     </span>
@@ -331,7 +330,7 @@ const Admin = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Reported Orders</p>
-                    <h3 className="stat-value">6</h3>
+                    <h3 className="stat-value">{stats.reportedOrders}</h3>
                     <span className="stat-trend">
                       <i className="bi bi-flag"></i> Disputes active
                     </span>
@@ -344,7 +343,7 @@ const Admin = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Flagged Sellers</p>
-                    <h3 className="stat-value">2</h3>
+                    <h3 className="stat-value">{stats.flaggedSellers}</h3>
                     <span className="stat-trend">
                       <i className="bi bi-eye"></i> Under investigation
                     </span>
@@ -420,43 +419,51 @@ const Admin = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map((user) => (
-                        <tr key={user.id}>
-                          <td>
-                            <div className="user-info">
-                              <div className="user-avatar">
-                                {user.name.charAt(0)}
+                      {props.users && props.users.length > 0 ? (
+                        props.users.map((user) => (
+                          <tr key={user.id}>
+                            <td>
+                              <div className="user-info">
+                                <div className="user-avatar">
+                                  {user.name.charAt(0)}
+                                </div>
+                                <strong>{user.name}</strong>
                               </div>
-                              <strong>{user.name}</strong>
-                            </div>
-                          </td>
-                          <td>{user.email}</td>
-                          <td>
-                            <span className={`role-badge ${user.role.toLowerCase()}`}>
-                              {user.role}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`status-badge status-${user.status}`}>
-                              {user.status}
-                            </span>
-                          </td>
-                          <td>{new Date(user.created_at).toLocaleDateString()}</td>
-                          <td>
-                            <div className="action-buttons">
-                              <button className="btn btn-sm btn-success">
-                                <i className="bi bi-check-lg"></i>
-                              </button>
-                              <button className="btn btn-sm btn-danger">
-                                <i className="bi bi-x-lg"></i>
-                              </button>
-                              <button className="btn btn-sm btn-outline-secondary" onClick={() => openEditModal(user)}>
-                                <i className="bi bi-pencil"></i>
-                              </button>
-                            </div>
+                            </td>
+                            <td>{user.email}</td>
+                            <td>
+                              <span className={`role-badge ${user.role.toLowerCase()}`}>
+                                {user.role}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`status-badge status-${user.status}`}>
+                                {user.status}
+                              </span>
+                            </td>
+                            <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                            <td>
+                              <div className="action-buttons">
+                                <button className="btn btn-sm btn-success">
+                                  <i className="bi bi-check-lg"></i>
+                                </button>
+                                <button className="btn btn-sm btn-danger">
+                                  <i className="bi bi-x-lg"></i>
+                                </button>
+                                <button className="btn btn-sm btn-outline-secondary" onClick={() => openEditModal(user)}>
+                                  <i className="bi bi-pencil"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className="text-center text-muted py-4">
+                            No users found
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -489,41 +496,48 @@ const Admin = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {products.map((product) => (
-                        <tr key={product.id}>
-                          <td>
-                            <div className="product-info">
-                              <div className="product-icon">
-                                <i className="bi bi-box"></i>
+                      {props.products && props.products.length > 0 ? (
+                        props.products.map((product) => (
+                          <tr key={product.id}>
+                            <td>
+                              <div className="product-info">
+                                <div className="product-icon">
+                                  <i className="bi bi-box"></i>
+                                </div>
+                                <strong>{product.name}</strong>
                               </div>
-                              <strong>{product.name}</strong>
-                            </div>
-                          </td>
-                          <td>{product.seller_name}</td>
-                          <td className="fw-bold">${product.price}</td>
-                          <td>
-                            <span className={`status-badge status-${product.status}`}>
-                              {product.instock}
-                            </span>
-                          </td>
-                          <td>{new Date(product.created_at).toLocaleDateString()}</td>
-                          <td>{product.status}</td>
+                            </td>
+                            <td>{product.seller_name || 'N/A'}</td>
+                            <td className="fw-bold">RM {product.price}</td>
+                            <td>
+                              <span className={`status-badge status-${product.instock > 0 ? 'active' : 'danger'}`}>
+                                {product.instock}
+                              </span>
+                            </td>
+                            <td>{new Date(product.created_at).toLocaleDateString()}</td>
+                            <td>{product.status}</td>
 
-                          <td>
-                            <div className="action-buttons">
-                              <Link href={`/approve/${product.id}`} className="btn btn-sm btn-success" onClick={approveProduct(product.id)}>
-                              
-                                <i className="bi bi-check-lg me-1"></i>
-                                Approve
-                              </Link>
-                              <Link href={`/reject/${product.id}`} className="btn btn-sm btn-danger">
-                                <i className="bi bi-x-lg me-1"></i>
-                                Reject
-                              </Link>
-                            </div>
+                            <td>
+                              <div className="action-buttons">
+                                <Link href={`/approve/${product.id}`} className="btn btn-sm btn-success">
+                                  <i className="bi bi-check-lg me-1"></i>
+                                  Approve
+                                </Link>
+                                <Link href={`/reject/${product.id}`} className="btn btn-sm btn-danger">
+                                  <i className="bi bi-x-lg me-1"></i>
+                                  Reject
+                                </Link>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" className="text-center text-muted py-4">
+                            No products pending review
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -940,54 +954,58 @@ const Admin = () => {
                   </div>
                 </div>
                 <div className="sellers-grid">
-                  {sellers.map((seller) => (
-                    <div key={seller.id} className="seller-card">
-                      <div className="seller-header">
-                        <div className="seller-avatar">
-                          <i className="bi bi-shop"></i>
-                        </div>
-                        <div className="seller-info">
-                          <h5>{seller.name}</h5>
-                          <span className={`status-badge status-${seller.status}`}>
-                            {seller.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="seller-stats">
-                        <div className="stat">
-                          <i className="bi bi-box"></i>
-                          <div>
-                            <strong>{seller.products}</strong>
-                            <span>Products</span>
+                  {props.sellers && props.sellers.length > 0 ? (
+                    props.sellers.map((seller) => (
+                      <div key={seller.id} className="seller-card">
+                        <div className="seller-header">
+                          <div className="seller-avatar">
+                            <i className="bi bi-shop"></i>
+                          </div>
+                          <div className="seller-info">
+                            <h5>{seller.name}</h5>
+                            <span className={`status-badge status-${seller.status?.toLowerCase()}`}>
+                              {seller.status}
+                            </span>
                           </div>
                         </div>
-                        <div className="stat">
-                          <i className="bi bi-currency-dollar"></i>
-                          <div>
-                            <strong>${seller.revenue}</strong>
-                            <span>Revenue</span>
+                        <div className="seller-stats">
+                          <div className="stat">
+                            <i className="bi bi-box"></i>
+                            <div>
+                              <strong>{seller.products}</strong>
+                              <span>Products</span>
+                            </div>
+                          </div>
+                          <div className="stat">
+                            <i className="bi bi-currency-dollar"></i>
+                            <div>
+                              <strong>RM {seller.revenue}</strong>
+                              <span>Revenue</span>
+                            </div>
+                          </div>
+                          <div className="stat">
+                            <i className="bi bi-star-fill"></i>
+                            <div>
+                              <strong>{seller.rating}</strong>
+                              <span>Rating</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="stat">
-                          <i className="bi bi-star-fill"></i>
-                          <div>
-                            <strong>{seller.rating}</strong>
-                            <span>Rating</span>
-                          </div>
+                        <div className="seller-actions">
+                          <button className="btn btn-sm btn-outline-primary">
+                            <i className="bi bi-eye me-1"></i>
+                            View Details
+                          </button>
+                          <button className="btn btn-sm btn-warning">
+                            <i className="bi bi-pause-circle me-1"></i>
+                            Freeze
+                          </button>
                         </div>
                       </div>
-                      <div className="seller-actions">
-                        <button className="btn btn-sm btn-outline-primary">
-                          <i className="bi bi-eye me-1"></i>
-                          View Details
-                        </button>
-                        <button className="btn btn-sm btn-warning">
-                          <i className="bi bi-pause-circle me-1"></i>
-                          Freeze
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="alert alert-info w-100">No sellers found</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1014,31 +1032,39 @@ const Admin = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {orders.map((order) => (
-                        <tr key={order.id}>
-                          <td><strong>{order.id}</strong></td>
-                          <td>{order.customer}</td>
-                          <td className="fw-bold">${order.amount}</td>
-                          <td>{order.issue}</td>
-                          <td>
-                            <span className="status-badge status-dispute">
-                              {order.status}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="action-buttons">
-                              <button className="btn btn-sm btn-primary">
-                                <i className="bi bi-arrow-up-circle me-1"></i>
-                                Escalate
-                              </button>
-                              <button className="btn btn-sm btn-outline-secondary">
-                                <i className="bi bi-eye me-1"></i>
-                                Details
-                              </button>
-                            </div>
+                      {props.reported_orders && props.reported_orders.length > 0 ? (
+                        props.reported_orders.map((order) => (
+                          <tr key={order.id}>
+                            <td><strong>{order.id}</strong></td>
+                            <td>{order.customer}</td>
+                            <td className="fw-bold">RM {order.amount}</td>
+                            <td>{order.issue || 'N/A'}</td>
+                            <td>
+                              <span className="status-badge status-dispute">
+                                {order.status}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="action-buttons">
+                                <button className="btn btn-sm btn-primary">
+                                  <i className="bi bi-arrow-up-circle me-1"></i>
+                                  Escalate
+                                </button>
+                                <button className="btn btn-sm btn-outline-secondary">
+                                  <i className="bi bi-eye me-1"></i>
+                                  Details
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className="text-center text-muted py-4">
+                            No disputed orders
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1050,40 +1076,44 @@ const Admin = () => {
           {activeTab === "reports" && (
             <div className="reports-section">
               <div className="reports-grid">
-                {reports.map((report) => (
-                  <div key={report.id} className="report-card">
-                    <div className="report-header">
-                      <span className={`report-type ${report.type.toLowerCase()}`}>
-                        <i className={`bi bi-${report.type === 'Product' ? 'box' : 'shop'}`}></i>
-                        {report.type} Report
-                      </span>
-                      <span className="report-date">{report.date}</span>
+                {props.reports && props.reports.length > 0 ? (
+                  props.reports.map((report) => (
+                    <div key={report.id} className="report-card">
+                      <div className="report-header">
+                        <span className={`report-type ${report.type.toLowerCase()}`}>
+                          <i className={`bi bi-${report.type === 'Product' ? 'box' : 'shop'}`}></i>
+                          {report.type} Report
+                        </span>
+                        <span className="report-date">{new Date(report.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="report-body">
+                        <p className="report-description">
+                          <i className="bi bi-flag-fill me-2"></i>
+                          {report.description}
+                        </p>
+                        <p className="report-meta">
+                          Reported by: <strong>{report.reported_by}</strong>
+                        </p>
+                      </div>
+                      <div className="report-actions">
+                        <button className="btn btn-sm btn-outline-primary">
+                          <i className="bi bi-eye me-1"></i>
+                          Investigate
+                        </button>
+                        <button className="btn btn-sm btn-success">
+                          <i className="bi bi-check-lg me-1"></i>
+                          Resolve
+                        </button>
+                        <button className="btn btn-sm btn-danger">
+                          <i className="bi bi-x-lg me-1"></i>
+                          Dismiss
+                        </button>
+                      </div>
                     </div>
-                    <div className="report-body">
-                      <p className="report-description">
-                        <i className="bi bi-flag-fill me-2"></i>
-                        {report.description}
-                      </p>
-                      <p className="report-meta">
-                        Reported by: <strong>{report.reported_by}</strong>
-                      </p>
-                    </div>
-                    <div className="report-actions">
-                      <button className="btn btn-sm btn-outline-primary">
-                        <i className="bi bi-eye me-1"></i>
-                        Investigate
-                      </button>
-                      <button className="btn btn-sm btn-success">
-                        <i className="bi bi-check-lg me-1"></i>
-                        Resolve
-                      </button>
-                      <button className="btn btn-sm btn-danger">
-                        <i className="bi bi-x-lg me-1"></i>
-                        Dismiss
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="alert alert-info w-100">No reports found</div>
+                )}
               </div>
             </div>
           )}
@@ -1101,26 +1131,30 @@ const Admin = () => {
                   </div>
                 </div>
                 <div className="logs-list">
-                  {logs.map((log) => (
-                    <div key={log.id} className="log-item">
-                      <div className="log-icon">
-                        <i className="bi bi-shield-check"></i>
-                      </div>
-                      <div className="log-content">
-                        <p className="log-action">{log.action}</p>
-                        <div className="log-meta">
-                          <span>
-                            <i className="bi bi-person me-1"></i>
-                            {log.admin}
-                          </span>
-                          <span>
-                            <i className="bi bi-clock me-1"></i>
-                            {log.timestamp}
-                          </span>
+                  {props.logs && props.logs.length > 0 ? (
+                    props.logs.map((log) => (
+                      <div key={log.id} className="log-item">
+                        <div className="log-icon">
+                          <i className="bi bi-shield-check"></i>
+                        </div>
+                        <div className="log-content">
+                          <p className="log-action">{log.action}</p>
+                          <div className="log-meta">
+                            <span>
+                              <i className="bi bi-person me-1"></i>
+                              {log.admin}
+                            </span>
+                            <span>
+                              <i className="bi bi-clock me-1"></i>
+                              {log.timestamp}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="text-center text-muted py-4">No audit logs found</div>
+                  )}
                 </div>
               </div>
             </div>

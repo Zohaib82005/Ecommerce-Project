@@ -47,7 +47,7 @@ const EditProduct = () => {
 
     if (categoryId) {
       try {
-        const response = await axios.get(`/api/categories/${categoryId}/subcategories`);
+        const response = await axios.get(`/api/subcategories/${categoryId}`);
         setSubcategories(response.data);
         setSubSubcategories([]);
       } catch (error) {
@@ -66,7 +66,7 @@ const EditProduct = () => {
 
     if (subcategoryId) {
       try {
-        const response = await axios.get(`/api/subcategories/${subcategoryId}/sub-subcategories`);
+        const response = await axios.get(`/api/sub-subcategories/${subcategoryId}`);
         setSubSubcategories(response.data);
       } catch (error) {
         console.error('Failed to fetch sub-subcategories', error);
@@ -146,10 +146,10 @@ const EditProduct = () => {
 
   useEffect(() => {
     if (product.category_id) {
-      axios.get(`/api/categories/${product.category_id}/subcategories`).then(res => setSubcategories(res.data));
+      axios.get(`/api/subcategories/${product.category_id}`).then(res => setSubcategories(res.data));
     }
     if (product.subcategory_id) {
-      axios.get(`/api/subcategories/${product.subcategory_id}/sub-subcategories`).then(res => setSubSubcategories(res.data));
+      axios.get(`/api/sub-subcategories/${product.subcategory_id}`).then(res => setSubSubcategories(res.data));
     }
   }, [product]);
 

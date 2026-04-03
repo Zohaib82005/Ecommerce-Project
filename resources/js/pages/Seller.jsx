@@ -33,6 +33,80 @@ const Seller = () => {
 
   const props = usePage().props;
 
+  // Calculate dashboard statistics
+  const calculateStats = () => {
+    const totalRevenue = props.orders?.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0) || 0;
+    const pendingOrders = props.orders?.filter(order => order.status === 'Pending').length || 0;
+    const deliveredOrders = props.orders?.filter(order => order.status === 'Delivered').length || 0;
+    const fulfillmentRate = props.orders?.length > 0 ? ((deliveredOrders / props.orders.length) * 100).toFixed(1) : 0;
+    
+    return {
+      totalRevenue: totalRevenue.toFixed(2),
+      pendingOrders,
+      fulfillmentRate,
+      deliveredOrders
+    };
+  };
+
+  const stats = calculateStats();
+
+  // Get recent activity from orders and products
+  const getRecentActivity = () => {
+    const activities = [];
+    
+    // Get most recent orders (converted to a map to get unique ones)
+    const recentOrdersMap = new Map(props.orders?.map(order => [order.oid, order]) || []);
+    const recentOrders = Array.from(recentOrdersMap.values()).slice(0, 3);
+    
+    recentOrders.forEach(order => {
+      if (order.status === 'Delivered') {
+        activities.push({
+          type: 'delivered',
+          title: `Order #${order.oid} delivered`,
+          time: new Date(order.created_at),
+          icon: 'check-circle-fill'
+        });
+      } else if (order.status === 'Shipped') {
+        activities.push({
+          type: 'shipped',
+          title: `Order #${order.oid} shipped`,
+          time: new Date(order.created_at),
+          icon: 'box-seam'
+        });
+      }
+    });
+    
+    // Add low stock alerts
+    props.products?.forEach(product => {
+      if (product.instock > 0 && product.instock <= 5) {
+        activities.push({
+          type: 'low-stock',
+          title: `Low stock alert: ${product.name}`,
+          time: new Date(),
+          icon: 'exclamation-triangle-fill'
+        });
+      }
+    });
+    
+    return activities.sort((a, b) => b.time - a.time).slice(0, 3);
+  };
+
+  const recentActivities = getRecentActivity();
+
+  // Function to format time difference
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
   // Fetch categories on component mount
   useEffect(() => {
     const fetchCategories = async () => {
@@ -370,7 +444,7 @@ const Seller = () => {
             >
               <i className="bi bi-bag-check-fill"></i>
               <span>Orders</span>
-              <span className="badge badge-warning">8</span>
+              <span className="badge badge-warning">{stats.pendingOrders}</span>
             </li>
             <li 
               className={`nav-item ${activeTab === "deals" ? "active" : ""}`}
@@ -432,7 +506,7 @@ const Seller = () => {
           <div className="header-right">
             <button className="btn-notification">
               <i className="bi bi-bell-fill"></i>
-              <span className="notification-badge">3</span>
+              <span className="notification-badge">{stats.pendingOrders + recentActivities.length}</span>
             </button>
           </div>
         </div>
@@ -477,9 +551,9 @@ const Seller = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Pending Orders</p>
-                    <h3 className="stat-value">{props.orders.length}</h3>
+                    <h3 className="stat-value">{stats.pendingOrders}</h3>
                     <div className="stat-trend neutral">
-                      <i className="bi bi-dash"></i> 0%
+                      <i className="bi bi-dash"></i> {stats.pendingOrders > 0 ? 'Action needed' : 'All clear'}
                     </div>
                   </div>
                 </div>
@@ -490,9 +564,9 @@ const Seller = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Total Revenue</p>
-                    <h3 className="stat-value">RM 12,430</h3>
+                    <h3 className="stat-value">RM {stats.totalRevenue}</h3>
                     <div className="stat-trend positive">
-                      <i className="bi bi-arrow-up"></i> 23%
+                      <i className="bi bi-arrow-up"></i> {props.orders?.length > 0 ? ((stats.deliveredOrders / props.orders.length) * 100).toFixed(0) : 0}%
                     </div>
                   </div>
                 </div>
@@ -525,33 +599,29 @@ const Seller = () => {
               <div className="recent-activity-section">
                 <h5 className="section-title">Recent Activity</h5>
                 <div className="activity-list">
-                  <div className="activity-item">
-                    <div className="activity-icon success">
-                      <i className="bi bi-check-circle-fill"></i>
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map((activity, index) => (
+                      <div key={index} className="activity-item">
+                        <div className={`activity-icon ${activity.type === 'low-stock' ? 'warning' : activity.type === 'delivered' ? 'success' : 'info'}`}>
+                          <i className={`bi bi-${activity.icon}`}></i>
+                        </div>
+                        <div className="activity-content">
+                          <p className="activity-title">{activity.title}</p>
+                          <p className="activity-time">{formatTimeAgo(activity.time)}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="activity-item">
+                      <div className="activity-icon info">
+                        <i className="bi bi-info-circle"></i>
+                      </div>
+                      <div className="activity-content">
+                        <p className="activity-title">No recent activity</p>
+                        <p className="activity-time">Your orders and products will appear here</p>
+                      </div>
                     </div>
-                    <div className="activity-content">
-                      <p className="activity-title">New order received</p>
-                      <p className="activity-time">2 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon info">
-                      <i className="bi bi-box-seam"></i>
-                    </div>
-                    <div className="activity-content">
-                      <p className="activity-title">Product "Wireless Headphones" updated</p>
-                      <p className="activity-time">1 hour ago</p>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon warning">
-                      <i className="bi bi-exclamation-triangle-fill"></i>
-                    </div>
-                    <div className="activity-content">
-                      <p className="activity-title">Low stock alert: Smart Watch</p>
-                      <p className="activity-time">3 hours ago</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1475,41 +1545,37 @@ const Seller = () => {
               <div className="analytics-grid">
                 <div className="analytics-card">
                   <div className="analytics-header">
-                    <h6>Monthly Sales Target</h6>
-                    <span className="analytics-value">RM 10,000</span>
+                    <h6>Total Revenue</h6>
+                    <span className="analytics-value">RM {stats.totalRevenue}</span>
                   </div>
                   <div className="progress-wrapper">
                     <div className="progress">
-                      <div className="progress-bar bg-primary" style={{ width: "70%" }}></div>
+                      <div className="progress-bar bg-primary" style={{ width: `${Math.min((parseFloat(stats.totalRevenue) / 20000) * 100, 100)}%` }}></div>
                     </div>
-                    <span className="progress-label">RM 7,000 / RM 10,000 (70%)</span>
+                    <span className="progress-label">RM {stats.totalRevenue} / RM 20,000 target ({Math.min((parseFloat(stats.totalRevenue) / 20000) * 100, 100).toFixed(1)}%)</span>
                   </div>
                 </div>
 
                 <div className="analytics-card">
                   <div className="analytics-header">
                     <h6>Order Fulfillment Rate</h6>
-                    <span className="analytics-value">92%</span>
+                    <span className="analytics-value">{stats.fulfillmentRate}%</span>
                   </div>
                   <div className="progress-wrapper">
                     <div className="progress">
-                      <div className="progress-bar bg-success" style={{ width: "92%" }}></div>
+                      <div className="progress-bar bg-success" style={{ width: `${stats.fulfillmentRate}%` }}></div>
                     </div>
-                    <span className="progress-label">284 / 309 orders fulfilled</span>
+                    <span className="progress-label">{stats.deliveredOrders} / {props.orders?.length || 0} orders fulfilled</span>
                   </div>
                 </div>
 
                 <div className="analytics-card">
                   <div className="analytics-header">
-                    <h6>Customer Satisfaction</h6>
-                    <span className="analytics-value">4.8/5</span>
+                    <h6>Active Products</h6>
+                    <span className="analytics-value">{props.pcount || 0}</span>
                   </div>
                   <div className="rating-stars">
-                    <i className="bi bi-star-fill"></i>
-                    <i className="bi bi-star-fill"></i>
-                    <i className="bi bi-star-fill"></i>
-                    <i className="bi bi-star-fill"></i>
-                    <i className="bi bi-star-half"></i>
+                    <p style={{ margin: 0 }}>{props.products?.filter(p => p.instock > 0).length || 0} in stock, {props.products?.filter(p => p.instock === 0).length || 0} out of stock</p>
                   </div>
                 </div>
               </div>
@@ -1525,24 +1591,24 @@ const Seller = () => {
                     <i className="bi bi-wallet2"></i>
                   </div>
                   <div className="payout-info">
-                    <p className="payout-label">Available Balance</p>
-                    <h2 className="payout-amount">RM 1,230.00</h2>
-                    <p className="payout-pending">RM 450.00 pending clearance</p>
+                    <p className="payout-label">Total Earnings</p>
+                    <h2 className="payout-amount">RM {stats.totalRevenue}</h2>
+                    <p className="payout-pending">From {props.orders?.length || 0} orders</p>
                   </div>
                 </div>
                 <div className="payout-body">
                   <div className="payout-details">
                     <div className="detail-item">
-                      <span className="detail-label">Last Payout</span>
-                      <span className="detail-value">RM 850.00</span>
+                      <span className="detail-label">Delivered Orders</span>
+                      <span className="detail-value">{stats.deliveredOrders}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Payout Date</span>
-                      <span className="detail-value">Jan 15, 2026</span>
+                      <span className="detail-label">Avg Order Value</span>
+                      <span className="detail-value">RM {props.orders?.length > 0 ? (parseFloat(stats.totalRevenue) / props.orders.length).toFixed(2) : '0.00'}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Total Earned</span>
-                      <span className="detail-value">RM 12,430.00</span>
+                      <span className="detail-label">Pending Orders</span>
+                      <span className="detail-value">{stats.pendingOrders}</span>
                     </div>
                   </div>
                 </div>
@@ -1554,30 +1620,38 @@ const Seller = () => {
                 </div>
               </div>
 
-              {/* Payout History */}
+              {/* Recent Orders Summary */}
               <div className="payout-history">
-                <h5 className="section-title">Payout History</h5>
+                <h5 className="section-title">Orders Summary</h5>
                 <div className="history-list">
-                  <div className="history-item">
-                    <div className="history-icon success">
-                      <i className="bi bi-check-circle-fill"></i>
+                  {props.orders && props.orders.length > 0 ? (
+                    (() => {
+                      // Group orders by ID and get unique ones
+                      const uniqueOrders = Array.from(new Map(props.orders.map(o => [o.oid, o])).values()).slice(0, 5);
+                      return uniqueOrders.map((order, idx) => (
+                        <div key={idx} className="history-item">
+                          <div className={`history-icon ${order.status === 'Delivered' ? 'success' : order.status === 'Cancelled' ? 'danger' : 'warning'}`}>
+                            <i className={`bi bi-${order.status === 'Delivered' ? 'check-circle-fill' : order.status === 'Cancelled' ? 'x-circle-fill' : 'clock-history'}`}></i>
+                          </div>
+                          <div className="history-content">
+                            <p className="history-title">Order #{order.oid} - {order.status}</p>
+                            <p className="history-date">{new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                          </div>
+                          <div className="history-amount">+RM {parseFloat(order.total_amount).toFixed(2)}</div>
+                        </div>
+                      ));
+                    })()
+                  ) : (
+                    <div className="history-item">
+                      <div className="history-icon info">
+                        <i className="bi bi-info-circle"></i>
+                      </div>
+                      <div className="history-content">
+                        <p className="history-title">No Orders Yet</p>
+                        <p className="history-date">Your orders will appear here</p>
+                      </div>
                     </div>
-                    <div className="history-content">
-                      <p className="history-title">Payout Completed</p>
-                      <p className="history-date">January 15, 2026</p>
-                    </div>
-                    <div className="history-amount">+RM 850.00</div>
-                  </div>
-                  <div className="history-item">
-                    <div className="history-icon success">
-                      <i className="bi bi-check-circle-fill"></i>
-                    </div>
-                    <div className="history-content">
-                      <p className="history-title">Payout Completed</p>
-                      <p className="history-date">December 15, 2025</p>
-                    </div>
-                    <div className="history-amount">+RM 1,200.00</div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
