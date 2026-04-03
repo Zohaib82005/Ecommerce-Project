@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, router } from '@inertiajs/react';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import LoadingScreen from '../components/LoadingScreen';
@@ -297,26 +297,28 @@ const Welcome = ({
   dealsOfTheDay: dbDealsOfTheDay = [],
 }) => {
   // Initialize form for add to cart
-  const { post, processing, reset } = useForm({
-    product_id: null,
-    quantity: 1,
-  });
+ const { post, processing, reset, setData } = useForm({
+  product_id: null,
+  quantity: 1,
+});
 
-  // Handle add to cart
-  const handleAddToCart = (productId) => {
-    post('/cart/add', {
-      data: {
-        product_id: productId,
-        quantity: 1,
-      },
-      onSuccess: () => {
-        reset();
-      },
-      onError: (errors) => {
-        console.error('Error adding to cart:', errors);
-      },
-    });
-  };
+const handleAddToCart = (productId) => {
+  console.log('Adding to cart:', productId);
+  
+  // Pass data directly to post instead of using setData
+  post('/cart/add', {
+    data: {
+      product_id: productId,
+      quantity: 1,
+    },
+    onSuccess: () => {
+      reset();
+      console.log('Item added to cart successfully');
+    },
+    onError: (errors) => console.error('Error adding to cart:', errors),
+  });
+};
+  
 
   // Prepare categories — use DB data or fallback to mock
   const displayCategories =
@@ -415,11 +417,11 @@ const Welcome = ({
   const formatProduct = (product) => ({
     id: product.id,
     name: product.name,
-    price: `RM ${Math.round(product.price - (product.price * (product.discount_price || 0)) / 100)}`,
+    price: (product.final_price),
     originalPrice: `RM ${Math.round(product.price)}`,
     discount: `${product.discount_price || 0}%`,
     image: product.image,
-    savings: product.savings || 0,
+    savings: (product.discount_type === 'percentage') ? (product.price * (product.discount_price || 0) / 100) : (product.discount_price || 0),
   });
 
   // Seamless category scroll animation
@@ -674,6 +676,7 @@ const Welcome = ({
           </AnimatedSection>
 
           {/* ── Trending Deals Row ── */}
+          {deals.length > 0 && (
           <AnimatedSection className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {/* Trending Deals */}
             <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
@@ -713,7 +716,7 @@ const Welcome = ({
             {/* Special Deals */}
             <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
               <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-sm text-gray-800">Special Deals</span>
+                <span className="font-bold text-sm text-gray-800">Top Picks For You</span>
                 <span className="text-xs cursor-pointer" style={{ color: '#7c3aed' }}>View All ›</span>
               </div>
               <div className="space-y-3">
@@ -790,9 +793,10 @@ const Welcome = ({
               </div>
             </div>
           </AnimatedSection>
+          )}
 
           {/* ── Deals of the Day with Tabs ── */}
-          {deals.length > 0 ? (
+          {deals.length > 0 && (
             <AnimatedSection className="mb-12">
               {/* Tabs */}
               <div className="mb-6">
@@ -957,39 +961,10 @@ const Welcome = ({
                 )}
               </div>
             </AnimatedSection>
-          ) : (
-            /* Skeleton placeholder while deals load */
-            <AnimatedSection className="mb-12">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-800">Deals Of The Day</h2>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-                <div
-                  className="hidden lg:flex flex-col items-center justify-center rounded-xl text-white p-4 text-center"
-                  style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)', minHeight: '220px' }}
-                >
-                  <div className="text-4xl mb-3">⏰</div>
-                  <p className="font-black text-lg leading-tight">UP TO 70% OFF</p>
-                </div>
-                {[...Array(6)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-xl overflow-hidden"
-                    style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                  >
-                    <div className="bg-gray-200 animate-pulse" style={{ height: '140px' }} />
-                    <div className="p-3 space-y-2">
-                      <div className="bg-gray-200 animate-pulse h-4 rounded" />
-                      <div className="bg-gray-200 animate-pulse h-4 rounded w-3/4" />
-                      <div className="bg-gray-200 animate-pulse h-6 rounded" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </AnimatedSection>
           )}
 
           {/* ── Deals You Might Like ── */}
+          {deals.length > 0 && (
           <AnimatedSection className="mb-12">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800">Deals You Might Like</h2>
@@ -1112,19 +1087,12 @@ const Welcome = ({
               )}
             </div>
           </AnimatedSection>
+          )}
 
           {/* ── Dynamic Categories with Products ── */}
-          {loadingCategories ? (
-            <AnimatedSection className="mb-12">
-              <div className="text-center py-12">
-                <div className="inline-block">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
-                </div>
-                <p className="text-gray-500 mt-4">Loading products...</p>
-              </div>
-            </AnimatedSection>
-          ) : dynamicCategories.length > 0 ? (
-            dynamicCategories.map((cat, idx) => {
+          {dynamicCategories.length > 0 && (
+            !loadingCategories ? (
+              dynamicCategories.map((cat, idx) => {
               const gradientStarts = ['#831843', '#065f46', '#1e3a5f', '#333', '#7c2d12', '#1a0533'];
               const gradientEnds   = ['#ec4899', '#10b981', '#2563eb', '#666', '#ea580c', '#4c1d95'];
               const g1 = gradientStarts[idx % gradientStarts.length];
@@ -1200,12 +1168,7 @@ const Welcome = ({
                 </AnimatedSection>
               );
             })
-          ) : (
-            <AnimatedSection className="mb-12">
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No categories available</p>
-              </div>
-            </AnimatedSection>
+            ) : null
           )}
 
           {/* ── Brand of the Week ── */}

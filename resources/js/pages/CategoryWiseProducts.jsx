@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import LoadingScreen from '../components/LoadingScreen';
 import FlashMessage from '../components/FlashMessage';
+import { calculatePrice, formatPrice } from '@/utils/priceCalculator';
 
 
 const CategoryWiseProducts = ({ categoryId }) => {
@@ -46,15 +47,25 @@ const CategoryWiseProducts = ({ categoryId }) => {
     }
   };
 
-  const formatProduct = (product) => ({
-    id: product.id,
-    name: product.name,
-    price: `RM ${Math.round(product.price - (product.price * (product.discount_price || 0) / 100))}`,
-    originalPrice: `RM ${Math.round(product.price)}`,
-    discount: `${product.discount_price || 0}%`,
-    image: product.image,
-    savings: product.savings || 0,
-  });
+  const formatProduct = (product) => {
+    // Use final_price and other pricing data from backend database (calculated by PriceCalculator)
+    const finalPrice = parseFloat(product.final_price) || parseFloat(product.price) || 0;
+    const originalPrice = parseFloat(product.price) || 0;
+    const discountPercentage = product.discount_percentage || 0;
+    const savings = product.savings || 0;
+
+    return {
+      id: product.id,
+      name: product.name,
+      price: formatPrice(finalPrice, 'RM'),
+      originalPrice: formatPrice(originalPrice, 'RM'),
+      discount: `${discountPercentage}%`,
+      image: product.image,
+      savings: savings,
+      finalPrice: finalPrice,
+      isDiscounted: product.is_discounted || false,
+    };
+  };
 
   const handlePageChange = (page) => {
     fetchProducts(page);

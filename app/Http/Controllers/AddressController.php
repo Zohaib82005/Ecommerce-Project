@@ -92,12 +92,18 @@ class AddressController extends Controller
      */
     public function destroy(Request $request, $id)
     {
+        try{
         $address = Addresse::where('user_id', auth()->id())
             ->where('id', $id)
             ->firstOrFail();
 
         $address->delete();
-
+        } catch (\Exception $e) {
+            // if ($request->expectsJson()) {
+            //     return response()->json(['message' => 'Address Not Found'], 404);
+            // }
+            return back()->with('error', 'Sorry we are unable to delete this address at the moment. Please try again later.');
+        }
         // if ($request->expectsJson()) {
         //     return response()->json(['message' => 'Address Deleted Successfully'], 200);
         // }

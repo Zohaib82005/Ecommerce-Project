@@ -157,7 +157,7 @@ const CategoryDropdown = () => {
                             return (
                               <Link
                                 key={subcategory.id}
-                                href={`/category/${subcategory.id}`}
+                                href={`/`}
                                 className="flex flex-col items-center gap-2 group"
                               >
                                 <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden group-hover:bg-purple-50 transition-colors">
@@ -200,7 +200,7 @@ const CategoryDropdown = () => {
                                   return subcategory.sub_subcategories.map((subSubcategory) => (
                                     <Link
                                       key={subSubcategory.id}
-                                      href={`/product/${subSubcategory.id}`}
+                                      href={`/`}
                                       className="block text-sm text-black font-semibold hover:text-purple-700 hover:bg-gray-50 px-2 py-1 rounded transition-colors"
                                     >
                                       {subSubcategory.name}
@@ -213,24 +213,8 @@ const CategoryDropdown = () => {
                           </div>
 
                           {/* Top Brands */}
-                          <div className="flex-1">
-                            <h3 className="text-base font-bold text-black mb-3">Top Brands</h3>
-                            <div className="grid grid-cols-3 gap-3">
-                              {topBrands.map((brand) => (
-                                <div
-                                  key={brand.id}
-                                  className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-center hover:shadow-md transition-shadow cursor-pointer"
-                                  style={{ minHeight: '64px' }}
-                                >
-                                  <img
-                                    src={brand.logo}
-                                    alt={brand.name}
-                                    className="max-h-8 w-auto object-contain"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                          
+                          
 
                         </div>
                       )}

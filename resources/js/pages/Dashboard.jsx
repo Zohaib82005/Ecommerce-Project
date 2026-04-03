@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, usePage } from "@inertiajs/react";
+import { Link, usePage, router, useForm } from "@inertiajs/react";
 import FlashMessage from "../Components/FlashMessage";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -32,6 +32,10 @@ const Dashboard = () => {
     landmark: "",
   });
 
+  // Cart Management States
+  const [addingToCart, setAddingToCart] = useState({});   // { [productId]: true/false }
+  const [cartErrors, setCartErrors] = useState({});       // { [productId]: errorMsg }
+
   // Pakistan provinces and cities
   const pakistanProvinces = [
     "Punjab",
@@ -63,6 +67,29 @@ const Dashboard = () => {
     alert("Settings saved successfully!");
   };
 
+  // Handle Add to Cart for Wishlist
+  const handleAddToCart = (productId) => {
+    setAddingToCart(prev => ({ ...prev, [productId]: true }));
+    setCartErrors(prev => ({ ...prev, [productId]: null }));
+
+    router.post('/cart/add', {
+      product_id: productId,
+      quantity: 1,
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setAddingToCart(prev => ({ ...prev, [productId]: false }));
+      },
+      onError: (errors) => {
+        setAddingToCart(prev => ({ ...prev, [productId]: false }));
+        setCartErrors(prev => ({
+          ...prev,
+          [productId]: errors?.product_id || errors?.quantity || 'Failed to add to cart.',
+        }));
+      },
+    });
+  };
+
   // Read URL query parameter to set active tab
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -87,7 +114,7 @@ const Dashboard = () => {
     };
     
     fetchAddresses();
-  }, []);
+  }, []); // This fetches when the addresses tab is first viewed
 
   // Handle address form change
   const handleAddressFormChange = (e) => {
@@ -124,86 +151,50 @@ const Dashboard = () => {
   };
 
   // Add new address
-  const handleAddAddress = async (e) => {
+  const handleAddAddress = (e) => {
     e.preventDefault();
     
-    try {
-      const response = await fetch("/addresses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content,
-        },
-        body: JSON.stringify(addressForm),
-      });
-
-      if (response.ok) {
-        const newAddress = await response.json();
-        setAddresses([...addresses, newAddress]);
+    router.post("/addresses", addressForm, {
+      onSuccess: () => {
         setShowAddModal(false);
         resetAddressForm();
-        alert("Address added successfully!");
-      } else {
-        alert("Failed to add address");
-      }
-    } catch (error) {
-      console.error("Error adding address:", error);
-      alert("Error adding address");
-    }
+      },
+      onError: (errors) => {
+        console.error("Error adding address:", errors);
+      },
+    });
   };
 
   // Update address
-  const handleUpdateAddress = async (e) => {
+  const handleUpdateAddress = (e) => {
     e.preventDefault();
     
-    try {
-      const response = await fetch(`/addresses/${selectedAddress.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content,
+    router.post(`/addresses/${selectedAddress.id}`, 
+      { ...addressForm, _method: 'PUT' },
+      {
+        onSuccess: () => {
+          setShowEditModal(false);
+          setSelectedAddress(null);
+          resetAddressForm();
         },
-        body: JSON.stringify(addressForm),
-      });
-
-      if (response.ok) {
-        const updatedAddress = await response.json();
-        setAddresses(addresses.map(addr => addr.id === selectedAddress.id ? updatedAddress : addr));
-        setShowEditModal(false);
-        setSelectedAddress(null);
-        resetAddressForm();
-        alert("Address updated successfully!");
-      } else {
-        alert("Failed to update address");
+        onError: (errors) => {
+          console.error("Error updating address:", errors);
+        },
       }
-    } catch (error) {
-      console.error("Error updating address:", error);
-      alert("Error updating address");
-    }
+    );
   };
 
   // Delete address
-  const handleDeleteAddress = async () => {
-    try {
-      const response = await fetch(`/addresses/${selectedAddress.id}`, {
-        method: "DELETE",
-        headers: {
-          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content,
-        },
-      });
-
-      if (response.ok) {
-        setAddresses(addresses.filter(addr => addr.id !== selectedAddress.id));
+  const handleDeleteAddress = () => {
+    router.delete(`/addresses/${selectedAddress.id}`, {
+      onSuccess: () => {
         setShowDeleteConfirm(false);
         setSelectedAddress(null);
-        alert("Address deleted successfully!");
-      } else {
-        alert("Failed to delete address");
-      }
-    } catch (error) {
-      console.error("Error deleting address:", error);
-      alert("Error deleting address");
-    }
+      },
+      onError: (errors) => {
+        console.error("Error deleting address:", errors);
+      },
+    });
   };
 
   // Check if form is valid
@@ -306,7 +297,10 @@ const Dashboard = () => {
                     <i className="bi bi-box text-lg"></i>
                     <span className="font-medium">My Orders</span>
                   </li>
-                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors">
+                  <li 
+                    onClick={() => { setActiveTab("track"); setSidebarOpen(false); }}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${activeTab === "track" ? "bg-indigo-600 text-white" : "text-gray-700 hover:bg-gray-100"}`}
+                  >
                     <i className="bi bi-truck text-lg"></i>
                     <span className="font-medium">Track your order</span>
                   </li>
@@ -455,14 +449,7 @@ const Dashboard = () => {
                             </div>
 
                             <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex gap-3 justify-end">
-                              <button className="px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">
-                                <i className="bi bi-geo-alt mr-1"></i>
-                                Track Order
-                              </button>
-                              <button className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
-                                <i className="bi bi-eye mr-1"></i>
-                                View Details
-                              </button>
+                              
                             </div>
                           </div>
                         ))}
@@ -478,6 +465,250 @@ const Dashboard = () => {
                         </p>
                         <Link href="/products" className="inline-block px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
                           Keep Exploring
+                        </Link>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* TRACK ORDER TAB */}
+            {activeTab === "track" && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 lg:p-8">
+                  <div className="mb-8">
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Track Your Orders</h1>
+                    <p className="text-gray-600 leading-relaxed max-w-3xl">
+                      Monitor the real-time status of your orders and get updates on delivery progress.
+                    </p>
+                  </div>
+
+                  {(() => {
+                    const groupedOrders = props.orders ? props.orders.reduce((acc, item) => {
+                      const oid = item.oid;
+                      if (!acc[oid]) {
+                        acc[oid] = {
+                          id: item.id,
+                          oid: item.oid,
+                          created_at: item.created_at,
+                          order_status: item.order_status,
+                          status: item.status,
+                          cstatus: item.cstatus,
+                          payment_method: item.payment_method,
+                          total_amount: item.total_amount,
+                          products: []
+                        };
+                      }
+                      acc[oid].products.push({
+                        name: item.product_name,
+                        quantity: item.quantity,
+                        cstatus: item.cstatus,
+                        image: item.product_image,
+                        price: item.pprice,
+                        totalPrice: (item.quantity * item.pprice).toFixed(2)
+                      });
+                      return acc;
+                    }, {}) : {};
+
+                    const getStatusIcon = (status) => {
+                      switch(status?.toLowerCase()) {
+                        case 'pending': return { icon: '📦', color: 'text-yellow-600', bgColor: 'bg-yellow-100' };
+                        case 'processing': return { icon: '⚙️', color: 'text-blue-600', bgColor: 'bg-blue-100' };
+                        case 'shipped': return { icon: '🚚', color: 'text-indigo-600', bgColor: 'bg-indigo-100' };
+                        case 'delivered': return { icon: '✅', color: 'text-green-600', bgColor: 'bg-green-100' };
+                        case 'cancelled': return { icon: '❌', color: 'text-red-600', bgColor: 'bg-red-100' };
+                        default: return { icon: '📦', color: 'text-gray-600', bgColor: 'bg-gray-100' };
+                      }
+                    };
+
+                    const getStatusBgClass = (status) => {
+                      switch(status?.toLowerCase()) {
+                        case 'pending': return 'bg-yellow-100 text-yellow-800';
+                        case 'processing': return 'bg-blue-100 text-blue-800';
+                        case 'shipped': return 'bg-indigo-100 text-indigo-800';
+                        case 'delivered': return 'bg-green-100 text-green-800';
+                        case 'cancelled': return 'bg-red-100 text-red-800';
+                        default: return 'bg-gray-100 text-gray-800';
+                      }
+                    };
+
+                    return Object.keys(groupedOrders).length > 0 ? (
+                      <div className="space-y-6">
+                        {Object.values(groupedOrders).map((order) => {
+                          const statusInfo = getStatusIcon(order.cstatus);
+                          
+                          return (
+                            <div key={order.oid} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+                              {/* Order Header */}
+                              <div className={`${statusInfo.bgColor} px-6 py-4 border-b border-gray-200`}>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-4">
+                                    <div className={`w-16 h-16 ${statusInfo.bgColor} rounded-xl flex items-center justify-center text-3xl`}>
+                                      {statusInfo.icon}
+                                    </div>
+                                    <div>
+                                      <h6 className="font-bold text-gray-900 text-lg">Order #{order.oid}</h6>
+                                      <p className="text-sm text-gray-600">Placed on {new Date(order.created_at).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}</p>
+                                    </div>
+                                  </div>
+                                  <span className={`px-4 py-2 rounded-full text-sm font-bold ${getStatusBgClass(order.cstatus)}`}>
+                                    {order.cstatus?.toUpperCase()}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Status Timeline */}
+                              <div className="p-6 bg-gray-50">
+                                <div className="space-y-4">
+                                  {/* Timeline item - Pending */}
+                                  <div className="flex gap-4">
+                                    <div className="flex flex-col items-center">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                        ['processing', 'shipped', 'delivered'].includes(order.cstatus?.toLowerCase()) 
+                                          ? 'bg-green-500 text-white' 
+                                          : 'bg-yellow-400 text-white'
+                                      }`}>
+                                        ✓
+                                      </div>
+                                      <div className={`w-1 h-12 ${
+                                        ['processing', 'shipped', 'delivered'].includes(order.cstatus?.toLowerCase()) 
+                                          ? 'bg-green-500' 
+                                          : 'bg-gray-300'
+                                      }`}></div>
+                                    </div>
+                                    <div className="pb-4">
+                                      <h6 className="font-semibold text-gray-900">Order Placed</h6>
+                                      <p className="text-sm text-gray-600">Your order has been confirmed</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Timeline item - Processing */}
+                                  <div className="flex gap-4">
+                                    <div className="flex flex-col items-center">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                        ['shipped', 'delivered'].includes(order.cstatus?.toLowerCase()) 
+                                          ? 'bg-green-500 text-white' 
+                                          : order.cstatus?.toLowerCase() === 'processing'
+                                          ? 'bg-blue-500 text-white'
+                                          : 'bg-gray-300 text-gray-600'
+                                      }`}>
+                                        {['shipped', 'delivered'].includes(order.cstatus?.toLowerCase()) ? '✓' : order.cstatus?.toLowerCase() === 'processing' ? '⚙' : '○'}
+                                      </div>
+                                      <div className={`w-1 h-12 ${
+                                        ['shipped', 'delivered'].includes(order.cstatus?.toLowerCase()) 
+                                          ? 'bg-green-500' 
+                                          : order.cstatus?.toLowerCase() === 'processing'
+                                          ? 'bg-blue-500'
+                                          : 'bg-gray-300'
+                                      }`}></div>
+                                    </div>
+                                    <div className="pb-4">
+                                      <h6 className="font-semibold text-gray-900">Processing</h6>
+                                      <p className="text-sm text-gray-600">We're preparing your items</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Timeline item - Shipped */}
+                                  <div className="flex gap-4">
+                                    <div className="flex flex-col items-center">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                        order.cstatus?.toLowerCase() === 'delivered' 
+                                          ? 'bg-green-500 text-white' 
+                                          : ['shipped'].includes(order.cstatus?.toLowerCase())
+                                          ? 'bg-indigo-500 text-white'
+                                          : 'bg-gray-300 text-gray-600'
+                                      }`}>
+                                        {order.cstatus?.toLowerCase() === 'delivered' ? '✓' : order.cstatus?.toLowerCase() === 'shipped' ? '🚚' : '○'}
+                                      </div>
+                                      <div className={`w-1 h-12 ${
+                                        order.cstatus?.toLowerCase() === 'delivered' 
+                                          ? 'bg-green-500' 
+                                          : order.cstatus?.toLowerCase() === 'shipped'
+                                          ? 'bg-indigo-500'
+                                          : 'bg-gray-300'
+                                      }`}></div>
+                                    </div>
+                                    <div className="pb-4">
+                                      <h6 className="font-semibold text-gray-900">Shipped</h6>
+                                      <p className="text-sm text-gray-600">Your order is on the way</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Timeline item - Delivered */}
+                                  <div className="flex gap-4">
+                                    <div className="flex flex-col items-center">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                        order.cstatus?.toLowerCase() === 'delivered' 
+                                          ? 'bg-green-500 text-white' 
+                                          : 'bg-gray-300 text-gray-600'
+                                      }`}>
+                                        {order.cstatus?.toLowerCase() === 'delivered' ? '✓' : '○'}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <h6 className="font-semibold text-gray-900">Delivered</h6>
+                                      <p className="text-sm text-gray-600">Order completed successfully</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Products */}
+                              <div className="p-6 border-t border-gray-200 space-y-4">
+                                <h6 className="font-semibold text-gray-900">Items in this order</h6>
+                                {order.products.map((product, idx) => (
+                                  <div key={idx} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                                    <div className="w-20 h-20 rounded-lg bg-white overflow-hidden flex-shrink-0 border border-gray-200">
+                                      <img
+                                        src={`/storage/${product.image}`}
+                                        alt={product.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-semibold text-gray-900 truncate">{product.name}</h5>
+                                      <p className="text-sm text-gray-600 mt-1">Qty: {product.quantity}</p>
+                                      <p className="text-sm font-semibold text-indigo-600">${parseFloat(product.price).toFixed(2)} each</p>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${getStatusBgClass(product.cstatus)}`}>
+                                      {product.cstatus}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Order Footer */}
+                              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                                <div>
+                                  <p className="text-sm text-gray-600">Order Total</p>
+                                  <h5 className="text-2xl font-bold text-indigo-600">${parseFloat(order.total_amount).toFixed(2)}</h5>
+                                </div>
+                                <div className="flex gap-3">
+                                  
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-16">
+                        <div className="w-32 h-32 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                          <i className="bi bi-truck text-5xl text-gray-400"></i>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Orders to Track</h3>
+                        <p className="text-gray-600 max-w-md mx-auto mb-6">
+                          You don't have any orders yet. Place your first order and track it here!
+                        </p>
+                        <Link href="/products" className="inline-block px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                          Start Shopping
                         </Link>
                       </div>
                     );
@@ -577,16 +808,38 @@ const Dashboard = () => {
                               )}
                             </div>
                             <button 
-                              disabled={item.instock === 0}
-                              className={`w-full py-2.5 rounded-lg font-medium transition-colors ${
-                                item.instock > 0 
-                                  ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              onClick={() => handleAddToCart(item.id)}
+                              disabled={item.instock === 0 || addingToCart[item.id]}
+                              className={`w-full py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                                item.instock > 0 && !addingToCart[item.id]
+                                  ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-500 active:bg-yellow-600' 
+                                  : item.instock === 0
+                                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                  : 'bg-indigo-600 text-white cursor-not-allowed opacity-70'
                               }`}
                             >
-                              <i className="bi bi-cart-plus mr-2"></i>
-                              Add to Cart
+                              {addingToCart[item.id] ? (
+                                <>
+                                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                  </svg>
+                                  Adding...
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.4 7h12.8M7 13L5.4 5M17 21a1 1 0 100-2 1 1 0 000 2zm-10 0a1 1 0 100-2 1 1 0 000 2z" />
+                                  </svg>
+                                  Add to Cart
+                                </>
+                              )}
                             </button>
+                            {cartErrors[item.id] && (
+                              <p className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded mt-2">
+                                {cartErrors[item.id]}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}

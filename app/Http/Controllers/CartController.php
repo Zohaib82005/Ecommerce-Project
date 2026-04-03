@@ -6,13 +6,15 @@ use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Wishlist;
+use App\Utils\PriceCalculator;
 use Inertia\Inertia;
 class CartController extends Controller
 {
 
     public function addToCart(Request $request)
     {
+        // dd($request->all());
         $validated = $request->validate([
             'product_id' => 'required|integer|exists:products,id',
             'quantity' => 'required|integer|min:1',
@@ -32,6 +34,7 @@ class CartController extends Controller
             'status' => 'active',
         ]);
         
+        Wishlist::where('user_id', $user->id)->where('product_id', $validated['product_id'])->delete();
        
 
         return redirect()->back()->with('success', 'Product added to cart successfully!');
@@ -44,20 +47,29 @@ class CartController extends Controller
             ->where('carts.user_id', $user->id)
             ->where('carts.status', 'active')
             ->select('products.*', 'carts.id as cart_item_id', 'carts.quantity as quantity')
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                // Use PriceCalculator for consistent price calculations
+                $priceCalc = PriceCalculator::calculate(
+                    $product->price,
+                    $product->discount_price ?? 0,
+                    $product->discount_type ?? 'percentage'
+                );
 
-            // dd($products);
-        if (!$products) {
-            return Inertia::render('Cart', ['cartItems' => []]);
+                return array_merge($product->toArray(), [
+                    'final_price' => $priceCalc['final_price'],
+                    'discount_amount' => $priceCalc['discount_amount'],
+                    'discount_percentage' => $priceCalc['discount_percentage'],
+                    'is_discounted' => $priceCalc['is_discounted'],
+                    'savings' => $priceCalc['savings'],
+                ]);
+            });
+
+        if (!$products || $products->isEmpty()) {
+            return Inertia::render('Cart', ['products' => []]);
         }
 
-        // $cartItems = Cartitem::where('cart_id', $cart->id)
-        //     ->where('status', 'active')
-        //     ->with('product')
-        //     ->get();
-        // dd($products);
         return Inertia::render('Cart', ['products' => $products]);
-        
     }
 
     //update status to removed

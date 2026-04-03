@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 import Footer from '../components/Footer';
 import { Link, usePage, router } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
-import LoadingScreens from "../components/LoadingScreen";
+
 const Product = () => {
   const props = usePage().props;
   const allProducts = props.products || [];
@@ -157,7 +157,6 @@ const Product = () => {
 
   return (
     <>
-    <LoadingScreens />
       <FlashMessage />
       <Navbar />
 
@@ -380,22 +379,18 @@ const Product = () => {
                     const cartError = cartErrors[product.id];
 
                     return (
-                      <Link
-                        href={`/product/details/${product.id}`}
+                      /*
+                       * HOW THE HOVER BUTTON WORKS:
+                       * 1. Card:   overflow-hidden  →  clips anything outside its boundary
+                       * 2. Card:   group            →  lets children react to card hover
+                       * 3. Button: translate-y-full →  pushed entirely below the card (invisible)
+                       * 4. Button: group-hover:translate-y-0 → slides up on card hover
+                       * 5. Button must be the LAST child (outside p-3) to sit flush at the bottom
+                       */
+                      <div
                         key={product.id}
-                        className="no-underline"
+                        className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col"
                       >
-                        {/*
-                         * HOW THE HOVER BUTTON WORKS:
-                         * 1. Card:   overflow-hidden  →  clips anything outside its boundary
-                         * 2. Card:   group            →  lets children react to card hover
-                         * 3. Button: translate-y-full →  pushed entirely below the card (invisible)
-                         * 4. Button: group-hover:translate-y-0 → slides up on card hover
-                         * 5. Button must be the LAST child (outside p-3) to sit flush at the bottom
-                         */}
-                        <div
-                          className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col"
-                        >
                         {/* ── Image ── */}
                         <div className="relative aspect-square bg-gray-50 overflow-hidden flex-shrink-0">
                           <img
@@ -506,8 +501,7 @@ const Product = () => {
                             )}
                           </button>
                         )}
-                        </div>
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>

@@ -1486,6 +1486,54 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 .history-amount { font-size: 15px; font-weight: 700; color: var(--success); }
 
 /* ============================================
+   DISCOUNT DISPLAY
+   ============================================ */
+
+.discount-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.discount-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--brand);
+  min-width: 45px;
+  padding: 4px 8px;
+  background: var(--brand-faint);
+  border-radius: var(--r-sm);
+  letter-spacing: -0.01em;
+}
+
+.discount-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: rgba(232, 80, 30, 0.12);
+  color: var(--brand);
+  white-space: nowrap;
+}
+
+.no-discount {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--t3);
+  font-style: italic;
+}
+
+/* ============================================
    EMPTY STATE
    ============================================ */
 

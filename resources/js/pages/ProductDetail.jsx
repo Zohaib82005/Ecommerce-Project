@@ -131,35 +131,42 @@ const ProductDetail = () => {
   }, [product?.id]);
 
   // Calculate pricing based on discount percentage
-  const calculatePricing = () => {
-    const originalPrice = product?.price || 0;
-    const discountPercentage = product?.discount_price || 0; // discount_price is a percentage
-    const savings = originalPrice * (discountPercentage / 100);
-    const discountedPrice = originalPrice - savings;
-    return {
-      originalPrice: originalPrice,
-      discountedPrice: discountedPrice,
-      savings: savings,
-      discountPercentage: discountPercentage
-    };
-  };
+  // const calculatePricing = () => {
+  //   // Import and use centralized price calculator
+  //   const { calculatePrice } = null;
+    
+  //   const calculation = calculatePrice(
+  //     product?.price || 0,
+  //     product?.discount_price || 0,
+  //     product?.discount_type || 'percentage'
+  //   );
 
-  const pricing = calculatePricing();
+  //   return {
+  //     originalPrice: calculation.originalPrice,
+  //     discountedPrice: calculation.finalPrice,
+  //     savings: calculation.savings,
+  //     discountPercentage: calculation.discountPercentage,
+  //     isDiscounted: calculation.isDiscounted,
+  //     discountType: calculation.discountType,
+  //   };
+  // };
+
+  // const pricing = calculatePricing();
 
   const productData = {
     name: product?.name || "Product Name",
-    price: parseFloat(pricing.discountedPrice),
+    price: product?.final_price || 0,
     discount_price: product?.discount_price || null,
-    originalPrice: parseFloat(pricing.originalPrice),
+    originalPrice: product?.price || 0,
     rating: averageRating,
     reviewCount: productRating.total_reviews || reviews.length || 0,
     inStock: product?.instock > 0,
     stockCount: product?.instock || 50,
     brand: "Generic",
-    seller: "OurShopee",
+    seller: "BrightMaxTrading",
     deliveryDate: formatDeliveryDate(),
-    discount: parseInt(pricing.discountPercentage),
-    savings: parseFloat(pricing.savings),
+    discount: product?.discount_price || 0,
+    savings: product?.discount_type === 'percentage' ? (product?.price * (product?.discount_price || 0) / 100) : (product?.discount_price || 0),
     description: product?.description || "No description available.",
     category: "Mobiles & Tablets",
     subcategory: "Mobile Phones",
@@ -302,7 +309,7 @@ const ProductDetail = () => {
                 {/* Original Price and Discount */}
                 <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
                   <span className="text-gray-400 line-through text-sm sm:text-base">RM {productData.originalPrice}</span>
-                  <span className="text-green-600 font-semibold text-sm sm:text-base">{productData.discount}% OFF</span>
+                  <span className="text-green-600 font-semibold text-sm sm:text-base">{ (productData.discount_price && productData.discount_type === 'percentage' ? productData.discount_price + '%' : 'RM ' + productData.discount_price) || '0' } OFF</span>
                   <span className="text-gray-400 text-xs sm:text-sm">(Inc. of VAT)</span>
                 </div>
 

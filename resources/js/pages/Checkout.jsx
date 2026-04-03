@@ -3,7 +3,8 @@ import { Link, useForm, usePage } from "@inertiajs/react";
 import Navbar from "../Components/Navbar";
 import Footer from "../components/Footer";
 import FlashMessage from "../components/FlashMessage";
-
+import LoadingScreen from "../components/LoadingScreen";
+import { calculatePrice, formatPrice, calculateCartTotal } from '@/utils/priceCalculator';
 const Checkout = () => {
   const props = usePage().props;
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -44,89 +45,171 @@ const Checkout = () => {
     fetchAddresses();
   }, []);
 
-  // Pakistan provinces
-  const pakistanProvinces = [
-    "Punjab",
-    "Sindh",
-    "Khyber Pakhtunkhwa",
-    "Balochistan",
-    "Gilgit-Baltistan",
-    "Azad Jammu and Kashmir",
-    "Islamabad",
-  ];
+  // Mala provinces
+  const malaysianProvinces = [
+  "Johor",
+  "Kedah",
+  "Kelantan",
+  "Melaka",
+  "Negeri Sembilan",
+  "Pahang",
+  "Penang",
+  "Perak",
+  "Perlis",
+  "Sabah",
+  "Sarawak",
+  "Selangor",
+  "Terengganu",
+  "Kuala Lumpur",
+  "Labuan",
+  "Putrajaya"
+];
 
   // Pakistan cities mapped by province
-  const pakistanCities = {
-    Punjab: [
-      "Lahore",
-      "Faisalabad",
-      "Rawalpindi",
-      "Multan",
-      "Gujranwala",
-      "Sialkot",
-      "Sheikhupura",
-      "Okara",
-      "Sahiwal",
-      "Sargodha",
-      "Bahawalpur",
-      "Jhang",
-      "Kasur",
-      "Chakwal",
-      "Attock",
-    ],
-    Sindh: [
-      "Karachi",
-      "Hyderabad",
-      "Sukkur",
-      "Larkana",
-      "Nawabshah",
-      "Mirpur Khas",
-      "Dadu",
-      "Jacobabad",
-      "Shikarpur",
-      "Badin",
-    ],
-    "Khyber Pakhtunkhwa": [
-      "Peshawar",
-      "Mingora",
-      "Abbottabad",
-      "Mardan",
-      "Kohat",
-      "Bannu",
-      "Swat",
-      "Charsadda",
-      "Nowshera",
-      "Mansehra",
-    ],
-    Balochistan: [
-      "Quetta",
-      "Gwadar",
-      "Ziaarat",
-      "Loralai",
-      "Zhob",
-      "Khuzdar",
-      "Turbat",
-      "Sibi",
-    ],
-    "Gilgit-Baltistan": [
-      "Gilgit",
-      "Skardu",
-      "Hunza",
-      "Diamer",
-      "Ghizer",
-      "Shigar",
-    ],
-    "Azad Jammu and Kashmir": [
-      "Muzaffarabad",
-      "Mirpur",
-      "Bhimber",
-      "Kotli",
-      "Poonch",
-      "Rawalakot",
-      "Mandi",
-    ],
-    Islamabad: ["Islamabad"],
-  };
+  const malaysiaCities = {
+  Johor: [
+    "Johor Bahru",
+    "Batu Pahat",
+    "Muar",
+    "Kluang",
+    "Segamat",
+    "Kota Tinggi",
+    "Kulai",
+    "Mersing",
+    "Pontian"
+  ],
+  Kedah: [
+    "Alor Setar",
+    "Sungai Petani",
+    "Kulim",
+    "Langkawi",
+    "Jitra",
+    "Baling",
+    "Sik",
+    "Yan"
+  ],
+  Kelantan: [
+    "Kota Bharu",
+    "Pasir Mas",
+    "Tanah Merah",
+    "Kuala Krai",
+    "Tumpat",
+    "Machang",
+    "Gua Musang",
+    "Jeli"
+  ],
+  Melaka: [
+    "Melaka City",
+    "Alor Gajah",
+    "Jasin",
+    "Masjid Tanah",
+    "Klebang",
+    "Sungai Udang"
+  ],
+  "Negeri Sembilan": [
+    "Seremban",
+    "Port Dickson",
+    "Nilai",
+    "Kuala Pilah",
+    "Bahau",
+    "Tampin",
+    "Gemas"
+  ],
+  Pahang: [
+    "Kuantan",
+    "Temerloh",
+    "Bentong",
+    "Raub",
+    "Pekan",
+    "Jerantut",
+    "Cameron Highlands",
+    "Rompin"
+  ],
+  Penang: [
+    "George Town",
+    "Butterworth",
+    "Bukit Mertajam",
+    "Bayan Lepas",
+    "Balik Pulau",
+    "Tanjung Bungah"
+  ],
+  Perak: [
+    "Ipoh",
+    "Taiping",
+    "Teluk Intan",
+    "Sitiawan",
+    "Lumut",
+    "Kampar",
+    "Kuala Kangsar",
+    "Gerik"
+  ],
+  Perlis: [
+    "Kangar",
+    "Arau",
+    "Padang Besar",
+    "Kuala Perlis",
+    "Chuping"
+  ],
+  Sabah: [
+    "Kota Kinabalu",
+    "Sandakan",
+    "Tawau",
+    "Lahad Datu",
+    "Keningau",
+    "Semporna",
+    "Kudat",
+    "Ranau",
+    "Tambunan"
+  ],
+  Sarawak: [
+    "Kuching",
+    "Miri",
+    "Sibu",
+    "Bintulu",
+    "Limbang",
+    "Sarikei",
+    "Kapit",
+    "Betong",
+    "Sri Aman"
+  ],
+  Selangor: [
+    "Shah Alam",
+    "Petaling Jaya",
+    "Subang Jaya",
+    "Klang",
+    "Kajang",
+    "Ampang",
+    "Cyberjaya",
+    "Rawang",
+    "Sepang",
+    "Selayang"
+  ],
+  Terengganu: [
+    "Kuala Terengganu",
+    "Dungun",
+    "Kemaman",
+    "Marang",
+    "Besut",
+    "Jerteh",
+    "Kuala Berang"
+  ],
+  "Kuala Lumpur": [
+    "Kuala Lumpur",
+    "Cheras",
+    "Kepong",
+    "Bangsar",
+    "Bukit Bintang",
+    "Wangsa Maju"
+  ],
+  Labuan: [
+    "Victoria (Bandar Labuan)",
+    "Sungai Bedaun",
+    "Batu Manikar"
+  ],
+  Putrajaya: [
+    "Putrajaya"
+  ]
+};
 
   const orderItems = props.cartItems || [
     {
@@ -145,14 +228,30 @@ const Checkout = () => {
     },
   ];
 
-  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = orderItems.reduce((sum, item) => {
+    // Use final_price if available (from backend), otherwise calculate with price calculator
+    const finalPrice = item.final_price;
+    
+    return sum + (finalPrice * item.quantity);
+  }, 0);
   const couponDiscount = appliedCoupon ? appliedCoupon.discount : 0;
   const processingFee = paymentMethod === "cod" ? 1.00 : 0.00;
   const shipping = 0;
   const walletBalance = 0.00;
   const walletUsed = useWallet ? Math.min(walletBalance, subtotal - couponDiscount) : 0;
-  const total = subtotal - couponDiscount + processingFee + shipping - walletUsed;
-  const totalSavings = (60.70 - subtotal) + couponDiscount + shipping;
+  // const total = subtotal - couponDiscount + processingFee + shipping - walletUsed;
+    const total = subtotal ;
+
+  const totalSavings = orderItems.reduce((savings, item) => {
+    const originalPrice = item.price;
+    const finalPrice = item.final_price || calculatePrice(
+      item.price,
+      item.discount_price || 0,
+      item.discount_type || 'percentage'
+    ).finalPrice;
+    
+    return savings + ((originalPrice - finalPrice) * item.quantity);
+  }, 0);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -458,7 +557,7 @@ const Checkout = () => {
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           >
-                            <option value="Pakistan">Pakistan</option>
+                            <option value="Malaysia">Malaysia</option>
                           </select>
                         </div>
                         <div>
@@ -470,7 +569,7 @@ const Checkout = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           >
                             <option value="">Select Province</option>
-                            {pakistanProvinces.map((province) => (
+                            {malaysianProvinces.map((province) => (
                               <option key={province} value={province}>
                                 {province}
                               </option>
@@ -487,7 +586,7 @@ const Checkout = () => {
                           >
                             <option value="">Select City</option>
                             {formData.data.location &&
-                              pakistanCities[formData.data.location]?.map((city) => (
+                              malaysiaCities[formData.data.location]?.map((city) => (
                                 <option key={city} value={city}>
                                   {city}
                                 </option>
@@ -604,7 +703,7 @@ const Checkout = () => {
                             {item.name.split(' ')[0]} {item.name.split(' ')[1]}
                           </p>
                           <p className="text-sm text-gray-900 font-medium truncate">{item.name}</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">OMR {item.price}</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">RM {item.final_price}</p>
                         </div>
                       </div>
                     ))}
@@ -629,7 +728,7 @@ const Checkout = () => {
                       />
                       <div>
                         <p className="font-semibold text-gray-900">Pay by Card</p>
-                        <p className="text-sm text-gray-600">Processing Fees: 0.00 OMR</p>
+                        <p className="text-sm text-gray-600">Processing Fees: 0.00 RM</p>
                       </div>
                     </div>
                   </label>
@@ -646,14 +745,14 @@ const Checkout = () => {
                       />
                       <div>
                         <p className="font-semibold text-gray-900">Cash On Delivery</p>
-                        <p className="text-sm text-gray-600">Processing Fees: 1.00 OMR</p>
+                        <p className="text-sm text-gray-600">Processing Fees: 1.00 RM</p>
                       </div>
                     </div>
                   </label>
                 </div>
 
                 {/* Shopee Wallet */}
-                <div className="border-t border-gray-200 pt-4">
+                {/* <div className="border-t border-gray-200 pt-4">
                   <h3 className="font-semibold text-gray-900 mb-4">SHOPEE WALLET</h3>
                   <label className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg cursor-pointer">
                     <div className="flex items-center gap-3">
@@ -665,17 +764,17 @@ const Checkout = () => {
                       />
                       <div>
                         <p className="font-medium text-gray-900">Pay Using Wallet Balance</p>
-                        <p className="text-sm text-gray-600">Available Balance: OMR {walletBalance.toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">Available Balance: RM {walletBalance.toFixed(2)}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600 flex items-center gap-1">
                         <span className="text-orange-500">🎁</span>
-                        Used Balance: OMR {walletUsed.toFixed(2)}
+                        Used Balance: RM {walletUsed.toFixed(2)}
                       </p>
                     </div>
                   </label>
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -696,7 +795,7 @@ const Checkout = () => {
                       <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-sm text-green-800">Congrats! You've saved OMR {appliedCoupon.discount}</span>
+                      <span className="text-sm text-green-800">Congrats! You've saved RM {appliedCoupon.discount}</span>
                     </div>
                     <button onClick={removeCoupon} className="text-gray-400 hover:text-gray-600">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -730,24 +829,24 @@ const Checkout = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold text-gray-900">OMR {subtotal.toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">RM {subtotal.toFixed(2)}</span>
                   </div>
                   
                   {appliedCoupon && (
                     <div className="flex justify-between text-sm bg-green-50 p-2 rounded">
-                      <span className="text-gray-600">Coupon Discount</span>
-                      <span className="font-semibold text-green-600">OMR -{appliedCoupon.discount}</span>
+                      {/* <span className="text-gray-600">Coupon Discount</span> */}
+                      {/* <span className="font-semibold text-green-600">RM -{appliedCoupon.discount}</span> */}
                     </div>
                   )}
                   
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Processing Fee</span>
-                    <span className="font-semibold text-green-600">FREE</span>
+                    <span className="font-semibold text-green-600">May Apply</span>
                   </div>
                   
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Shipping</span>
-                    <span className="font-semibold text-green-600">FREE</span>
+                    <span className="font-semibold text-green-600">May Apply</span>
                   </div>
                   
                   <div className="border-t border-gray-200 pt-3">
@@ -755,7 +854,7 @@ const Checkout = () => {
                       <span className="font-semibold text-gray-900">
                         Total <span className="text-gray-500 font-normal text-sm">(Inclusive of VAT)</span>
                       </span>
-                      <span className="text-lg font-bold text-gray-900">OMR {total.toFixed(2)}</span>
+                      <span className="text-lg font-bold text-gray-900">RM {total.toFixed(2)}</span>
                     </div>
                   </div>
                   
@@ -768,7 +867,7 @@ const Checkout = () => {
                         </svg>
                         <span className="font-semibold text-green-800">Your Total Savings</span>
                       </div>
-                      <span className="font-bold text-green-700">OMR {totalSavings.toFixed(2)}</span>
+                      <span className="font-bold text-green-700">RM {totalSavings}</span>
                     </div>
                   </div>
                   

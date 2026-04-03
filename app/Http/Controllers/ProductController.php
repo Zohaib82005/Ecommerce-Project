@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Productimage;
+use App\Utils\PriceCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -37,28 +38,28 @@ class ProductController extends Controller
 
     public function addProduct(Request $req)
     {
-
-        // dd([
-        //     'files' => $req->allFiles(),
-        //     'inputs' => $req->except(['image','image1','image2','image3']),
-        //     'content_type' => $req->header('Content-Type'),
-        // ]);
-
+        /**
+         * Updated validation to support both percentage and fixed discount types
+         * - If discount_type is 'percentage': discount_price should be 0-100
+         * - If discount_type is 'fixed': discount_price should be less than price
+         * - Default is 'percentage' for backward compatibility
+         */
         $data = $req->validate([
             'name' => 'required',
-            'price' => 'required|numeric',
-            'discount_price' => 'nullable|numeric|lt:price', // ← this is failing because 34 is not less than 34
-            'instock' => 'required',
+            'price' => 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0',
+            'discount_type' => 'nullable|in:percentage,fixed',
+            'instock' => 'required|numeric|min:0',
             'desc' => 'required',
             'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-            'category_id' => 'required',
-            'subcategory_id' => 'required',
-            'sub_subcategory_id' => 'nullable',
+            'category_id' => 'required|exists:categories,id',
+            'subcategory_id' => 'required|exists:subcategories,id',
+            'sub_subcategory_id' => 'nullable|exists:sub_subcategories,id',
             'image1' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'image2' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'image3' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
-        // dd($data);
+
         // Store main image
         if ($req->hasFile('image')) {
             $file = $req->file('image');
@@ -66,11 +67,20 @@ class ProductController extends Controller
             $data['image'] = $path;
         }
 
-        // Create product
+        // Use PriceCalculator to ensure final_price is calculated and validated
+        $priceCalculation = PriceCalculator::calculate(
+            $data['price'],
+            $data['discount_price'] ?? null,
+            $data['discount_type'] ?? 'percentage'
+        );
+
+        // Create product with calculated final price
         $product = Product::create([
             'name' => $data['name'],
             'price' => $data['price'],
             'discount_price' => $data['discount_price'] ?? null,
+            'discount_type' => $priceCalculation['discount_type'],
+            'final_price' => $priceCalculation['final_price'],
             'instock' => $data['instock'],
             'description' => $data['desc'],
             'image' => $data['image'],
@@ -98,18 +108,81 @@ class ProductController extends Controller
         }
 
         return redirect()->back()->with('success', 'Product added successfully!');
+    }
 
+    public function updateProduct(Request $req, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $data = $req->validate([
+            'name' => 'required',
+            'price' => 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0',
+            'discount_type' => 'nullable|in:percentage,fixed',
+            'instock' => 'required|numeric|min:0',
+            'description' => 'required',
+            'category_id' => 'required|exists:categories,id',
+            'subcategory_id' => 'required|exists:subcategories,id',
+            'sub_subcategory_id' => 'nullable|exists:sub_subcategories,id',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image1' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image2' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image3' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        // Handle main image update
+        if ($req->hasFile('image')) {
+            // Delete old image if it exists
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $file = $req->file('image');
+            $path = $file->store('images', 'public');
+            $data['image'] = $path;
+        }
+
+        // Use PriceCalculator for consistent price updates
+        $priceCalculation = PriceCalculator::calculate(
+            $data['price'],
+            $data['discount_price'] ?? null,
+            $data['discount_type'] ?? 'percentage'
+        );
+
+        // Update product fields
+        $product->fill(array_merge($data, [
+            'final_price' => $priceCalculation['final_price'],
+            'discount_type' => $priceCalculation['discount_type'],
+            'description' => $data['description'],
+        ]));
+
+        $product->save();
+
+        // Handle optional extra images
+        $imageFields = ['image1', 'image2', 'image3'];
+        foreach ($imageFields as $field) {
+            if ($req->hasFile($field)) {
+                $file = $req->file($field);
+                $path = $file->store('images', 'public');
+                Productimage::create([
+                    'product_id' => $product->id,
+                    'image' => $path,
+                ]);
+            }
+        }
+
+        return redirect('/seller')->with('success', 'Product updated successfully!');
     }
 
     public function editProduct($id)
     {
         $product = Product::findOrFail($id);
-        // dd($product);
         $categories = Category::all();
+        $productImages = Productimage::where('product_id', $id)->get();
 
         return Inertia::render('EditProduct', [
             'product' => $product,
             'categories' => $categories,
+            'product_images' => $productImages,
         ]);
     }
 
@@ -128,17 +201,24 @@ class ProductController extends Controller
 
     public function products()
     {
-
         $products = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->select('products.*', 'categories.category as category')
             ->where('products.status', 'Approved')
-            ->get();
-        // ->paginate(5);
-        $categories = Category::all();
-        // dd($products);
-        // dd($products);
+            ->get()
+            ->map(function ($product) {
+                // Use PriceCalculator for consistent calculations
+                $priceCalc = $product->getPriceCalculation();
+                
+                return array_merge($product->toArray(), [
+                    'final_price' => $priceCalc['final_price'],
+                    'discount_amount' => $priceCalc['discount_amount'],
+                    'discount_percentage' => $priceCalc['discount_percentage'],
+                    'is_discounted' => $priceCalc['is_discounted'],
+                    'savings' => $priceCalc['savings'],
+                ]);
+            });
 
-        // return "We are facing some issues. Please try again later.";
+        $categories = Category::all();
 
         return Inertia::render('Product',
             [
@@ -155,7 +235,7 @@ class ProductController extends Controller
             ->where('products.id', $id)
             ->first();
 
-        if (! $product) {
+        if (!$product) {
             return redirect()->back()->with('error', 'Product not found!');
         }
 
@@ -164,6 +244,13 @@ class ProductController extends Controller
 
         // Calculate delivery date (current date + 3 days)
         $deliveryDate = now()->addDays(3);
+
+        // Ensure final_price is calculated if not already in DB
+        $priceCalc = $product->getPriceCalculation();
+        $product->final_price = $priceCalc['final_price'];
+        $product->discount_amount = $priceCalc['discount_amount'];
+        $product->discount_percentage = $priceCalc['discount_percentage'];
+        $product->is_discounted = $priceCalc['is_discounted'];
 
         return Inertia::render('ProductDetail', [
             'product' => $product,
@@ -174,6 +261,7 @@ class ProductController extends Controller
 
     /**
      * API endpoint - Get all categories with their products
+     * Uses centralized PriceCalculator for consistent discount application
      */
     public function getCategoriesWithProducts()
     {
@@ -184,13 +272,21 @@ class ProductController extends Controller
                     ->limit(4)
                     ->get()
                     ->map(function ($product) {
+                        // Use PriceCalculator for consistent price calculations
+                        $priceCalc = $product->getPriceCalculation();
+
                         return [
                             'id' => $product->id,
                             'name' => $product->name,
                             'price' => $product->price,
                             'discount_price' => $product->discount_price ?? 0,
+                            'discount_type' => $product->discount_type ?? 'percentage',
+                            'final_price' => $priceCalc['final_price'],
+                            'discount_amount' => $priceCalc['discount_amount'],
+                            'discount_percentage' => $priceCalc['discount_percentage'],
                             'image' => $product->image,
-                            'savings' => $this->calculateSavings($product->price, $product->discount_price),
+                            'savings' => $priceCalc['savings'],
+                            'is_discounted' => $priceCalc['is_discounted'],
                         ];
                     });
 
@@ -218,6 +314,7 @@ class ProductController extends Controller
 
     /**
      * API endpoint - Get all products by category
+     * Uses centralized PriceCalculator for consistent discount application
      */
     public function getProductsByCategory($categoryId)
     {
@@ -230,20 +327,28 @@ class ProductController extends Controller
                 ], 404);
             }
 
-            // Get paginated products - try without status filter first for debugging
+            // Get paginated products with consistent price calculations
             $productsPaginated = Product::where('category_id', $categoryId)
                 ->orderBy('created_at', 'desc')
                 ->paginate(12);
 
             $products = $productsPaginated->map(function ($product) {
+                // Use PriceCalculator for consistent price calculations
+                $priceCalc = $product->getPriceCalculation();
+
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
                     'price' => $product->price,
                     'discount_price' => $product->discount_price ?? 0,
+                    'discount_type' => $product->discount_type ?? 'percentage',
+                    'final_price' => $priceCalc['final_price'],
+                    'discount_amount' => $priceCalc['discount_amount'],
+                    'discount_percentage' => $priceCalc['discount_percentage'],
                     'image' => $product->image,
-                    'savings' => $this->calculateSavings($product->price, $product->discount_price),
-                    'status' => $product->status, // Debug: show product status
+                    'savings' => $priceCalc['savings'],
+                    'is_discounted' => $priceCalc['is_discounted'],
+                    'status' => $product->status,
                 ];
             })->toArray();
 

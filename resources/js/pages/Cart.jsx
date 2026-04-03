@@ -3,6 +3,7 @@ import { Link, usePage, router } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { calculatePrice, calculateCartTotal, formatPrice } from '@/utils/priceCalculator';
 
 const Cart = () => {
   const products = usePage().props.products || [];
@@ -15,8 +16,18 @@ const Cart = () => {
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(null);
 
-  // Calculate totals
-  const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  // Calculate totals using centralized price calculator
+  const subtotal = cartItems.reduce((total, item) => {
+    // Use final_price if available (calculated by backend), otherwise calculate on frontend
+    const finalPrice = item.final_price || calculatePrice(
+      item.price,
+      item.discount_price || 0,
+      item.discount_type || 'percentage'
+    ).finalPrice;
+    
+    return total + (finalPrice * item.quantity);
+  }, 0);
+
   const processingFee = 0; // FREE
   const shipping = 0; // FREE
   const total = subtotal + processingFee + shipping;
@@ -109,7 +120,7 @@ const Cart = () => {
                         {item.name}
                       </h3>
                       <p className="text-lg font-bold text-gray-900 mb-4">
-                        OMR {item.price}
+                        RM {item.final_price}
                       </p>
 
                       <div className="flex items-center justify-between">
@@ -158,19 +169,19 @@ const Cart = () => {
                     {/* Subtotal */}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Subtotal</span>
-                      <span className="font-semibold text-gray-900">OMR {subtotal.toFixed(2)}</span>
+                      <span className="font-semibold text-gray-900">RM {subtotal.toFixed(2)}</span>
                     </div>
 
                     {/* Processing Fee */}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Processing Fee</span>
-                      <span className="font-semibold text-green-600">FREE</span>
+                      <span className="font-semibold text-green-600">May Apply</span>
                     </div>
 
                     {/* Shipping */}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Shipping</span>
-                      <span className="font-semibold text-green-600">FREE</span>
+                      <span className="font-semibold text-green-600">May Apply</span>
                     </div>
 
                     {/* Divider */}
@@ -179,7 +190,7 @@ const Cart = () => {
                         <span className="text-gray-900 font-semibold">
                           Total <span className="text-gray-500 font-normal text-sm">(Inclusive of VAT)</span>
                         </span>
-                        <span className="text-xl font-bold text-gray-900">OMR {total.toFixed(2)}</span>
+                        <span className="text-xl font-bold text-gray-900">RM {total.toFixed(2)}</span>
                       </div>
                     </div>
 

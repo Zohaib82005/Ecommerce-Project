@@ -8,6 +8,7 @@ const Seller = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [orderFilterStatus, setOrderFilterStatus] = useState("all");
   
   // States for categories
   const [categories, setCategories] = useState([]);
@@ -18,6 +19,7 @@ const Seller = () => {
     name: '',
     price: '',
     discount_price: '',
+    discount_type: 'percentage',
     instock: '',
     desc: '',
     image: null,
@@ -94,6 +96,7 @@ const Seller = () => {
     formData.append('desc', product.data.desc);
     formData.append('category_id', product.data.category_id);
     formData.append('subcategory_id', product.data.subcategory_id);
+    formData.append('discount_type', product.data.discount_type);
 
     // Only append if not empty
     if (product.data.discount_price) 
@@ -130,6 +133,12 @@ const Seller = () => {
     return matchesSearch && matchesStatus;
   }) || [];
   
+  const filteredOrders = (props.orders ? 
+    Array.from(new Map(props.orders.map(order => [order.oid, order])).values()) : [])
+    .filter(order => {
+        if (orderFilterStatus === "all") return true;
+        return order.status === orderFilterStatus;
+    });
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
@@ -583,6 +592,7 @@ const Seller = () => {
                       <th>Product</th>
                       <th>Image</th>
                       <th>Price</th>
+                      <th>Discount</th>
                       <th>Stock</th>
                       <th>Status</th>
                       <th>Actions</th>
@@ -607,6 +617,22 @@ const Seller = () => {
                           </td>
                           <td>
                             <span className="product-price">RM {item.price}</span>
+                          </td>
+                          <td>
+                            <div className="discount-display">
+                              {item.discount_price ? (
+                                <>
+                                  <span className="discount-value">
+                                    {item.discount_price}{item.discount_type === 'percentage' ? '%' : ' RM'}
+                                  </span>
+                                  <span className="discount-type-badge">
+                                    {item.discount_type === 'percentage' ? 'Percent' : 'Fixed'}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="no-discount">No discount</span>
+                              )}
+                            </div>
                           </td>
                           <td>
                             <span className={`stock-quantity ${item.instock > 10 ? 'high' : item.instock > 0 ? 'low' : 'out'}`}>
@@ -701,6 +727,23 @@ const Seller = () => {
                         />
                       </div>
                       <small className="text-muted">Leave empty if no discount</small>
+                    </div>
+
+                    <div className="col-md-6">
+                      <label className="form-label">Discount Type</label>
+                      <select
+                        className="form-select"
+                        value={product.data.discount_type}
+                        onChange={(e) => product.setData('discount_type', e.target.value)}
+                      >
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed Amount (RM)</option>
+                      </select>
+                      <small className="text-muted">
+                        {product.data.discount_type === 'percentage' 
+                          ? 'Discount percentage value (0-100)' 
+                          : 'Fixed discount amount in RM'}
+                      </small>
                     </div>
 
                     <div className="col-md-6">
@@ -875,14 +918,26 @@ const Seller = () => {
           )}
           {activeTab === "orders" && (
         <div className="tab-content-wrapper">
-          {props.orders && props.orders.length > 0 ? (
+          <div className="products-toolbar">
+            <div className="filter-group">
+              <select 
+                className="form-select"
+                value={orderFilterStatus}
+                onChange={(e) => setOrderFilterStatus(e.target.value)}
+              >
+                <option value="all">All Orders</option>
+                <option value="Pending">Pending</option>
+                <option value="Processing">Processing</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          {filteredOrders.length > 0 ? (
             <div className="orders-grid">
               {/* Group orders by order ID */}
-              {Array.from(
-                new Map(
-                  props.orders.map(order => [order.oid, order])
-                ).values()
-              ).map((groupedOrder, index) => {
+              {filteredOrders.map((groupedOrder, index) => {
                 const productsInOrder = props.orders.filter(o => o.oid === groupedOrder.oid);
                 return (
                   <div key={groupedOrder.oid || index} className="order-card">
@@ -983,7 +1038,7 @@ const Seller = () => {
                 <div className="info-grid">
                   <div className="info-row">
                     <span className="info-label">Order ID:</span>
-                    <span className="info-value">#{selectedOrder.id}</span>
+                    <span className="info-value">#{selectedOrder.oid}</span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">Date:</span>
@@ -1322,7 +1377,9 @@ const Seller = () => {
                           <div className="product-pricing">
                             <span className="price">RM {parseFloat(product.price).toFixed(2)}</span>
                             {product.discount_price && (
-                              <span className="discount-badge">{product.discount_price}% OFF</span>
+                              <span className="discount-badge">
+                                {product.discount_price}{product.discount_type === 'percentage' ? '%' : ' RM'} OFF
+                              </span>
                             )}
                           </div>
                         </div>

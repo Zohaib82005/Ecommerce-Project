@@ -50,6 +50,7 @@ Route::middleware([CheckSeller::class])->group(function () {
     Route::get('/seller', [UserController::class, 'sellerDashboard']);
     Route::post('/addProduct', [ProductController::class, 'addProduct']);
     Route::get('/seller/editProduct/{id}', [ProductController::class, 'editProduct']);
+    Route::post('/seller/updateProduct/{id}', [ProductController::class, 'updateProduct']);
     Route::get('/seller/deleteProduct/{id}', [ProductController::class, 'deleteProduct']);
     Route::post('/orders/update-status', [OrderController::class, 'updateStatus']);
     
