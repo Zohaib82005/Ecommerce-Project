@@ -305,14 +305,12 @@ const Welcome = ({
 const handleAddToCart = (productId) => {
   console.log('Adding to cart:', productId);
   
-  // Pass data directly to post instead of using setData
-  post('/cart/add', {
-    data: {
-      product_id: productId,
-      quantity: 1,
-    },
+  // Use router.post to send data directly
+  router.post('/cart/add', {
+    product_id: productId,
+    quantity: 1,
+  }, {
     onSuccess: () => {
-      reset();
       console.log('Item added to cart successfully');
     },
     onError: (errors) => console.error('Error adding to cart:', errors),
