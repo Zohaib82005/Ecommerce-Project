@@ -21,7 +21,7 @@ class OrderController extends Controller
             'address_id' => 'required|exists:addresses,id',
             'paymentMethod' => 'required|string',
         ]);
-
+        // dd($validated);
         $user = Auth::user();
         // dd($validated);
         // Get all active cart items for this user
@@ -35,29 +35,15 @@ class OrderController extends Controller
         }
 
         // Calculate total amount from products in cart using PriceCalculator
-        $totalAmount = 0;
-        foreach ($cartItems as $item) {
-            if (!$item->product) {
-                continue;
-            }
+       
+       
 
-            // Use PriceCalculator to get the correct final price for each item
-            $priceCalc = PriceCalculator::calculate(
-                $item->product->price,
-                $item->product->discount_price ?? 0,
-                $item->product->discount_type ?? 'percentage'
-            );
-
-            // Add to total: (final_price * quantity)
-            $totalAmount += $priceCalc['final_price'] * $item->quantity;
-        }
-
-        $totalAmount = round($totalAmount, 2);
+        // $totalAmount = round($totalAmount, 2);
 
         // Create order with calculated total
         $order = Order::create([
             'user_id' => $user->id,
-            'total_amount' => $totalAmount,
+            'total_amount' => $validated['total'],
             'address_id' => $validated['address_id'],
             'payment_method' => $validated['paymentMethod'],
             'status' => 'Pending'
@@ -75,24 +61,25 @@ class OrderController extends Controller
     }
 
     public function updateStatus(Request $req){
-        Order::where('id', $req->order_id)->update([
-            'status' => $req->status
-        ]);
+        // dd($req->all());
+        // Order::where('id', $req->order_id)->update([
+        //     'status' => $req->status
+        // ]);
         
         // Handle both single product_id and array of product_ids
-        // if (is_array($req->product_id)) {
-        //     // Multiple product IDs
-        //     foreach ($req->product_id as $productId) {
-        //         Cart::where('order_id', $req->order_id)
-        //             ->where('product_id', $productId)
-        //             ->update(['orderstatus' => $req->status]);
-        //     }
-        // } else {
-        //     // Single product ID
-        //     Cart::where('order_id', $req->order_id)
-        //         ->where('product_id', $req->product_id)
-        //         ->update(['orderstatus' => $req->status]);
-        // }
+        if (is_array($req->product_id)) {
+            // Multiple product IDs
+            foreach ($req->product_id as $productId) {
+                Cart::where('order_id', $req->order_id)
+                    ->where('product_id', $productId)
+                    ->update(['orderstatus' => $req->status]);
+            }
+        } else {
+            // Single product ID
+            Cart::where('order_id', $req->order_id)
+                ->where('product_id', $req->product_id)
+                ->update(['orderstatus' => $req->status]);
+        }
         
         // If order is completed, add quantities to total_sold
         if (strtolower($req->status) === 'completed' || strtolower($req->status) === 'delivered') {

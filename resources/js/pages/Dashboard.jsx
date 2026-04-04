@@ -378,17 +378,19 @@ const Dashboard = () => {
                           status: item.status,
                           cstatus: item.cstatus,
                           payment_method: item.payment_method,
-                          total_amount: item.total_amount,
+                          total_amount: 0,
                           products: []
                         };
                       }
+                      const productTotal = item.quantity * parseFloat(item.pprice || 0);
+                      acc[oid].total_amount += productTotal;
                       acc[oid].products.push({
                         name: item.product_name,
                         quantity: item.quantity,
                         cstatus: item.cstatus,
                         image: item.product_image,
                         price: item.pprice,
-                        totalPrice: (item.quantity * item.pprice).toFixed(2)
+                        totalPrice: productTotal.toFixed(2)
                       });
                       return acc;
                     }, {}) : {};
@@ -496,17 +498,19 @@ const Dashboard = () => {
                           status: item.status,
                           cstatus: item.cstatus,
                           payment_method: item.payment_method,
-                          total_amount: item.total_amount,
+                          total_amount: 0,
                           products: []
                         };
                       }
+                      const productTotal = item.quantity * parseFloat(item.pprice || 0);
+                      acc[oid].total_amount += productTotal;
                       acc[oid].products.push({
                         name: item.product_name,
                         quantity: item.quantity,
                         cstatus: item.cstatus,
                         image: item.product_image,
                         price: item.pprice,
-                        totalPrice: (item.quantity * item.pprice).toFixed(2)
+                        totalPrice: productTotal.toFixed(2)
                       });
                       return acc;
                     }, {}) : {};

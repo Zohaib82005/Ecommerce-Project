@@ -77,7 +77,7 @@ class UserController extends Controller
         $products = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->where('products.added_by', Auth::user()->id)
             ->select('products.*', 'categories.category')
-            ->get();
+            ->paginate(10);
         $pcount = Product::leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->where('products.added_by', Auth::user()->id)
             ->count();
@@ -107,11 +107,10 @@ class UserController extends Controller
             ->join('addresses', 'orders.address_id', '=', 'addresses.id')
             ->where('products.added_by', Auth::user()->id)
             ->where('carts.status', 'ordered')
-
-            ->select('orders.*','orders.id as oid', 'products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.price as pprice','products.id as pid','addresses.*')
+            ->select('orders.id as oid', 'orders.user_id', 'orders.payment_method', 'orders.status', 'orders.created_at', 'orders.updated_at', 'products.name as product_name', 'carts.quantity as quantity', 'carts.orderstatus as cart_status', 'products.image as product_image', 'products.final_price as pprice', 'products.id as pid', 'addresses.address', 'addresses.city', 'addresses.phone')
             ->get();
         
-    
+    // dd($order);
     // dd($order);
         return Inertia::render('Seller',
             [
@@ -131,13 +130,10 @@ class UserController extends Controller
 
     public function dashboard()
     {
-            $orders = Order::where('user_id', Auth::user()->id)->get();
-          
-
         $orders = Order::where('orders.user_id', Auth::user()->id)
             ->join('carts', 'orders.id', '=', 'carts.order_id')
             ->join('products', 'carts.product_id', '=', 'products.id')
-            ->select('orders.*', 'orders.id as oid','products.name as product_name', 'carts.quantity as quantity','carts.orderstatus as cstatus', 'products.image as product_image', 'products.price as pprice')
+            ->select('orders.id as oid', 'orders.user_id', 'orders.payment_method', 'carts.orderstatus as cstatus', 'orders.created_at', 'orders.updated_at', 'products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'products.final_price as pprice')
             ->get();
         // dd($orders);
 

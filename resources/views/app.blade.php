@@ -19,7 +19,7 @@
         </style>
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
-        
+        <meta name="description" content="Power & Charging · Power Banks · Chargers · Charging Cables · Lighting & Flashlights · Torches · Headlamps · Solar Lights.">
         <link rel="shortcut icon" href="{{ asset('logo.png') }}" type="image/x-icon">
         {{-- <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml"> --}}

@@ -9,6 +9,14 @@ const Seller = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [orderFilterStatus, setOrderFilterStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [imagePreviews, setImagePreviews] = useState({
+    image: null,
+    image1: null,
+    image2: null,
+    image3: null
+  });
   
   // States for categories
   const [categories, setCategories] = useState([]);
@@ -33,12 +41,29 @@ const Seller = () => {
 
   const props = usePage().props;
 
+  // Helper function to calculate order totals
+  const calculateOrderTotals = () => {
+    const orderTotals = {};
+    props.orders?.forEach(orderRow => {
+      if (!orderTotals[orderRow.oid]) {
+        orderTotals[orderRow.oid] = 0;
+      }
+      orderTotals[orderRow.oid] += parseFloat(orderRow.pprice || 0) * parseInt(orderRow.quantity || 0);
+    });
+    return orderTotals;
+  };
+
+  const orderTotals = calculateOrderTotals();
+
   // Calculate dashboard statistics
   const calculateStats = () => {
-    const totalRevenue = props.orders?.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0) || 0;
-    const pendingOrders = props.orders?.filter(order => order.status === 'Pending').length || 0;
-    const deliveredOrders = props.orders?.filter(order => order.status === 'Delivered').length || 0;
-    const fulfillmentRate = props.orders?.length > 0 ? ((deliveredOrders / props.orders.length) * 100).toFixed(1) : 0;
+    const totalRevenue = Object.values(orderTotals).reduce((sum, total) => sum + total, 0) || 0;
+    
+    // Get unique orders for status filtering
+    const uniqueOrders = Array.from(new Map(props.orders?.map(order => [order.oid, order]) || []).values());
+    const pendingOrders = uniqueOrders?.filter(order => order.status === 'Pending').length || 0;
+    const deliveredOrders = uniqueOrders?.filter(order => order.status === 'Delivered').length || 0;
+    const fulfillmentRate = uniqueOrders?.length > 0 ? ((deliveredOrders / uniqueOrders.length) * 100).toFixed(1) : 0;
     
     return {
       totalRevenue: totalRevenue.toFixed(2),
@@ -77,7 +102,8 @@ const Seller = () => {
     });
     
     // Add low stock alerts
-    props.products?.forEach(product => {
+    const productsData = Array.isArray(props.products) ? props.products : props.products?.data || [];
+    productsData.forEach(product => {
       if (product.instock > 0 && product.instock <= 5) {
         activities.push({
           type: 'low-stock',
@@ -160,6 +186,25 @@ const Seller = () => {
     }
   };
 
+  // Handle image preview
+  const handleImageChange = (fieldName, file) => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => ({
+          ...prev,
+          [fieldName]: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreviews(prev => ({
+        ...prev,
+        [fieldName]: null
+      }));
+    }
+  };
+
  function addproductsubmit(e) {
     e.preventDefault();
 
@@ -199,19 +244,32 @@ const Seller = () => {
   }
 
   // Filter products based on search and status
-  const filteredProducts = props.products?.filter(item => {
+  const productsArray = Array.isArray(props.products) ? props.products : props.products?.data || [];
+  const allFilteredProducts = productsArray.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === "all" || 
       (filterStatus === "instock" && item.instock > 0) ||
       (filterStatus === "outofstock" && item.instock === 0);
     return matchesSearch && matchesStatus;
-  }) || [];
+  });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(allFilteredProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const filteredProducts = allFilteredProducts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus]);
   
   const filteredOrders = (props.orders ? 
     Array.from(new Map(props.orders.map(order => [order.oid, order])).values()) : [])
     .filter(order => {
         if (orderFilterStatus === "all") return true;
-        return order.status === orderFilterStatus;
+        const cartStatus = props.orders.find(o => o.oid === order.oid)?.cart_status || 'ordered';
+        return cartStatus === orderFilterStatus;
     });
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -221,6 +279,8 @@ const Seller = () => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [dealSearch, setDealSearch] = useState("");
   const [discountType, setDiscountType] = useState("percentage");
+  const [dealCurrentPage, setDealCurrentPage] = useState(1);
+  const [dealItemsPerPage, setDealItemsPerPage] = useState(10);
 
   // States for reviews management
   const [reviews, setReviews] = useState([]);
@@ -755,7 +815,8 @@ const Seller = () => {
                       <th>Price</th>
                       <th>Discount</th>
                       <th>Stock</th>
-                      <th>Status</th>
+                      <th>Admin Status</th>
+                      <th>Stock Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -801,6 +862,20 @@ const Seller = () => {
                             </span>
                           </td>
                           <td>
+                            <span className={`status-badge admin-status ${
+                              item.status === 'Approved' ? 'success' : 
+                              item.status === 'Pending' ? 'warning' : 
+                              item.status === 'Rejected' ? 'danger' : 'secondary'
+                            }`}>
+                              <i className={`bi bi-${
+                                item.status === 'Approved' ? 'check-circle-fill' : 
+                                item.status === 'Pending' ? 'clock-history' : 
+                                item.status === 'Rejected' ? 'x-circle-fill' : 'question-circle-fill'
+                              }`}></i>
+                              {item.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td>
                             <span className={`status-badge ${item.instock > 0 ? 'success' : 'danger'}`}>
                               {item.instock > 0 ? 'In Stock' : 'Out of Stock'}
                             </span>
@@ -825,7 +900,7 @@ const Seller = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="text-center">
+                        <td colSpan="8" className="text-center">
                           <div className="empty-state">
                             <i className="bi bi-inbox"></i>
                             <p>No products found</p>
@@ -836,6 +911,63 @@ const Seller = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {allFilteredProducts.length > 0 && (
+                <div className="pagination-section">
+                  <div className="pagination-info">
+                    <p>
+                      Showing {startIndex + 1} to {Math.min(endIndex, allFilteredProducts.length)} of {allFilteredProducts.length} products
+                    </p>
+                    <div className="items-per-page">
+                      <label>Items per page:</label>
+                      <select 
+                        value={itemsPerPage} 
+                        onChange={(e) => {
+                          setItemsPerPage(parseInt(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="form-select"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={15}>15</option>
+                        <option value={20}>20</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pagination-controls">
+                    <button 
+                      className="btn btn-pagination"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <i className="bi bi-chevron-left"></i> Previous
+                    </button>
+
+                    <div className="pagination-numbers">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          className={`page-number ${currentPage === page ? 'active' : ''}`}
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button 
+                      className="btn btn-pagination"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next <i className="bi bi-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -991,7 +1123,11 @@ const Seller = () => {
                           id="productImage"
                           className="file-input"
                           accept="image/*"
-                          onChange={(e) => product.setData('image', e.target.files[0])}
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            product.setData('image', file);
+                            handleImageChange('image', file);
+                          }}
                           required
                         />
                         <label htmlFor="productImage" className="file-label">
@@ -1024,7 +1160,9 @@ const Seller = () => {
                                 className="file-input"
                                 accept="image/*"
                                 onChange={(e) => {
-                                  product.setData(img.key, e.target.files[0]);
+                                  const file = e.target.files[0];
+                                  product.setData(img.key, file);
+                                  handleImageChange(img.key, file);
                                 }}
                               />
                               <label htmlFor={img.key} className="file-label">
@@ -1043,6 +1181,39 @@ const Seller = () => {
                         ))}
                       </div>
                     </div>
+
+                    {/* Image Preview Section */}
+                    {(imagePreviews.image || imagePreviews.image1 || imagePreviews.image2 || imagePreviews.image3) && (
+                      <div className="col-12">
+                        <label className="form-label">Image Preview</label>
+                        <div className="image-preview-gallery">
+                          {imagePreviews.image && (
+                            <div className="preview-item main-preview">
+                              <img src={imagePreviews.image} alt="Main Product" />
+                              <span className="preview-label">Main Image</span>
+                            </div>
+                          )}
+                          {imagePreviews.image1 && (
+                            <div className="preview-item">
+                              <img src={imagePreviews.image1} alt="Additional Image 1" />
+                              <span className="preview-label">Image 1</span>
+                            </div>
+                          )}
+                          {imagePreviews.image2 && (
+                            <div className="preview-item">
+                              <img src={imagePreviews.image2} alt="Additional Image 2" />
+                              <span className="preview-label">Image 2</span>
+                            </div>
+                          )}
+                          {imagePreviews.image3 && (
+                            <div className="preview-item">
+                              <img src={imagePreviews.image3} alt="Additional Image 3" />
+                              <span className="preview-label">Image 3</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="col-12">
                       <div className="form-actions">
@@ -1100,12 +1271,13 @@ const Seller = () => {
               {/* Group orders by order ID */}
               {filteredOrders.map((groupedOrder, index) => {
                 const productsInOrder = props.orders.filter(o => o.oid === groupedOrder.oid);
+                const cartStatus = productsInOrder[0]?.cart_status || 'ordered';
                 return (
                   <div key={groupedOrder.oid || index} className="order-card">
                     <div className="order-header">
                       <strong className="order-id">Order #{groupedOrder.oid}</strong>
-                      <span className={`status-badge ${groupedOrder.status.toLowerCase()}`}>
-                        {groupedOrder.status}
+                      <span className={`status-badge ${cartStatus.toLowerCase()}`}>
+                        {cartStatus}
                       </span>
                     </div>
                     
@@ -1135,7 +1307,7 @@ const Seller = () => {
                           })}
                         </p>
                         <p className="order-meta">
-                          <i className="bi bi-currency-dollar"></i> RM {parseFloat(groupedOrder.total_amount).toFixed(2)}
+                          <i className="bi bi-currency-dollar"></i> RM {parseFloat(orderTotals[groupedOrder.oid] || 0).toFixed(2)}
                         </p>
                         <p className="order-meta">
                           <i className="bi bi-geo-alt"></i> {groupedOrder.city}, {groupedOrder.state}
@@ -1147,7 +1319,7 @@ const Seller = () => {
                       </div>
                       
                       <div className="order-total">
-                        <strong>Total: RM {parseFloat(groupedOrder.total_amount).toFixed(2)}</strong>
+                        <strong>Total: RM {parseFloat(orderTotals[groupedOrder.oid] || 0).toFixed(2)}</strong>
                       </div>
                     </div>
                     
@@ -1218,7 +1390,7 @@ const Seller = () => {
                   <div className="info-row">
                     <span className="info-label">Total Amount:</span>
                     <span className="info-value text-primary fw-bold">
-                      RM {parseFloat(selectedOrder.total_amount).toFixed(2)}
+                      RM {parseFloat(orderTotals[selectedOrder.oid] || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -1232,7 +1404,7 @@ const Seller = () => {
                   .map((product, idx) => (
                     <div className="product-detail-card" key={idx}>
                       <img 
-                        src={`http://localhost:8000/storage/${product.product_image}`} 
+                        src={`/storage/${product.product_image}`} 
                         alt={product.product_name}
                         className="product-detail-image"
                       />
@@ -1269,9 +1441,9 @@ const Seller = () => {
                 <form onSubmit={handleStatusUpdate}>
                   {/* {console.log(selectedOrder)} */}
                   <div className="current-status-display">
-                    <span className="label">Current Status:</span>
-                    <span className={`status-badge ${selectedOrder.status.toLowerCase()}`}>
-                      {selectedOrder.status}
+                    <span className="label">Current Product Status:</span>
+                    <span className={`status-badge ${(props.orders.find(o => o.oid === selectedOrder.oid)?.cart_status || 'ordered').toLowerCase()}`}>
+                      {props.orders.find(o => o.oid === selectedOrder.oid)?.cart_status || 'ordered'}
                     </span>
                   </div>
 
@@ -1487,72 +1659,174 @@ const Seller = () => {
               </form>
             </div>
 
-            {/* Product Selection Grid */}
+            {/* Product Selection List with Pagination */}
             <div className="products-selection-container">
               <div className="form-header">
                 <h3><i className="bi bi-box-seam"></i> Select Products</h3>
-                <div className="search-input">
+                <div className="search-bar">
+                  <i className="bi bi-search"></i>
                   <input
                     type="text"
                     className="form-control"
                     placeholder="Search products..."
                     value={dealSearch}
-                    onChange={(e) => setDealSearch(e.target.value)}
+                    onChange={(e) => {
+                      setDealSearch(e.target.value);
+                      setDealCurrentPage(1);
+                    }}
                   />
-                  <i className="bi bi-search"></i>
                 </div>
               </div>
 
-              <div className="products-grid">
-                {props.products && props.products.length > 0 ? (
-                  props.products
-                    .filter(product => 
-                      product.name.toLowerCase().includes(dealSearch.toLowerCase())
-                    )
-                    .map((product) => (
-                      <div key={product.id} className={`product-card ${selectedProducts.includes(product.id) ? 'selected' : ''}`}>
-                        <div className="product-checkbox">
-                          <input
-                            type="checkbox"
-                            id={`product-${product.id}`}
-                            checked={selectedProducts.includes(product.id)}
-                            onChange={() => handleProductCheckbox(product.id)}
-                          />
-                          <label htmlFor={`product-${product.id}`}></label>
+              {(() => {
+                // Handle both direct array and nested .data structure
+                const allDealProducts = Array.isArray(productsArray) ? productsArray : [];
+                const filteredDealProducts = allDealProducts.filter(product => 
+                  product.name.toLowerCase().includes(dealSearch.toLowerCase())
+                );
+
+                // Pagination calculations
+                const totalDealPages = Math.ceil(filteredDealProducts.length / dealItemsPerPage);
+                const dealStartIndex = (dealCurrentPage - 1) * dealItemsPerPage;
+                const dealEndIndex = dealStartIndex + dealItemsPerPage;
+                const paginatedDealProducts = filteredDealProducts.slice(dealStartIndex, dealEndIndex);
+
+                return (
+                  <>
+                    {filteredDealProducts.length > 0 ? (
+                      <>
+                        <div className="products-table-container">
+                          <table className="products-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '50px' }}>Select</th>
+                                <th style={{ width: '100px' }}>Image</th>
+                                <th>Product Name</th>
+                                <th style={{ width: '100px' }}>Stock</th>
+                                <th style={{ width: '120px' }}>Price</th>
+                                <th style={{ width: '120px' }}>Discount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paginatedDealProducts.map((product) => (
+                                <tr 
+                                  key={product.id} 
+                                  className={selectedProducts.includes(product.id) ? 'table-active' : ''}
+                                >
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      id={`deal-product-${product.id}`}
+                                      checked={selectedProducts.includes(product.id)}
+                                      onChange={() => handleProductCheckbox(product.id)}
+                                      className="form-check-input"
+                                    />
+                                  </td>
+                                  <td>
+                                    {product.image ? (
+                                      <img 
+                                        src={`http://localhost:8000/storage/${product.image}`}
+                                        alt={product.name}
+                                        className="product-thumbnail"
+                                      />
+                                    ) : (
+                                      <div className="placeholder-image">
+                                        <i className="bi bi-image"></i>
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <strong>{product.name}</strong>
+                                  </td>
+                                  <td>
+                                    <span className={`stock-quantity ${product.instock > 10 ? 'high' : product.instock > 0 ? 'low' : 'out'}`}>
+                                      {product.instock}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="product-price">RM {parseFloat(product.price).toFixed(2)}</span>
+                                  </td>
+                                  <td>
+                                    {product.discount_price ? (
+                                      <span className="discount-badge">
+                                        {product.discount_price}{product.discount_type === 'percentage' ? '%' : ' RM'} OFF
+                                      </span>
+                                    ) : (
+                                      <span className="no-discount">No discount</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                        <div className="product-image">
-                          {product.image ? (
-                            <img src={`/storage/${product.image}`} alt={product.name} />
-                          ) : (
-                            <div className="placeholder-image">
-                              <i className="bi bi-image"></i>
+
+                        {/* Pagination Controls */}
+                        {filteredDealProducts.length > 0 && (
+                          <div className="pagination-section">
+                            <div className="pagination-info">
+                              <p>
+                                Showing {dealStartIndex + 1} to {Math.min(dealEndIndex, filteredDealProducts.length)} of {filteredDealProducts.length} products
+                              </p>
+                              <div className="items-per-page">
+                                <label>Items per page:</label>
+                                <select 
+                                  value={dealItemsPerPage} 
+                                  onChange={(e) => {
+                                    setDealItemsPerPage(parseInt(e.target.value));
+                                    setDealCurrentPage(1);
+                                  }}
+                                  className="form-select"
+                                >
+                                  <option value={5}>5</option>
+                                  <option value={10}>10</option>
+                                  <option value={15}>15</option>
+                                  <option value={20}>20</option>
+                                </select>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        <div className="product-info">
-                          <h6 className="product-name">{product.name}</h6>
-                          <p className="product-stock">
-                            <i className="bi bi-box"></i>
-                            Stock: {product.instock}
-                          </p>
-                          <div className="product-pricing">
-                            <span className="price">RM {parseFloat(product.price).toFixed(2)}</span>
-                            {product.discount_price && (
-                              <span className="discount-badge">
-                                {product.discount_price}{product.discount_type === 'percentage' ? '%' : ' RM'} OFF
-                              </span>
-                            )}
+
+                            <div className="pagination-controls">
+                              <button 
+                                className="btn btn-pagination"
+                                onClick={() => setDealCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={dealCurrentPage === 1}
+                              >
+                                <i className="bi bi-chevron-left"></i> Previous
+                              </button>
+
+                              <div className="pagination-numbers">
+                                {Array.from({ length: totalDealPages }, (_, i) => i + 1).map(page => (
+                                  <button
+                                    key={page}
+                                    className={`page-number ${dealCurrentPage === page ? 'active' : ''}`}
+                                    onClick={() => setDealCurrentPage(page)}
+                                  >
+                                    {page}
+                                  </button>
+                                ))}
+                              </div>
+
+                              <button 
+                                className="btn btn-pagination"
+                                onClick={() => setDealCurrentPage(prev => Math.min(prev + 1, totalDealPages))}
+                                disabled={dealCurrentPage === totalDealPages}
+                              >
+                                Next <i className="bi bi-chevron-right"></i>
+                              </button>
+                            </div>
                           </div>
-                        </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="bi bi-inbox"></i>
+                        <p>{dealSearch ? 'No products matching your search' : 'No products available'}</p>
                       </div>
-                    ))
-                ) : (
-                  <div className="no-products-message">
-                    <i className="bi bi-inbox"></i>
-                    <p>No products available</p>
-                  </div>
-                )}
-              </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Active Deals Display */}
@@ -1666,7 +1940,12 @@ const Seller = () => {
                     <span className="analytics-value">{props.pcount || 0}</span>
                   </div>
                   <div className="rating-stars">
-                    <p style={{ margin: 0 }}>{props.products?.filter(p => p.instock > 0).length || 0} in stock, {props.products?.filter(p => p.instock === 0).length || 0} out of stock</p>
+                    <p style={{ margin: 0 }}>
+                      {(() => {
+                        const allProducts = Array.isArray(props.products) ? props.products : props.products?.data || [];
+                        return `${allProducts.filter(p => p.instock > 0).length || 0} in stock, ${allProducts.filter(p => p.instock === 0).length || 0} out of stock`;
+                      })()}
+                    </p>
                   </div>
                 </div>
               </div>

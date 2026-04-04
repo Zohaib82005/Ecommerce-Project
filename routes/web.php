@@ -34,6 +34,23 @@ Route::post('/submitlog', [UserController::class, 'Login']);
 // Public category routes
 Route::get('/api/categories', [CategoryController::class, 'getAllCategories']);
 
+
+
+Route::get('/cart/count', [CartController::class, 'getCartCount']);
+
+Route::get('/logout', function () {
+    Auth::logout();
+    return redirect('/');
+});
+
+Route::get('/verify/otp', function () {
+    return Inertia::render('otp');
+})->name('verify-otp');
+
+Route::get('/send-email', [MailController::class, 'sendEmail']);
+Route::post('/verify-otp', [MailController::class, 'verifyOtp'])->name('verify.otp');
+
+
 // ========== ADMIN ROUTES (Admin only) ==========
 Route::middleware([CheckAdmin::class])->group(function () {
     Route::get('/admin', [AdminController::class, 'index']);
@@ -104,19 +121,3 @@ Route::get('/category/{id}', function ($id) {
     return Inertia::render('CategoryWiseProducts', ['categoryId' => $id]);
 })->name('category.products');
 
-Route::get('/super', function () {
-    return Inertia::render('SuperAdminDashboard');
-});
-Route::get('/cart/count', [CartController::class, 'getCartCount']);
-
-Route::get('/logout', function () {
-    Auth::logout();
-    return redirect('/');
-});
-
-Route::get('/verify/otp', function () {
-    return Inertia::render('otp');
-})->name('verify-otp');
-
-Route::get('/send-email', [MailController::class, 'sendEmail']);
-Route::post('/verify-otp', [MailController::class, 'verifyOtp'])->name('verify.otp');
