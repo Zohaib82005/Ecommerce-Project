@@ -43,6 +43,7 @@ Route::middleware([CheckAdmin::class])->group(function () {
     Route::get('/approve/{id}', [AdminController::class, 'approveProduct']);
     Route::get('/reject/{id}', [AdminController::class, 'rejectProduct']);
     Route::post('/admin/user/update', [AdminController::class, 'updateUser']);
+    Route::delete('/admin/user/delete/{id}', [AdminController::class, 'deleteUser']);
 });
 
 // ========== SELLER ROUTES (Seller only) ==========
@@ -64,6 +65,11 @@ Route::middleware([CheckSeller::class])->group(function () {
     Route::get('/product-images/{productId}', [ImageController::class, 'getProductImages']);
     Route::delete('/product-images/{imageId}', [ImageController::class, 'deleteProductImage']);
     Route::post('/product-images/{productId}', [ImageController::class, 'uploadProductImage']);
+    
+    // Review management routes for sellers
+    Route::get('/seller/reviews', [ReviewController::class, 'getSellerReviews']);
+    Route::post('/seller/reviews/{reviewId}/reply', [ReviewController::class, 'replyToReview']);
+    Route::delete('/seller/reviews/{reviewId}/reply', [ReviewController::class, 'deleteSellerReply']);
 });
 
 // ========== CUSTOMER ROUTES (Customer only) ==========

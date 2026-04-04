@@ -41,7 +41,7 @@ class UserController extends Controller
 
         ]);
         // session()->put('email', $req->email);
-        return redirect('/login');
+        return redirect('/')->with('success', 'Registration successful! Please log in to Continue.');
 
     }
 

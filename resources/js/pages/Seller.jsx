@@ -222,6 +222,17 @@ const Seller = () => {
   const [dealSearch, setDealSearch] = useState("");
   const [discountType, setDiscountType] = useState("percentage");
 
+  // States for reviews management
+  const [reviews, setReviews] = useState([]);
+  const [reviewsGroupedByProduct, setReviewsGroupedByProduct] = useState({});
+  const [replyStates, setReplyStates] = useState({});
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
+  const replyForm = useForm({
+    review_id: '',
+    seller_reply: ''
+  });
+
   const dealForm = useForm({
     deal_name: '',
     discount_type: 'percentage',
@@ -311,6 +322,78 @@ const Seller = () => {
   useEffect(() => {
     fetchDeals();
   }, []);
+
+  // Fetch seller reviews
+  const fetchSellerReviews = () => {
+    setLoadingReviews(true);
+    fetch('/seller/reviews')
+      .then(response => response.json())
+      .then(data => {
+        if (data.reviews) {
+          setReviews(data.reviews);
+          setReviewsGroupedByProduct(data.grouped_reviews || {});
+        }
+        setLoadingReviews(false);
+      })
+      .catch(error => {
+        console.error('Error fetching reviews:', error);
+        setLoadingReviews(false);
+      });
+  };
+
+  // Fetch reviews when activeTab changes to reviews
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      fetchSellerReviews();
+    }
+  }, [activeTab]);
+
+  // Toggle reply form visibility
+  const toggleReplyForm = (reviewId) => {
+    setReplyStates(prev => ({
+      ...prev,
+      [reviewId]: !prev[reviewId]
+    }));
+  };
+
+  // Handle review reply submission
+  const handleReplySubmit = (reviewId) => {
+    if (!replyForm.data.seller_reply.trim()) {
+      alert('Please enter a reply');
+      return;
+    }
+
+    router.post(`/seller/reviews/${reviewId}/reply`, {
+      seller_reply: replyForm.data.seller_reply
+    }, {
+      onSuccess: () => {
+        replyForm.reset();
+        toggleReplyForm(reviewId);
+        fetchSellerReviews();
+        alert('Reply added successfully!');
+      },
+      onError: (errors) => {
+        console.error('Error submitting reply:', errors);
+        alert('Failed to submit reply');
+      }
+    });
+  };
+
+  // Handle delete reply
+  const deleteReply = (reviewId) => {
+    if (confirm('Are you sure you want to delete this reply?')) {
+      router.delete(`/seller/reviews/${reviewId}/reply`, {
+        onSuccess: () => {
+          fetchSellerReviews();
+          alert('Reply deleted successfully!');
+        },
+        onError: (errors) => {
+          console.error('Error deleting reply:', errors);
+          alert('Failed to delete reply');
+        }
+      });
+    }
+  };
 
   // Delete a deal
   const deleteDeal = (dealId) => {
@@ -467,6 +550,13 @@ const Seller = () => {
               <i className="bi bi-wallet2"></i>
               <span>Payouts</span>
             </li>
+            <li 
+              className={`nav-item ${activeTab === "reviews" ? "active" : ""}`}
+              onClick={() => { setActiveTab("reviews"); setSidebarOpen(false); }}
+            >
+              <i className="bi bi-star-fill"></i>
+              <span>Reviews</span>
+            </li>
           </ul>
         </nav>
 
@@ -499,6 +589,7 @@ const Seller = () => {
                 {activeTab === "deals" && "Manage Deals"}
                 {activeTab === "analytics" && "Analytics & Reports"}
                 {activeTab === "payouts" && "Payouts"}
+                {activeTab === "reviews" && "Product Reviews"}
               </h2>
               <p className="header-subtitle">Manage your store and sales efficiently</p>
             </div>
@@ -1654,6 +1745,201 @@ const Seller = () => {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* REVIEWS */}
+          {activeTab === "reviews" && (
+            <div className="tab-content-wrapper">
+              {loadingReviews ? (
+                <div className="text-center py-5">
+                  <div className="spinner-border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                  <p className="mt-3">Loading reviews...</p>
+                </div>
+              ) : reviews.length > 0 ? (
+                <>
+                  <div className="reviews-summary">
+                    <div className="summary-card">
+                      <div className="summary-icon">
+                        <i className="bi bi-star-fill"></i>
+                      </div>
+                      <div className="summary-content">
+                        <p className="summary-label">Total Reviews</p>
+                        <h3 className="summary-value">{reviews.length}</h3>
+                      </div>
+                    </div>
+                    <div className="summary-card">
+                      <div className="summary-icon">
+                        <i className="bi bi-chat-dots"></i>
+                      </div>
+                      <div className="summary-content">
+                        <p className="summary-label">Replied</p>
+                        <h3 className="summary-value">{reviews.filter(r => r.seller_reply).length}</h3>
+                      </div>
+                    </div>
+                    <div className="summary-card">
+                      <div className="summary-icon">
+                        <i className="bi bi-exclamation-circle"></i>
+                      </div>
+                      <div className="summary-content">
+                        <p className="summary-label">Pending Reply</p>
+                        <h3 className="summary-value">{reviews.filter(r => !r.seller_reply).length}</h3>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="reviews-container">
+                    {Object.entries(reviewsGroupedByProduct).map(([productId, productReviews]) => {
+                      const product = productReviews[0]?.product;
+                      return (
+                        <div key={productId} className="product-reviews-section">
+                          <div className="product-header">
+                            <div className="product-info">
+                              {product?.image && (
+                                <img 
+                                  src={`http://localhost:8000/storage/${product.image}`} 
+                                  alt={product?.name}
+                                  className="product-thumbnail-review"
+                                />
+                              )}
+                              <div>
+                                <h5 className="product-name">{product?.name}</h5>
+                                <p className="product-sku">ID: {productId}</p>
+                              </div>
+                            </div>
+                            <div className="reviews-count">
+                              <span className="badge bg-primary">{productReviews.length} review{productReviews.length !== 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
+
+                          <div className="reviews-list">
+                            {productReviews.map((review) => (
+                              <div key={review.id} className="review-item">
+                                <div className="review-header">
+                                  <div className="reviewer-info">
+                                    <div className="reviewer-avatar">
+                                      {review.user?.name?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="reviewer-details">
+                                      <p className="reviewer-name">{review.user?.name}</p>
+                                      <p className="review-date">
+                                        {new Date(review.created_at).toLocaleDateString('en-US', { 
+                                          year: 'numeric', 
+                                          month: 'short', 
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="review-rating">
+                                    <div className="stars">
+                                      {[...Array(5)].map((_, i) => (
+                                        <i 
+                                          key={i} 
+                                          className={`bi bi-star${i < review.rating ? '-fill' : ''}`}
+                                        ></i>
+                                      ))}
+                                    </div>
+                                    <span className="rating-text">{review.rating}.0 / 5.0</span>
+                                  </div>
+                                </div>
+
+                                <div className="review-content">
+                                  <p className="review-comment">{review.comment}</p>
+                                </div>
+
+                                {review.seller_reply ? (
+                                  <div className="seller-reply-section">
+                                    <div className="reply-header">
+                                      <div className="seller-badge">
+                                        <i className="bi bi-check-circle-fill"></i>
+                                        <span>Store Response</span>
+                                      </div>
+                                      <p className="reply-date">
+                                        {new Date(review.seller_replied_at).toLocaleDateString('en-US', { 
+                                          year: 'numeric', 
+                                          month: 'short', 
+                                          day: 'numeric'
+                                        })}
+                                      </p>
+                                    </div>
+                                    <div className="reply-content">
+                                      <p>{review.seller_reply}</p>
+                                    </div>
+                                    <div className="reply-actions">
+                                      <button 
+                                        className="btn btn-sm btn-outline-secondary"
+                                        onClick={() => toggleReplyForm(review.id)}
+                                      >
+                                        <i className="bi bi-pencil"></i> Edit
+                                      </button>
+                                      <button 
+                                        className="btn btn-sm btn-outline-danger"
+                                        onClick={() => deleteReply(review.id)}
+                                      >
+                                        <i className="bi bi-trash"></i> Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="no-reply-section">
+                                    <p className="no-reply-text">You haven't replied to this review yet</p>
+                                    <button 
+                                      className="btn btn-sm btn-primary"
+                                      onClick={() => toggleReplyForm(review.id)}
+                                    >
+                                      <i className="bi bi-reply-fill"></i> Reply
+                                    </button>
+                                  </div>
+                                )}
+
+                                {replyStates[review.id] && (
+                                  <div className="reply-form-section">
+                                    <textarea
+                                      className="form-control"
+                                      placeholder="Write your response here (Max 1000 characters)..."
+                                      maxLength="1000"
+                                      rows="4"
+                                      value={replyForm.data.seller_reply}
+                                      onChange={(e) => replyForm.setData('seller_reply', e.target.value)}
+                                    ></textarea>
+                                    <div className="form-actions">
+                                      <button 
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => handleReplySubmit(review.id)}
+                                      >
+                                        <i className="bi bi-send"></i> Send Reply
+                                      </button>
+                                      <button 
+                                        className="btn btn-outline-secondary btn-sm"
+                                        onClick={() => {
+                                          replyForm.reset();
+                                          toggleReplyForm(review.id);
+                                        }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state">
+                  <i className="bi bi-chat-dots"></i>
+                  <p>No reviews yet. Start getting customer feedback!</p>
+                </div>
+              )}
             </div>
           )}
 

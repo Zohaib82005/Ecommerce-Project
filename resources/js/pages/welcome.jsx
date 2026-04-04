@@ -3,7 +3,7 @@ import { Link, useForm, router } from '@inertiajs/react';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import LoadingScreen from '../components/LoadingScreen';
-
+import FlashMessage from '../components/FlashMessage';
 // ─── Scroll Animation Hook ───────────────────────────────────────────────────
 const useScrollAnimation = () => {
   const ref = useRef(null);
@@ -120,9 +120,30 @@ const dealsOfTheDay   = makeProducts(['Smart Watch Pro', 'Fitness Tracker', 'Pow
 const dealsYouMightLike = makeProducts(['Gaming Mouse Pad XL', 'LED Desk Lamp', 'Phone Holder Stand', 'Cable Organizer', 'Laptop Sleeve 15"', 'Wireless Charger']);
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = ({ product, delay = 0, onAddToCart }) => {
+const ProductCard = ({ product, delay = 0, onAddToCart, rating = 0, totalReviews = 0 }) => {
   const [ref, visible] = useScrollAnimation();
   const [hovered, setHovered] = useState(false);
+
+  // Generate star array based on rating
+  const renderStars = (ratingValue) => {
+    return [...Array(5)].map((_, i) => (
+      <svg
+        key={i}
+        className="w-3 h-3"
+        fill={i < Math.floor(ratingValue) ? "currentColor" : "none"}
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        style={{ color: i < Math.floor(ratingValue) ? "#fbbf24" : "#d1d5db" }}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+        />
+      </svg>
+    ));
+  };
 
   return (
     <Link className="text-decoration-none" href={`/product/details/${product.id}`}>
@@ -185,8 +206,13 @@ const ProductCard = ({ product, delay = 0, onAddToCart }) => {
             {product.name}
           </p>
           <div className="flex flex-wrap items-center gap-1 mb-1">
-            <div className="flex text-yellow-400 text-xs">{'★★★★★'}</div>
-            <span className="text-gray-400 text-xs">(4.2)</span>
+            <div className="flex text-yellow-400 text-xs gap-0.5">
+              {renderStars(rating)}
+            </div>
+            <span className="text-gray-400 text-xs">({rating.toFixed(1)})</span>
+            {totalReviews > 0 && (
+              <span className="text-gray-400 text-xs">{totalReviews} reviews</span>
+            )}
           </div>
           <div className="flex items-center gap-2 mb-2">
             <span className="font-bold text-xs" style={{ color: '#059669' }}>{product.price}</span>
@@ -252,6 +278,7 @@ const ProductSection = ({
   sideEmoji = '🛒',
   sideLabel = 'UP TO 60% OFF',
   onAddToCart,
+  productRatings = {},
 }) => {
   const [ref, visible] = useScrollAnimation();
   return (
@@ -282,9 +309,19 @@ const ProductSection = ({
           <div className="text-4xl mb-3">{sideEmoji}</div>
           <p className="font-black text-lg leading-tight">{sideLabel}</p>
         </div>
-        {products.map((p, i) => (
-          <ProductCard key={p.id} product={p} delay={i * 60} onAddToCart={onAddToCart} />
-        ))}
+        {products.map((p, i) => {
+          const rating = productRatings[p.id] || { average_rating: 0, total_reviews: 0 };
+          return (
+            <ProductCard 
+              key={p.id} 
+              product={p} 
+              delay={i * 60} 
+              onAddToCart={onAddToCart}
+              rating={rating.average_rating}
+              totalReviews={rating.total_reviews}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -361,15 +398,53 @@ const handleAddToCart = (productId) => {
   const [upcomingDeal, setUpcomingDeal]             = useState(null);
   const [dynamicCategories, setDynamicCategories]   = useState([]);
   const [loadingCategories, setLoadingCategories]   = useState(false);
+  const [productRatings, setProductRatings]         = useState({}); // Store ratings by product ID
 
   const categoryScrollRef = useRef(null);
   const promoScrollRef    = useRef(null);
+
+  // Fetch ratings for a batch of products
+  const fetchProductRatings = useCallback(async (productIds) => {
+    if (!productIds || productIds.length === 0) return;
+    
+    try {
+      const ratingPromises = productIds.map(id =>
+        fetch(`/api/reviews/product/${id}/average`)
+          .then(res => res.ok ? res.json() : { average_rating: 0, total_reviews: 0 })
+          .catch(() => ({ average_rating: 0, total_reviews: 0 }))
+      );
+
+      const ratings = await Promise.all(ratingPromises);
+      const ratingMap = {};
+      
+      productIds.forEach((id, index) => {
+        ratingMap[id] = ratings[index] || { average_rating: 0, total_reviews: 0 };
+      });
+
+      setProductRatings(prev => ({ ...prev, ...ratingMap }));
+    } catch (error) {
+      console.error('Error fetching product ratings:', error);
+    }
+  }, []);
 
   // Auto-advance carousel
   useEffect(() => {
     const timer = setInterval(() => setCurrentSlide((p) => (p + 1) % carouselBanners.length), 4000);
     return () => clearInterval(timer);
   }, []);
+
+  // Fetch ratings for initial products
+  useEffect(() => {
+    const initialProductIds = [
+      ...displayTopPicks.map(p => p.id),
+      ...displayDealsOfTheDay.map(p => p.id),
+      ...dealsYouMightLike.map(p => p.id),
+    ].filter((id, idx, arr) => arr.indexOf(id) === idx);
+    
+    if (initialProductIds.length > 0) {
+      fetchProductRatings(initialProductIds);
+    }
+  }, [fetchProductRatings]);
 
   // Fetch active deals
   useEffect(() => {
@@ -382,6 +457,14 @@ const handleAddToCart = (productId) => {
           const availableDeals = data.deals.filter((deal) => deal.end_date);
           setDeals(availableDeals);
           if (availableDeals.length > 0) setSelectedDealTabId(availableDeals[0].id);
+          
+          // Fetch ratings for all deal products
+          const dealProductIds = availableDeals
+            .flatMap(deal => deal.products?.map(p => p.id) || [])
+            .filter((id, idx, arr) => arr.indexOf(id) === idx);
+          if (dealProductIds.length > 0) {
+            fetchProductRatings(dealProductIds);
+          }
         }
       } catch (error) {
         console.error('Error fetching deals:', error);
@@ -391,7 +474,7 @@ const handleAddToCart = (productId) => {
       }
     };
     fetchDeals();
-  }, []);
+  }, [fetchProductRatings]);
 
   // Fetch categories with products
   useEffect(() => {
@@ -400,7 +483,17 @@ const handleAddToCart = (productId) => {
         setLoadingCategories(true);
         const response = await fetch('/api/products/categories-with-products');
         const data = await response.json();
-        if (data.success && data.categories) setDynamicCategories(data.categories);
+        if (data.success && data.categories) {
+          setDynamicCategories(data.categories);
+          
+          // Fetch ratings for all category products
+          const categoryProductIds = data.categories
+            .flatMap(cat => cat.products?.map(p => p.id) || [])
+            .filter((id, idx, arr) => arr.indexOf(id) === idx);
+          if (categoryProductIds.length > 0) {
+            fetchProductRatings(categoryProductIds);
+          }
+        }
       } catch (error) {
         console.error('Error fetching categories:', error);
         setDynamicCategories([]);
@@ -409,7 +502,7 @@ const handleAddToCart = (productId) => {
       }
     };
     fetchCategoriesWithProducts();
-  }, []);
+  }, [fetchProductRatings]);
 
   // Format product helper (for dynamic categories)
   const formatProduct = (product) => ({
@@ -480,8 +573,10 @@ const handleAddToCart = (productId) => {
 
   return (
     <>
+
       <LoadingScreen isVisible={true} duration={2500} />
       <Navbar />
+      <FlashMessage />
       <div className="min-h-screen" style={{ background: '#f8f7fa', fontFamily: "'Poppins', sans-serif" }}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
@@ -718,34 +813,50 @@ const handleAddToCart = (productId) => {
                 <span className="text-xs cursor-pointer" style={{ color: '#7c3aed' }}>View All ›</span>
               </div>
               <div className="space-y-3">
-                {displayTopPicks.slice(0, 2).map((p, i) => (
-                  <Link key={p.id} className="text-decoration-none" href={`/product/details/${p.id}`}>
-                    <div className="flex gap-3 p-2 rounded-xl hover:bg-purple-50 transition cursor-pointer">
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
-                        {p.image ? (
-                          <img
-                            src={`/storage/${p.image}`}
-                            alt={p.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-3xl">📷</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-700 line-clamp-2 font-medium">{p.name}</p>
-                        <div className="flex text-yellow-400 text-xs mt-0.5">★★★★☆</div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
-                          <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
+                {displayTopPicks.slice(0, 2).map((p, i) => {
+                  const rating = productRatings[p.id] || { average_rating: 0, total_reviews: 0 };
+                  return (
+                    <Link key={p.id} className="text-decoration-none" href={`/product/details/${p.id}`}>
+                      <div className="flex gap-3 p-2 rounded-xl hover:bg-purple-50 transition cursor-pointer">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
+                          {p.image ? (
+                            <img
+                              src={`/storage/${p.image}`}
+                              alt={p.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-3xl">📷</span>
+                          )}
                         </div>
-                        <p className="text-xs font-semibold mt-0.5" style={{ color: '#7c3aed' }}>
-                          You saved RM {p.savings}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-700 line-clamp-2 font-medium">{p.name}</p>
+                          <div className="flex text-yellow-400 text-xs mt-0.5 gap-0.5">
+                            {[...Array(5)].map((_, idx) => (
+                              <svg
+                                key={idx}
+                                className="w-3 h-3"
+                                fill={idx < Math.floor(rating.average_rating) ? "currentColor" : "none"}
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                              </svg>
+                            ))}
+                          </div>
+                          <span className="text-xs text-gray-500">({rating.average_rating.toFixed(1)})</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs font-bold" style={{ color: '#059669' }}>{p.price}</span>
+                            <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
+                          </div>
+                          <p className="text-xs font-semibold mt-0.5" style={{ color: '#7c3aed' }}>
+                            You saved RM {p.savings}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 
@@ -890,8 +1001,23 @@ const handleAddToCart = (productId) => {
                                 {product.name}
                               </p>
                               <div className="flex flex-wrap items-center gap-1 mb-1">
-                                <div className="flex text-yellow-400 text-xs">★★★★★</div>
-                                <span className="text-gray-400 text-xs">(4.2)</span>
+                                <div className="flex text-yellow-400 text-xs gap-0.5">
+                                  {[...Array(5)].map((_, idx) => {
+                                    const rating = productRatings[product.id] || { average_rating: 0, total_reviews: 0 };
+                                    return (
+                                      <svg
+                                        key={idx}
+                                        className="w-3 h-3"
+                                        fill={idx < Math.floor(rating.average_rating) ? "currentColor" : "none"}
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                      </svg>
+                                    );
+                                  })}
+                                </div>
+                                <span className="text-gray-400 text-xs">({(productRatings[product.id]?.average_rating || 0).toFixed(1)})</span>
                               </div>
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="font-bold text-xs" style={{ color: '#059669' }}>
@@ -1147,14 +1273,19 @@ const handleAddToCart = (productId) => {
                     <div className="flex-1 w-full">
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {cat.products && cat.products.length > 0 ? (
-                          cat.products.map((product, i) => (
-                            <ProductCard
-                              key={product.id}
-                              product={formatProduct(product)}
-                              delay={i * 60}
-                              onAddToCart={handleAddToCart}
-                            />
-                          ))
+                          cat.products.map((product, i) => {
+                            const rating = productRatings[product.id] || { average_rating: 0, total_reviews: 0 };
+                            return (
+                              <ProductCard
+                                key={product.id}
+                                product={formatProduct(product)}
+                                delay={i * 60}
+                                onAddToCart={handleAddToCart}
+                                rating={rating.average_rating}
+                                totalReviews={rating.total_reviews}
+                              />
+                            );
+                          })
                         ) : (
                           <div className="col-span-full text-center py-8 text-gray-500">
                             <p>No products available in this category</p>

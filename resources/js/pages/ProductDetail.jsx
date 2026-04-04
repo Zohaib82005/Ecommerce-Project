@@ -109,8 +109,8 @@ const ProductDetail = () => {
         
       }
     } catch (error) {
-      console.error('Error submitting review:', error);
-      alert('Error submitting review');
+     // console.error('Error submitting review:', error);
+    
     }
   };
 
@@ -552,6 +552,30 @@ const ProductDetail = () => {
                             </div>
                           </div>
                           <p className="text-sm text-gray-600">{review.comment}</p>
+
+                          {/* Seller Reply Section */}
+                          {review.seller_reply && (
+                            <div className="mt-4 ml-0 sm:ml-12 bg-blue-50 border-l-4 border-blue-400 p-3 sm:p-4 rounded-r-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-3 sm:w-4 h-3 sm:h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 5a7 7 0 100 14 7 7 0 000-14zM3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-xs sm:text-sm font-semibold text-blue-900">Store Response</p>
+                                  <p className="text-xs text-blue-600">
+                                    {new Date(review.seller_replied_at).toLocaleDateString('en-US', { 
+                                      year: 'numeric', 
+                                      month: 'short', 
+                                      day: 'numeric' 
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-700 leading-relaxed">{review.seller_reply}</p>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

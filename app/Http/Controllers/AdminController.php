@@ -17,7 +17,7 @@ class AdminController extends Controller
         $categories = Category::select('category', 'id')->get();
         $subcategories = Subcategory::select('id', 'name', 'category_id')->get();
         $subSubcategories = Sub_subcategory::select('id', 'name', 'subcategory_id')->get();
-        $users = User::select('name', 'email', 'role', 'id', 'created_at')->get();
+        $users = User::select('name', 'email', 'role', 'id', 'created_at')->orderBy('created_at', 'desc')->get();
         $products = Product::join('categories', 'products.category_id', '=', 'categories.id')
                              ->join('users', 'products.added_by', '=', 'users.id')
                              ->select('products.*', 'categories.category as category_name', 'users.name as seller_name')
@@ -81,5 +81,23 @@ class AdminController extends Controller
         $user->save();
 
         return redirect()->back()->with('success', 'User updated successfully');
+    }
+
+    /**
+     * Delete a user from admin panel.
+     */
+    public function deleteUser($id)
+    {
+        try{
+            $user = User::find($id);
+            if (!$user) {
+                return redirect()->back()->withErrors(['user' => 'User not found']);
+            }
+
+            $user->delete();
+            return redirect()->back()->with('success', 'User deleted successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'An error occurred while deleting the user: ' . $e->getMessage()]);
+        }
     }
 }

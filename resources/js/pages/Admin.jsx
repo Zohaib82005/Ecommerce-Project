@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "../css/admin.css";
-import { useForm, usePage, Link } from "@inertiajs/react";
+import { useForm, usePage, Link, router } from "@inertiajs/react";
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -84,6 +84,19 @@ const Admin = () => {
     });
   }
 
+  function deleteUser(userId, userName) {
+    if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+      router.delete(`/admin/user/delete/${userId}`, {
+        onSuccess: () => {
+          alert('User deleted successfully');
+        },
+        onError: () => {
+          alert('Failed to delete user');
+        }
+      });
+    }
+  }
+
   function handleCatSubmit(e) {
     e.preventDefault();
     
@@ -158,10 +171,10 @@ const Admin = () => {
         <div className="sidebar-header">
           <div className="brand-section">
             <div className="brand-icon">
-              <i className="bi bi-shield-check"></i>
+              <img src={`/logo.png`} width="100" height="100" alt="" />
             </div>
             <div className="brand-info">
-              <h3 className="brand-name">CoreBuy</h3>
+              <h3 className="brand-name">Bright Max</h3>
               <span className="admin-badge">ADMIN PANEL</span>
             </div>
           </div>
@@ -452,6 +465,9 @@ const Admin = () => {
                                 </button>
                                 <button className="btn btn-sm btn-outline-secondary" onClick={() => openEditModal(user)}>
                                   <i className="bi bi-pencil"></i>
+                                </button>
+                                <button className="btn btn-sm btn-outline-danger" onClick={() => deleteUser(user.id, user.name)}>
+                                  <i className="bi bi-trash"></i>
                                 </button>
                               </div>
                             </td>
