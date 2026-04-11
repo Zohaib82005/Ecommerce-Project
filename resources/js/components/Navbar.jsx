@@ -14,7 +14,7 @@ const Navbar = () => {
   const { auth, cartCount } = usePage().props;
 
   const countries = [
-    { code: 'MY', name: 'Malaysia', flag: `my`, currency: 'RM' },
+    { code: 'MY', name: 'Malaysia', flag: `🇲🇾`, currency: 'RM' },
     { code: 'CN', name: 'China', flag: '🇨🇳', currency: 'CNY' },
     { code: 'AE', name: 'UAE', flag: '🇦🇪', currency: 'AED' },
     { code: 'PK', name: 'Pakistan', flag: '🇵🇰', currency: 'PKR' },
@@ -74,7 +74,7 @@ const Navbar = () => {
 
           {/* ── Logo ── */}
           <Link href="/" className="flex items-center gap-1.5 flex-shrink-0 text-white text-decoration-none">
-            <img src={`/logo.png`} className='h-10' alt="Logo" />
+            <img src={`/logo.png`} style={{height: "40px", backgroundColor: "#e7e7ff", borderRadius: "20px"}} alt="Logo" />
             <span className="text-base font-extrabold tracking-tight leading-none">
               BrightMaxTrading
             </span>

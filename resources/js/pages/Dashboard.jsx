@@ -331,10 +331,10 @@ const Dashboard = () => {
             </nav>
 
             <div className="p-4 border-t border-gray-200">
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 border border-gray-200 rounded-lg hover:bg-red-50 transition-colors font-medium">
+              <Link href="/logout" className="text-decoration-none w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 border border-gray-200 rounded-lg hover:bg-red-50 transition-colors font-medium">
                 <i className="bi bi-box-arrow-right"></i>
                 <span>Sign Out</span>
-              </button>
+              </Link>
             </div>
           </div>
         </aside>
@@ -378,12 +378,11 @@ const Dashboard = () => {
                           status: item.status,
                           cstatus: item.cstatus,
                           payment_method: item.payment_method,
-                          total_amount: 0,
+                          total_amount: parseFloat(item.total_amount || 0),
                           products: []
                         };
                       }
                       const productTotal = item.quantity * parseFloat(item.pprice || 0);
-                      acc[oid].total_amount += productTotal;
                       acc[oid].products.push({
                         name: item.product_name,
                         quantity: item.quantity,
@@ -425,7 +424,6 @@ const Dashboard = () => {
                                   <div className="flex-1 min-w-0">
                                     <h5 className="font-semibold text-gray-900 truncate">{product.name}</h5>
                                     <p className="text-sm text-gray-500 mt-1">Quantity: {product.quantity}</p>
-                                    <p className="text-sm text-gray-500">Price: ${parseFloat(product.price).toFixed(2)}</p>
                                     <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
                                       product.cstatus?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                       product.cstatus?.toLowerCase() === 'processing' ? 'bg-blue-100 text-blue-800' :
@@ -498,12 +496,11 @@ const Dashboard = () => {
                           status: item.status,
                           cstatus: item.cstatus,
                           payment_method: item.payment_method,
-                          total_amount: 0,
+                          total_amount: parseFloat(item.total_amount || 0),
                           products: []
                         };
                       }
                       const productTotal = item.quantity * parseFloat(item.pprice || 0);
-                      acc[oid].total_amount += productTotal;
                       acc[oid].products.push({
                         name: item.product_name,
                         quantity: item.quantity,

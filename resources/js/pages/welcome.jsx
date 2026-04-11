@@ -270,6 +270,45 @@ const ProductCard = ({ product, delay = 0, onAddToCart, rating = 0, totalReviews
   );
 };
 
+const CategorySkeleton = ({ count = 12 }) => (
+  <>
+    {Array.from({ length: count }).map((_, index) => (
+      <div
+        key={`category-skeleton-${index}`}
+        className="flex-shrink-0 flex flex-col items-center gap-1"
+        style={{ minWidth: '70px' }}
+      >
+        <div className="w-14 h-14 rounded-full bg-gray-200 animate-pulse" />
+        <div className="h-3 w-16 rounded bg-gray-200 animate-pulse" />
+      </div>
+    ))}
+  </>
+);
+
+const ProductCardSkeleton = ({ count = 6 }) => (
+  <>
+    {Array.from({ length: count }).map((_, index) => (
+      <div
+        key={`product-skeleton-${index}`}
+        className="bg-white rounded-xl overflow-hidden"
+        style={{
+          width: '100%',
+          height: '290px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        }}
+      >
+        <div className="h-[140px] bg-gray-200 animate-pulse" />
+        <div className="p-3 space-y-2">
+          <div className="h-3 w-4/5 rounded bg-gray-200 animate-pulse" />
+          <div className="h-3 w-3/5 rounded bg-gray-200 animate-pulse" />
+          <div className="h-3 w-1/2 rounded bg-gray-200 animate-pulse" />
+          <div className="h-7 w-full rounded bg-gray-200 animate-pulse mt-5" />
+        </div>
+      </div>
+    ))}
+  </>
+);
+
 // ─── Section with Side Image Card ────────────────────────────────────────────
 const ProductSection = ({
   title,
@@ -340,7 +379,7 @@ const Welcome = ({
 });
 
 const handleAddToCart = (productId) => {
-  console.log('Adding to cart:', productId);
+  // console.log('Adding to cart:', productId);
   
   // Use router.post to send data directly
   router.post('/cart/add', {
@@ -348,7 +387,7 @@ const handleAddToCart = (productId) => {
     quantity: 1,
   }, {
     onSuccess: () => {
-      console.log('Item added to cart successfully');
+      // console.log('Item added to cart successfully');
     },
     onError: (errors) => console.error('Error adding to cart:', errors),
   });
@@ -360,25 +399,101 @@ const handleAddToCart = (productId) => {
     dbCategories.length > 0
       ? dbCategories.map((cat, idx) => ({
           id: cat.id,
-          name: cat.name,
+          name: cat.category || cat.name,
           icon: categories[idx]?.icon || '🏷️',
           color: categories[idx]?.color || '#7c3aed',
           image: cat.image,
         }))
       : categories;
 
+  const lowCategoryCount = displayCategories.length > 0 && displayCategories.length <= 6;
+  const categoryGapClass = lowCategoryCount ? 'gap-0' : 'gap-3';
+  const categoryItemWidth = lowCategoryCount ? 70 : 82;
+  const categoryRepeatCount = displayCategories.length > 0
+    ? Math.max(2, Math.ceil(16 / displayCategories.length))
+    : 2;
+  const repeatedCategories = Array.from({ length: categoryRepeatCount }, (_, repeatIndex) =>
+    displayCategories.map((category) => ({
+      ...category,
+      repeatKey: `${category.id}-${repeatIndex}`,
+    }))
+  ).flat();
+
+  const parseNumericValue = (value) => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value !== 'string') {
+      return 0;
+    }
+
+    const cleaned = value.replace(/,/g, '').replace(/[^0-9.-]/g, '');
+    const parsed = parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const formatCurrency = (value, decimals = 0) => `RM ${parseNumericValue(value).toFixed(decimals)}`;
+
+  const formatPercentage = (value) => `${Math.round(parseNumericValue(value))}%`;
+
+  const calculateDiscount = (basePrice, discountValue = 0, discountType = 'percentage') => {
+    const price = parseNumericValue(basePrice);
+    const value = parseNumericValue(discountValue);
+
+    if (price <= 0 || value <= 0) {
+      return { finalPrice: price, savings: 0 };
+    }
+
+    const normalizedType = String(discountType || 'percentage').toLowerCase();
+    const savings = normalizedType === 'fixed'
+      ? value
+      : (price * value) / 100;
+
+    const clampedSavings = Math.min(price, Math.max(0, savings));
+    return {
+      finalPrice: Math.max(0, price - clampedSavings),
+      savings: clampedSavings,
+    };
+  };
+
+  const getDealProductPricing = (product) => {
+    const originalPrice = parseNumericValue(product.price);
+
+    const hasDealPercentage = parseNumericValue(product.discount_percentage_deal) > 0;
+    const dealType = hasDealPercentage ? 'percentage' : 'fixed';
+    const dealValue = hasDealPercentage
+      ? parseNumericValue(product.discount_percentage_deal)
+      : parseNumericValue(product.discount_amount);
+
+    // Deal products should use only deal discount (do not stack product discount)
+    const dealDiscount = calculateDiscount(originalPrice, dealValue, dealType);
+    const finalPrice = dealDiscount.finalPrice;
+    const totalSavings = dealDiscount.savings;
+    const totalDiscountPercentage = originalPrice > 0 ? (totalSavings / originalPrice) * 100 : 0;
+
+    return {
+      originalPrice,
+      finalPrice,
+      totalSavings,
+      totalDiscountPercentage,
+    };
+  };
+
   // Helper to map a raw DB product to display shape
   const mapProduct = (p, fallbackDiscount = 20) => {
-    const originalPrice = parseFloat(p.price) || 0;
-    const discountPercentage = p.discount_price || fallbackDiscount;
-    const discountedPrice = originalPrice - (originalPrice * discountPercentage) / 100;
-    const savings = originalPrice * discountPercentage / 100;
+    const originalPrice = parseNumericValue(p.price);
+    const discountValue = p.discount_price ?? fallbackDiscount;
+    const discountType = p.discount_type || 'percentage';
+    const { finalPrice, savings } = calculateDiscount(originalPrice, discountValue, discountType);
+    const discountPercentage = originalPrice > 0 ? (savings / originalPrice) * 100 : 0;
+
     return {
       id: p.id,
       name: p.name,
-      price: `RM ${Math.round(discountedPrice)}`,
-      originalPrice: `RM ${Math.round(originalPrice)}`,
-      discount: `${discountPercentage}%`,
+      price: formatCurrency(finalPrice),
+      originalPrice: formatCurrency(originalPrice),
+      discount: formatPercentage(discountPercentage),
       image: p.image,
       savings: Math.round(savings),
     };
@@ -399,6 +514,7 @@ const handleAddToCart = (productId) => {
   const [dynamicCategories, setDynamicCategories]   = useState([]);
   const [loadingCategories, setLoadingCategories]   = useState(false);
   const [productRatings, setProductRatings]         = useState({}); // Store ratings by product ID
+  const [isCategoryTickerPaused, setIsCategoryTickerPaused] = useState(false);
 
   const categoryScrollRef = useRef(null);
   const promoScrollRef    = useRef(null);
@@ -505,33 +621,51 @@ const handleAddToCart = (productId) => {
   }, [fetchProductRatings]);
 
   // Format product helper (for dynamic categories)
-  const formatProduct = (product) => ({
-    id: product.id,
-    name: product.name,
-    price: (product.final_price),
-    originalPrice: `RM ${Math.round(product.price)}`,
-    discount: `${product.discount_price || 0}%`,
-    image: product.image,
-    savings: (product.discount_type === 'percentage') ? (product.price * (product.discount_price || 0) / 100) : (product.discount_price || 0),
-  });
+  const formatProduct = (product) => {
+    const originalPrice = parseNumericValue(product.price);
+    const { finalPrice, savings } = calculateDiscount(
+      originalPrice,
+      product.discount_price || 0,
+      product.discount_type || 'percentage'
+    );
+    const discountPercentage = originalPrice > 0 ? (savings / originalPrice) * 100 : 0;
+
+    return {
+      id: product.id,
+      name: product.name,
+      price: formatCurrency(finalPrice),
+      originalPrice: formatCurrency(originalPrice),
+      discount: formatPercentage(discountPercentage),
+      image: product.image,
+      savings: Math.round(savings),
+    };
+  };
 
   // Seamless category scroll animation
   useEffect(() => {
     let animationFrameId;
-    let scrollPos = 0;
-    const itemWidth = 120; // approx width of each category item (w-[70px] + gap)
-    const totalWidth = displayCategories.length * itemWidth;
+    const totalWidth = displayCategories.length * categoryItemWidth;
+
+    if (totalWidth <= 0) {
+      setCategoryScrollPosition(0);
+      return undefined;
+    }
+
+    if (isCategoryTickerPaused) {
+      return undefined;
+    }
 
     const animate = () => {
-      scrollPos += 0.5;
-      if (scrollPos >= totalWidth) scrollPos = 0; // seamless reset at exact boundary
-      setCategoryScrollPosition(scrollPos);
+      setCategoryScrollPosition((prev) => {
+        const next = prev + 0.5;
+        return next >= totalWidth ? 0 : next; // seamless reset at exact boundary
+      });
       animationFrameId = requestAnimationFrame(animate);
     };
 
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [displayCategories.length]);
+  }, [displayCategories.length, categoryItemWidth, isCategoryTickerPaused]);
 
   // Countdown timer — tracks deal ending soonest
   useEffect(() => {
@@ -620,43 +754,52 @@ const handleAddToCart = (productId) => {
               <div className="hidden lg:block w-px bg-gray-300 self-stretch"></div>
 
               {/* Right: Category Icons (scroll right-to-left) */}
-              <div className="flex-1 overflow-hidden">
+              <div
+                className="flex-1 overflow-hidden"
+                onMouseEnter={() => setIsCategoryTickerPaused(true)}
+                onMouseLeave={() => setIsCategoryTickerPaused(false)}
+              >
                 <div
                   ref={categoryScrollRef}
-                  className="flex gap-3"
+                  className={`flex ${categoryGapClass}`}
                   style={{ transform: `translateX(-${categoryScrollPosition}px)` }}
                 >
-                  {[...displayCategories, ...displayCategories].map((category, index) => (
-                    <div
-                      key={`${category.id}-${index}`}
-                      className="flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer group"
-                      style={{ minWidth: '70px' }}
-                    >
-                      <div
-                        className="w-14 h-14 rounded-full overflow-hidden group-hover:scale-110 transition-transform duration-300 shadow-md flex items-center justify-center text-xl"
-                        style={{
-                          background: (category.color || '#7c3aed') + '22',
-                          border: `2px solid ${(category.color || '#7c3aed')}44`,
-                        }}
+                  {loadingCategories ? (
+                    <CategorySkeleton count={14} />
+                  ) : (
+                    repeatedCategories.map((category, index) => (
+                      <Link
+                        key={category.repeatKey || `${category.id}-${index}`}
+                        href={`/category/${category.id}`}
+                        className="flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer group text-decoration-none"
+                        style={{ minWidth: '70px' }}
                       >
-                        {category.image ? (
-                          <img
-                            src={`/storage/${category.image}`}
-                            alt={category.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span>{category.icon}</span>
-                        )}
-                      </div>
-                      <span
-                        className="text-xs text-center text-gray-700 font-medium line-clamp-2"
-                        style={{ maxWidth: '80px' }}
-                      >
-                        {category.name}
-                      </span>
-                    </div>
-                  ))}
+                        <div
+                          className="w-14 h-14 rounded-full overflow-hidden group-hover:scale-110 transition-transform duration-300 shadow-md flex items-center justify-center text-xl"
+                          style={{
+                            background: (category.color || '#7c3aed') + '22',
+                            border: `2px solid ${(category.color || '#7c3aed')}44`,
+                          }}
+                        >
+                          {category.image ? (
+                            <img
+                              src={`/storage/${category.image}`}
+                              alt={category.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span>{category.icon}</span>
+                          )}
+                        </div>
+                        <span
+                          className="text-xs text-center text-gray-700 font-medium line-clamp-2"
+                          style={{ maxWidth: '80px' }}
+                        >
+                          {category.name}
+                        </span>
+                      </Link>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -769,7 +912,7 @@ const handleAddToCart = (productId) => {
           </AnimatedSection>
 
           {/* ── Trending Deals Row ── */}
-          {deals.length > 0 && (
+          {(loadingDeals || deals.length > 0) && (
           <AnimatedSection className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {/* Trending Deals */}
             <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
@@ -783,7 +926,15 @@ const handleAddToCart = (productId) => {
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {deals.length > 0 ? (
+                {loadingDeals ? (
+                  [1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl p-3 bg-gray-200 animate-pulse"
+                      style={{ minHeight: '80px' }}
+                    />
+                  ))
+                ) : deals.length > 0 ? (
                   deals.slice(0, 4).map((deal, i) => (
                     <div
                       key={deal.id}
@@ -794,15 +945,7 @@ const handleAddToCart = (productId) => {
                       <p className="text-xs font-semibold text-gray-700 line-clamp-2">{deal.title}</p>
                     </div>
                   ))
-                ) : (
-                  [1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl p-3 bg-gray-200 animate-pulse"
-                      style={{ minHeight: '80px' }}
-                    />
-                  ))
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -813,7 +956,19 @@ const handleAddToCart = (productId) => {
                 <span className="text-xs cursor-pointer" style={{ color: '#7c3aed' }}>View All ›</span>
               </div>
               <div className="space-y-3">
-                {displayTopPicks.slice(0, 2).map((p, i) => {
+                {loadingDeals ? (
+                  [1, 2].map((i) => (
+                    <div key={i} className="flex gap-3 p-2 rounded-xl">
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-4/5 rounded bg-gray-200 animate-pulse" />
+                        <div className="h-3 w-2/5 rounded bg-gray-200 animate-pulse" />
+                        <div className="h-3 w-3/5 rounded bg-gray-200 animate-pulse" />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                displayTopPicks.slice(0, 2).map((p, i) => {
                   const rating = productRatings[p.id] || { average_rating: 0, total_reviews: 0 };
                   return (
                     <Link key={p.id} className="text-decoration-none" href={`/product/details/${p.id}`}>
@@ -856,7 +1011,7 @@ const handleAddToCart = (productId) => {
                       </div>
                     </Link>
                   );
-                })}
+                }))}
               </div>
             </div>
 
@@ -905,12 +1060,19 @@ const handleAddToCart = (productId) => {
           )}
 
           {/* ── Deals of the Day with Tabs ── */}
-          {deals.length > 0 && (
+          {(loadingDeals || deals.length > 0) && (
             <AnimatedSection className="mb-12">
               {/* Tabs */}
               <div className="mb-6">
                 <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                  {deals.map((deal) => (
+                  {loadingDeals
+                    ? [1, 2, 3].map((skeletonTab) => (
+                        <div
+                          key={`tab-skeleton-${skeletonTab}`}
+                          className="h-10 w-32 rounded-xl bg-gray-200 animate-pulse flex-shrink-0"
+                        />
+                      ))
+                    : deals.map((deal) => (
                     <button
                       key={deal.id}
                       onClick={() => setSelectedDealTabId(deal.id)}
@@ -941,13 +1103,16 @@ const handleAddToCart = (productId) => {
                 className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
                 style={{ transition: 'opacity 0.4s ease' }}
               >
-                {selectedDealTabId &&
+                {loadingDeals ? (
+                  <ProductCardSkeleton count={5} />
+                ) : selectedDealTabId &&
                 deals.find((d) => d.id === selectedDealTabId)?.products ? (
                   deals
                     .find((d) => d.id === selectedDealTabId)
                     .products.slice(0, 6)
                     .map((product, i) => {
                       const isDealHovered = hoveredDealProductId === product.id;
+                      const pricing = getDealProductPricing(product);
                       return (
                         <Link
                           key={`${product.id}-${i}`}
@@ -969,12 +1134,12 @@ const handleAddToCart = (productId) => {
                               flexDirection: 'column',
                             }}
                           >
-                            {(product.discount_percentage_deal > 0 || product.discount_percentage > 0) && (
+                            {pricing.totalDiscountPercentage > 0 && (
                               <div
                                 className="absolute top-2 left-2 z-10 text-white font-bold px-2 py-0.5 rounded-full"
                                 style={{ background: '#ef4444', fontSize: '10px' }}
                               >
-                                {(product.discount_percentage_deal + product.discount_percentage).toFixed(0)}% OFF
+                                {pricing.totalDiscountPercentage.toFixed(0)}% OFF
                               </div>
                             )}
 
@@ -1021,10 +1186,10 @@ const handleAddToCart = (productId) => {
                               </div>
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="font-bold text-xs" style={{ color: '#059669' }}>
-                                  RM {product.discounted_price}
+                                  RM {pricing.finalPrice.toFixed(2)}
                                 </span>
                                 <span className="text-gray-400 line-through text-xs">
-                                  RM {Math.round(product.price)}
+                                  RM {Math.round(pricing.originalPrice)}
                                 </span>
                               </div>
 
@@ -1044,7 +1209,7 @@ const handleAddToCart = (productId) => {
                                   overflow: 'hidden',
                                 }}
                               >
-                                You saved RM {product.savings}
+                                You saved RM {pricing.totalSavings.toFixed(2)}
                               </p>
 
                               {/* Add to Cart — shown on hover */}
@@ -1088,7 +1253,7 @@ const handleAddToCart = (productId) => {
           )}
 
           {/* ── Deals You Might Like ── */}
-          {deals.length > 0 && (
+          {(loadingDeals || deals.length > 0) && (
           <AnimatedSection className="mb-12">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800">Deals You Might Like</h2>
@@ -1102,7 +1267,15 @@ const handleAddToCart = (productId) => {
 
             {/* Deal promo cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-              {deals.length > 0 ? (
+              {loadingDeals ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={`deal-card-skeleton-${i}`}
+                    className="rounded-xl p-4 bg-gray-200 animate-pulse"
+                    style={{ minHeight: '120px' }}
+                  />
+                ))
+              ) : deals.length > 0 ? (
                 deals.map((deal, i) => {
                   // Deterministic gradient colors derived from index (avoids random re-renders)
                   const gradientPairs = [
@@ -1157,7 +1330,7 @@ const handleAddToCart = (productId) => {
                     </React.Fragment>
                   ))}
                 </div>
-                {upcomingDeal && (
+                {!loadingDeals && upcomingDeal && (
                   <p className="text-white/80 text-sm mt-2 font-semibold">{upcomingDeal.title}</p>
                 )}
               </div>
@@ -1167,9 +1340,7 @@ const handleAddToCart = (productId) => {
                   (() => {
                     const maxDiscount = Math.max(
                       ...upcomingDeal.products.map((p) => {
-                        const dealDiscount    = parseFloat(p.discount_percentage_deal) || 0;
-                        const productDiscount = parseFloat(p.discount_percentage)      || 0;
-                        return dealDiscount + productDiscount;
+                        return getDealProductPricing(p).totalDiscountPercentage;
                       })
                     );
                     return (
@@ -1189,7 +1360,7 @@ const handleAddToCart = (productId) => {
                 )}
               </div>
 
-              {upcomingDeal && (
+              {!loadingDeals && upcomingDeal && (
                 <div
                   className="rounded-xl overflow-hidden relative"
                   style={{
@@ -1214,8 +1385,24 @@ const handleAddToCart = (productId) => {
           )}
 
           {/* ── Dynamic Categories with Products ── */}
-          {dynamicCategories.length > 0 && (
-            !loadingCategories ? (
+          {loadingCategories ? (
+            <AnimatedSection className="mb-12">
+              <div className="space-y-6">
+                {Array.from({ length: 2 }).map((_, sectionIndex) => (
+                  <div key={`dynamic-category-skeleton-${sectionIndex}`} className="space-y-4">
+                    <div className="h-8 w-48 rounded bg-gray-200 animate-pulse" />
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      <div className="w-full lg:w-64 h-64 rounded-2xl bg-gray-200 animate-pulse" />
+                      <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <ProductCardSkeleton count={4} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AnimatedSection>
+          ) : (
+            dynamicCategories.length > 0 && (
               dynamicCategories.map((cat, idx) => {
               const gradientStarts = ['#831843', '#065f46', '#1e3a5f', '#333', '#7c2d12', '#1a0533'];
               const gradientEnds   = ['#ec4899', '#10b981', '#2563eb', '#666', '#ea580c', '#4c1d95'];
@@ -1297,7 +1484,7 @@ const handleAddToCart = (productId) => {
                 </AnimatedSection>
               );
             })
-            ) : null
+            )
           )}
 
           {/* ── Brand of the Week ── */}

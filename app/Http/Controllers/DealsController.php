@@ -83,7 +83,17 @@ class DealsController extends Controller
                         'created_at' => $deal->created_at,
                         'products_count' => $deal->products->count(),
                         'products' => $deal->products->map(function ($product) {
-                            return $this->calculateProductDiscount($product);
+                            return [
+                                'id' => $product->id,
+                                'name' => $product->name,
+                                'price' => (float) $product->price,
+                                'discount_price' => (float) ($product->discount_price ?? 0),
+                                'discount_type' => $product->discount_type ?? 'percentage',
+                                'discount_percentage_deal' => (float) ($product->pivot->discount_percentage ?? 0),
+                                'discount_amount' => (float) ($product->pivot->discount_amount ?? 0),
+                                'image' => $product->image,
+                                'instock' => $product->instock,
+                            ];
                         }),
                     ];
                 });
@@ -114,15 +124,9 @@ class DealsController extends Controller
             // Delete the deal
             $deal->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Deal deleted successfully!',
-            ]);
+            return redirect()->back()->with('success', 'Deal Deleted Successfully!');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete deal: ' . $e->getMessage(),
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to Delete Deal');
         }
     }
 
@@ -170,11 +174,7 @@ class DealsController extends Controller
                 Flashdeals_product::create($dealData);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Deal updated successfully!',
-                'deal' => $deal,
-            ]);
+            return redirect()->back()->with('success', 'Deal Updated Successfully!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to update deal: ' . $e->getMessage());
         }
@@ -204,7 +204,33 @@ class DealsController extends Controller
                         'start_date' => $deal->start_date,
                         'end_date' => $deal->end_date,
                         'products' => $deal->products->map(function ($product) {
-                            return $this->calculateProductDiscount($product);
+                            $originalPrice = (float) $product->price;
+                            $dealDiscountPercentage = (float) ($product->pivot->discount_percentage ?? 0);
+                            $dealDiscountAmount = (float) ($product->pivot->discount_amount ?? 0);
+
+                            $dealDiscountType = $dealDiscountPercentage > 0 ? 'percentage' : 'fixed';
+                            $dealDiscountValue = $dealDiscountPercentage > 0 ? $dealDiscountPercentage : $dealDiscountAmount;
+                            $dealSavings = $dealDiscountType === 'percentage'
+                                ? ($originalPrice * $dealDiscountValue / 100)
+                                : $dealDiscountValue;
+                            $dealSavings = min($originalPrice, max(0, $dealSavings));
+
+                            return [
+                                'id' => $product->id,
+                                'name' => $product->name,
+                                'price' => $originalPrice,
+                                'discount_price' => (float) ($product->discount_price ?? 0),
+                                'discount_type' => $product->discount_type ?? 'percentage',
+                                'discount_percentage_deal' => $dealDiscountPercentage,
+                                'discount_amount' => $dealDiscountAmount,
+                                'effective_discount_source' => 'deal',
+                                'effective_discount_type' => $dealDiscountType,
+                                'effective_discount_value' => $dealDiscountValue,
+                                'effective_savings' => round($dealSavings, 2),
+                                'effective_final_price' => round(max(0, $originalPrice - $dealSavings), 2),
+                                'image' => $product->image,
+                                'instock' => $product->instock,
+                            ];
                         })->toArray(),
                     ];
                 });
@@ -222,53 +248,4 @@ class DealsController extends Controller
     }
 }
 
-    /**
-     * Calculate product discount considering both product discount and deal discount
-     */
-    private function calculateProductDiscount($product)
-    {
-        $originalPrice = (float) $product->price;
-        $productDiscountPercentage = (float) ($product->discount_price ?? 0);
-        
-        // Apply product discount first
-        $priceAfterProductDiscount = $originalPrice - ($originalPrice * $productDiscountPercentage / 100);
-        
-        // Apply deal discount - handle both BelongsToMany (pivot) and HasMany relationships
-        $dealDiscountPercentage = 0;
-        $dealDiscountAmount = 0;
-        
-        if ($product->pivot) {
-            $dealDiscountPercentage = (float) ($product->pivot->discount_percentage ?? 0);
-            $dealDiscountAmount = (float) ($product->pivot->discount_amount ?? 0);
-        } elseif ($product->flashdealProducts) {
-            $flashdealProduct = $product->flashdealProducts->first();
-            $dealDiscountPercentage = (float) ($flashdealProduct->discount_percentage ?? 0);
-            $dealDiscountAmount = (float) ($flashdealProduct->discount_amount ?? 0);
-        }
-        
-        $finalPrice = $priceAfterProductDiscount;
-        $totalSavings = $originalPrice * $productDiscountPercentage / 100;
-        
-        if ($dealDiscountPercentage > 0) {
-            $dealSavings = $priceAfterProductDiscount * $dealDiscountPercentage / 100;
-            $finalPrice = $priceAfterProductDiscount - $dealSavings;
-            $totalSavings += $dealSavings;
-        } elseif ($dealDiscountAmount > 0) {
-            $finalPrice = $priceAfterProductDiscount - $dealDiscountAmount;
-            $totalSavings += $dealDiscountAmount;
-        }
-        
-        return [
-            'id' => $product->id,
-            'name' => $product->name,
-            'price' => $originalPrice,
-            'discounted_price' => round($finalPrice, 2),
-            'discount_percentage' => $productDiscountPercentage,
-            'discount_percentage_deal' => $dealDiscountPercentage,
-            'discount_amount' => $dealDiscountAmount,
-            'savings' => round($totalSavings, 2),
-            'image' => $product->image,
-            'instock' => $product->instock,
-        ];
-    }
 }

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import "../css/admin.css";
 import { useForm, usePage, Link, router } from "@inertiajs/react";
-
+import FlashMessage from "../components/FlashMessage";
+import LoadingScreen from "../Components/LoadingScreen";
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,12 +57,26 @@ const Admin = () => {
 
   // Edit user modal form
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editCategoryModalOpen, setEditCategoryModalOpen] = useState(false);
+  const [deleteCategoryModalOpen, setDeleteCategoryModalOpen] = useState(false);
   const editForm = useForm({
     id: '',
     name: '',
     email: '',
     role: '',
-    status: ''
+    password: '',
+    password_confirmation: ''
+  });
+
+  const editCategoryForm = useForm({
+    id: '',
+    name: '',
+    level: 'main',
+  });
+
+  const deleteCategoryForm = useForm({
+    id: '',
+    level: 'main',
   });
 
   function openEditModal(user) {
@@ -70,7 +85,8 @@ const Admin = () => {
       name: user.name || '',
       email: user.email || '',
       role: user.role || 'User',
-      status: user.status || ''
+      password: '',
+      password_confirmation: ''
     });
     setEditModalOpen(true);
   }
@@ -80,6 +96,8 @@ const Admin = () => {
     editForm.post('/admin/user/update', {
       onSuccess: () => {
         setEditModalOpen(false);
+        editForm.setData('password', '');
+        editForm.setData('password_confirmation', '');
       }
     });
   }
@@ -95,6 +113,41 @@ const Admin = () => {
         }
       });
     }
+  }
+
+  function openEditCategoryModal(item, level) {
+    editCategoryForm.setData({
+      id: item.id,
+      name: level === 'main' ? (item.category || '') : (item.name || ''),
+      level,
+    });
+    setEditCategoryModalOpen(true);
+  }
+
+  function handleCategoryEditSubmit(e) {
+    e.preventDefault();
+    editCategoryForm.post('/admin/category/update', {
+      onSuccess: () => {
+        setEditCategoryModalOpen(false);
+      }
+    });
+  }
+
+  function openDeleteCategoryModal(item, level) {
+    deleteCategoryForm.setData({
+      id: item.id,
+      level,
+    });
+    setDeleteCategoryModalOpen(true);
+  }
+
+  function handleCategoryDeleteSubmit(e) {
+    e.preventDefault();
+    deleteCategoryForm.post('/admin/category/delete', {
+      onSuccess: () => {
+        setDeleteCategoryModalOpen(false);
+      }
+    });
   }
 
   function handleCatSubmit(e) {
@@ -154,13 +207,14 @@ const Admin = () => {
   // Sample data (replace with props data when available)
   const users = props.users || [];
   const products = props.products || [];
-  const sellers = props.sellers || [];
-  const orders = props.reported_orders || [];
+  const orders = props.orders || [];
   const reports = props.reports || [];
   const logs = props.logs || [];
 
   return (
     <div className="admin-dashboard">
+      <FlashMessage />
+      <LoadingScreen />
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>
@@ -232,13 +286,6 @@ const Admin = () => {
               <span>Manage Categories</span>
             </li>
             <li
-              className={`nav-item ${activeTab === "sellers" ? "active" : ""}`}
-              onClick={() => { setActiveTab("sellers"); setSidebarOpen(false); }}
-            >
-              <i className="bi bi-shop"></i>
-              <span>Seller Control</span>
-            </li>
-            <li
               className={`nav-item ${activeTab === "orders" ? "active" : ""}`}
               onClick={() => { setActiveTab("orders"); setSidebarOpen(false); }}
             >
@@ -288,7 +335,6 @@ const Admin = () => {
                 {activeTab === "users" && "User Verification"}
                 {activeTab === "products" && "Product Review"}
                 {activeTab === "category" && "Manage Categories"}
-                {activeTab === "sellers" && "Seller Control"}
                 {activeTab === "orders" && "Order Oversight"}
                 {activeTab === "reports" && "Reports & Flags"}
                 {activeTab === "logs" && "Audit Logs"}
@@ -532,7 +578,6 @@ const Admin = () => {
                             </td>
                             <td>{new Date(product.created_at).toLocaleDateString()}</td>
                             <td>{product.status}</td>
-
                             <td>
                               <div className="action-buttons">
                                 <Link href={`/approve/${product.id}`} className="btn btn-sm btn-success">
@@ -551,6 +596,77 @@ const Admin = () => {
                         <tr>
                           <td colSpan="7" className="text-center text-muted py-4">
                             No products pending review
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ORDERS TAB */}
+          {activeTab === "orders" && (
+            <div className="orders-section">
+              <div className="table-card">
+                <div className="table-header">
+                  <h5>All Order Details</h5>
+                  <span className="badge bg-primary">{orders.length} Records</span>
+                </div>
+                <div className="table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Product</th>
+                        <th>Customer</th>
+                        <th>Seller</th>
+                        <th>Qty</th>
+                        <th>Amount</th>
+                        <th>Product Status</th>
+                        <th>Order Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.length > 0 ? (
+                        orders.map((order, index) => (
+                          <tr key={`${order.order_id || order.id}-${index}`}>
+                            <td><strong>#{order.order_id || order.id}</strong></td>
+                            <td>{order.product_name || 'N/A'}</td>
+                            <td>{order.customer_name || order.customer || 'N/A'}</td>
+                            <td>{order.seller_name || 'N/A'}</td>
+                            <td>{order.quantity || 1}</td>
+                            <td className="fw-bold">RM {order.total_amount || order.amount || 0}</td>
+                            <td>
+                              <span className="status-badge status-active">
+                                {order.product_order_status || order.cart_status || 'Pending'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="status-badge status-active">
+                                {order.order_status || order.status || 'Pending'}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="action-buttons">
+                                <button className="btn btn-sm btn-primary">
+                                  <i className="bi bi-eye me-1"></i>
+                                  Details
+                                </button>
+                                <button className="btn btn-sm btn-outline-secondary">
+                                  <i className="bi bi-box-arrow-up-right me-1"></i>
+                                  Track
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="9" className="text-center text-muted py-4">
+                            No orders found
                           </td>
                         </tr>
                       )}
@@ -875,10 +991,10 @@ const Admin = () => {
                                 </td>
                                 <td>
                                   <div className="action-buttons">
-                                    <button className="btn btn-sm btn-outline-primary">
+                                    <button className="btn btn-sm btn-outline-primary" onClick={() => openEditCategoryModal(item, 'main')}>
                                       <i className="bi bi-pencil"></i>
                                     </button>
-                                    <button className="btn btn-sm btn-outline-danger">
+                                    <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteCategoryModal(item, 'main')}>
                                       <i className="bi bi-trash"></i>
                                     </button>
                                   </div>
@@ -905,10 +1021,10 @@ const Admin = () => {
                                     </td>
                                     <td>
                                       <div className="action-buttons">
-                                        <button className="btn btn-sm btn-outline-primary">
+                                        <button className="btn btn-sm btn-outline-primary" onClick={() => openEditCategoryModal(subcat, 'sub')}>
                                           <i className="bi bi-pencil"></i>
                                         </button>
-                                        <button className="btn btn-sm btn-outline-danger">
+                                        <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteCategoryModal(subcat, 'sub')}>
                                           <i className="bi bi-trash"></i>
                                         </button>
                                       </div>
@@ -934,10 +1050,10 @@ const Admin = () => {
                                       </td>
                                       <td>
                                         <div className="action-buttons">
-                                          <button className="btn btn-sm btn-outline-primary">
+                                          <button className="btn btn-sm btn-outline-primary" onClick={() => openEditCategoryModal(subsubcat, 'subsub')}>
                                             <i className="bi bi-pencil"></i>
                                           </button>
-                                          <button className="btn btn-sm btn-outline-danger">
+                                          <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteCategoryModal(subsubcat, 'subsub')}>
                                             <i className="bi bi-trash"></i>
                                           </button>
                                         </div>
@@ -952,137 +1068,6 @@ const Admin = () => {
                       </table>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* SELLERS TAB */}
-          {activeTab === "sellers" && (
-            <div className="sellers-section">
-              <div className="table-card">
-                <div className="table-header">
-                  <h5>Seller Management</h5>
-                  <div className="filter-buttons">
-                    <button className="btn btn-sm btn-outline-primary active">All</button>
-                    <button className="btn btn-sm btn-outline-success">Active</button>
-                    <button className="btn btn-sm btn-outline-danger">Flagged</button>
-                  </div>
-                </div>
-                <div className="sellers-grid">
-                  {props.sellers && props.sellers.length > 0 ? (
-                    props.sellers.map((seller) => (
-                      <div key={seller.id} className="seller-card">
-                        <div className="seller-header">
-                          <div className="seller-avatar">
-                            <i className="bi bi-shop"></i>
-                          </div>
-                          <div className="seller-info">
-                            <h5>{seller.name}</h5>
-                            <span className={`status-badge status-${seller.status?.toLowerCase()}`}>
-                              {seller.status}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="seller-stats">
-                          <div className="stat">
-                            <i className="bi bi-box"></i>
-                            <div>
-                              <strong>{seller.products}</strong>
-                              <span>Products</span>
-                            </div>
-                          </div>
-                          <div className="stat">
-                            <i className="bi bi-currency-dollar"></i>
-                            <div>
-                              <strong>RM {seller.revenue}</strong>
-                              <span>Revenue</span>
-                            </div>
-                          </div>
-                          <div className="stat">
-                            <i className="bi bi-star-fill"></i>
-                            <div>
-                              <strong>{seller.rating}</strong>
-                              <span>Rating</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="seller-actions">
-                          <button className="btn btn-sm btn-outline-primary">
-                            <i className="bi bi-eye me-1"></i>
-                            View Details
-                          </button>
-                          <button className="btn btn-sm btn-warning">
-                            <i className="bi bi-pause-circle me-1"></i>
-                            Freeze
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="alert alert-info w-100">No sellers found</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ORDERS TAB */}
-          {activeTab === "orders" && (
-            <div className="orders-section">
-              <div className="table-card">
-                <div className="table-header">
-                  <h5>Disputed Orders</h5>
-                  <span className="badge bg-danger">Requires Attention</span>
-                </div>
-                <div className="table-responsive">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Order ID</th>
-                        <th>Customer</th>
-                        <th>Amount</th>
-                        <th>Issue</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {props.reported_orders && props.reported_orders.length > 0 ? (
-                        props.reported_orders.map((order) => (
-                          <tr key={order.id}>
-                            <td><strong>{order.id}</strong></td>
-                            <td>{order.customer}</td>
-                            <td className="fw-bold">RM {order.amount}</td>
-                            <td>{order.issue || 'N/A'}</td>
-                            <td>
-                              <span className="status-badge status-dispute">
-                                {order.status}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="action-buttons">
-                                <button className="btn btn-sm btn-primary">
-                                  <i className="bi bi-arrow-up-circle me-1"></i>
-                                  Escalate
-                                </button>
-                                <button className="btn btn-sm btn-outline-secondary">
-                                  <i className="bi bi-eye me-1"></i>
-                                  Details
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="6" className="text-center text-muted py-4">
-                            No disputed orders
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
                 </div>
               </div>
             </div>
@@ -1209,19 +1194,105 @@ const Admin = () => {
                 </select>
               </div>
               <div className="mb-3">
-                <label className="form-label">Status</label>
-                <select className="form-select" value={editForm.data.status} onChange={(e) => editForm.setData('status', e.target.value)}>
-                  <option value="">-- Select --</option>
-                  <option>Pending</option>
-                  <option>Approved</option>
-                  <option>Rejected</option>
-                  <option>Active</option>
-                </select>
+                <label className="form-label">New Password (Optional)</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  value={editForm.data.password}
+                  onChange={(e) => editForm.setData('password', e.target.value)}
+                  placeholder="Leave blank to keep current password"
+                />
+                {editForm.errors.password && <div className="text-danger small">{editForm.errors.password}</div>}
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Confirm New Password</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  value={editForm.data.password_confirmation}
+                  onChange={(e) => editForm.setData('password_confirmation', e.target.value)}
+                  placeholder="Re-enter new password"
+                />
               </div>
               <div style={{display:'flex',gap:'0.5rem',justifyContent:'flex-end'}}>
                 <button type="button" className="btn btn-outline-secondary" onClick={() => setEditModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={editForm.processing}>
                   {editForm.processing ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Category Modal */}
+      {editCategoryModalOpen && (
+        <div>
+          <div className="sidebar-overlay" onClick={() => setEditCategoryModalOpen(false)}></div>
+          <div className="admin-modal" style={{position: 'fixed',left: '50%',top: '50%',transform: 'translate(-50%, -50%)',zIndex:1100,width:'460px',background:'#fff',borderRadius:'8px',boxShadow:'0 10px 30px rgba(0,0,0,0.2)'}}>
+            <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <h5 style={{margin:0}}>Edit Category</h5>
+              <button className="close-sidebar" onClick={() => setEditCategoryModalOpen(false)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <form onSubmit={handleCategoryEditSubmit} style={{padding:'1rem 1.25rem'}}>
+              <div className="mb-3">
+                <label className="form-label">Category Type</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editCategoryForm.data.level === 'main' ? 'Main Category' : editCategoryForm.data.level === 'sub' ? 'Sub Category' : 'Sub-Sub Category'}
+                  disabled
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Category Name</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editCategoryForm.data.name}
+                  onChange={(e) => editCategoryForm.setData('name', e.target.value)}
+                  required
+                />
+                {editCategoryForm.errors.name && <div className="text-danger small">{editCategoryForm.errors.name}</div>}
+              </div>
+              <div style={{display:'flex',gap:'0.5rem',justifyContent:'flex-end'}}>
+                <button type="button" className="btn btn-outline-secondary" onClick={() => setEditCategoryModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={editCategoryForm.processing}>
+                  {editCategoryForm.processing ? 'Updating...' : 'Update Category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Category Modal */}
+      {deleteCategoryModalOpen && (
+        <div>
+          <div className="sidebar-overlay" onClick={() => setDeleteCategoryModalOpen(false)}></div>
+          <div className="admin-modal" style={{position: 'fixed',left: '50%',top: '50%',transform: 'translate(-50%, -50%)',zIndex:1100,width:'460px',background:'#fff',borderRadius:'8px',boxShadow:'0 10px 30px rgba(0,0,0,0.2)'}}>
+            <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <h5 style={{margin:0}}>Delete Category</h5>
+              <button className="close-sidebar" onClick={() => setDeleteCategoryModalOpen(false)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <form onSubmit={handleCategoryDeleteSubmit} style={{padding:'1rem 1.25rem'}}>
+              <div className="alert alert-warning d-flex align-items-start gap-2" role="alert">
+                <i className="bi bi-exclamation-triangle-fill"></i>
+                <div>
+                  <strong>Warning:</strong> Deleting this {deleteCategoryForm.data.level === 'main' ? 'main category' : deleteCategoryForm.data.level === 'sub' ? 'sub category' : 'sub-sub category'} will also delete all related products.
+                </div>
+              </div>
+              <p className="mb-3 text-muted">
+                This action is permanent and cannot be undone.
+              </p>
+              <div style={{display:'flex',gap:'0.5rem',justifyContent:'flex-end'}}>
+                <button type="button" className="btn btn-outline-secondary" onClick={() => setDeleteCategoryModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-danger" disabled={deleteCategoryForm.processing}>
+                  {deleteCategoryForm.processing ? 'Deleting...' : 'Delete Category'}
                 </button>
               </div>
             </form>

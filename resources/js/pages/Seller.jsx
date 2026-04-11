@@ -45,11 +45,15 @@ const Seller = () => {
   const calculateOrderTotals = () => {
     const orderTotals = {};
     props.orders?.forEach(orderRow => {
-      if (!orderTotals[orderRow.oid]) {
+      if (orderTotals[orderRow.oid] === undefined) {
         orderTotals[orderRow.oid] = 0;
       }
-      orderTotals[orderRow.oid] += parseFloat(orderRow.pprice || 0) * parseInt(orderRow.quantity || 0);
+
+      const amount = parseFloat(orderRow.pprice || 0);
+      const quantity = parseInt(orderRow.quantity || 0, 10);
+      orderTotals[orderRow.oid] += amount * quantity;
     });
+
     return orderTotals;
   };
 
@@ -160,7 +164,7 @@ const Seller = () => {
       try {
         const response = await fetch(`/api/subcategories/${categoryId}`);
         const data = await response.json();
-        console.log('Fetched subcategories:', data);
+        // console.log('Fetched subcategories:', data);
         setSubcategories(data);
       } catch (error) {
         console.error('Error fetching subcategories:', error);
@@ -281,6 +285,14 @@ const Seller = () => {
   const [discountType, setDiscountType] = useState("percentage");
   const [dealCurrentPage, setDealCurrentPage] = useState(1);
   const [dealItemsPerPage, setDealItemsPerPage] = useState(10);
+  const [showEditDealModal, setShowEditDealModal] = useState(false);
+  const [editingDeal, setEditingDeal] = useState(null);
+  const [editSelectedProducts, setEditSelectedProducts] = useState([]);
+  const [editDealSearch, setEditDealSearch] = useState("");
+  const [editDealCurrentPage, setEditDealCurrentPage] = useState(1);
+  const [editDealItemsPerPage, setEditDealItemsPerPage] = useState(10);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState({ type: '', id: null, label: '' });
 
   // States for reviews management
   const [reviews, setReviews] = useState([]);
@@ -294,6 +306,15 @@ const Seller = () => {
   });
 
   const dealForm = useForm({
+    deal_name: '',
+    discount_type: 'percentage',
+    discount_value: '',
+    start_date: '',
+    end_date: '',
+    products: []
+  });
+
+  const editDealForm = useForm({
     deal_name: '',
     discount_type: 'percentage',
     discount_value: '',
@@ -378,6 +399,152 @@ const Seller = () => {
       .catch(error => console.error('Error fetching deals:', error));
   };
 
+  const handleEditProductCheckbox = (productId) => {
+    setEditSelectedProducts(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const toDatetimeLocalValue = (rawDate) => {
+    if (!rawDate) return '';
+    const date = new Date(rawDate);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const openEditDealModal = (deal) => {
+    const dealProducts = Array.isArray(deal.products) ? deal.products : [];
+    const preselectedIds = dealProducts.map((p) => p.id);
+    const firstProduct = dealProducts[0] || {};
+    const hasPercentage = parseFloat(firstProduct.discount_percentage_deal || 0) > 0;
+    const initialDiscountType = hasPercentage ? 'percentage' : 'fixed';
+    const initialDiscountValue = hasPercentage
+      ? (firstProduct.discount_percentage_deal || 0)
+      : (firstProduct.discount_amount || 0);
+
+    setEditingDeal(deal);
+    setEditSelectedProducts(preselectedIds);
+    setEditDealSearch('');
+    setEditDealCurrentPage(1);
+
+    editDealForm.setData({
+      deal_name: deal.title || '',
+      discount_type: initialDiscountType,
+      discount_value: initialDiscountValue,
+      start_date: toDatetimeLocalValue(deal.start_date),
+      end_date: toDatetimeLocalValue(deal.end_date),
+      products: preselectedIds,
+    });
+
+    setShowEditDealModal(true);
+  };
+
+  const closeEditDealModal = () => {
+    setShowEditDealModal(false);
+    setEditingDeal(null);
+    setEditSelectedProducts([]);
+    setEditDealSearch('');
+    setEditDealCurrentPage(1);
+    editDealForm.reset();
+  };
+
+  const openDeleteModal = (type, id, label = '') => {
+    setDeleteTarget({ type, id, label });
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteTarget({ type: '', id: null, label: '' });
+  };
+
+  const executeDeleteAction = () => {
+    if (!deleteTarget.id || !deleteTarget.type) {
+      closeDeleteModal();
+      return;
+    }
+
+    if (deleteTarget.type === 'product') {
+      router.get(`/seller/deleteProduct/${deleteTarget.id}`, {
+        onSuccess: () => {
+          closeDeleteModal();
+          alert('Product deleted successfully!');
+        },
+        onError: () => {
+          alert('Failed to delete product');
+        }
+      });
+      return;
+    }
+
+    if (deleteTarget.type === 'deal') {
+      router.delete(`/seller/deals/delete/${deleteTarget.id}`, {
+        onSuccess: () => {
+          fetchDeals();
+          closeDeleteModal();
+          alert('Deal deleted successfully!');
+        },
+        onError: (errors) => {
+          console.error('Delete error:', errors);
+          alert('Failed to delete deal');
+        }
+      });
+      return;
+    }
+
+    if (deleteTarget.type === 'reply') {
+      router.delete(`/seller/reviews/${deleteTarget.id}/reply`, {
+        onSuccess: () => {
+          fetchSellerReviews();
+          closeDeleteModal();
+          alert('Reply deleted successfully!');
+        },
+        onError: (errors) => {
+          console.error('Error deleting reply:', errors);
+          alert('Failed to delete reply');
+        }
+      });
+    }
+  };
+
+  const handleEditDealSubmit = (e) => {
+    e.preventDefault();
+
+    if (!editingDeal?.id) {
+      alert('Unable to update this deal. Please try again.');
+      return;
+    }
+
+    if (editSelectedProducts.length === 0) {
+      alert('Please select at least one product');
+      return;
+    }
+
+    const completeFormData = {
+      deal_name: editDealForm.data.deal_name,
+      discount_type: editDealForm.data.discount_type,
+      discount_value: editDealForm.data.discount_value,
+      start_date: editDealForm.data.start_date,
+      end_date: editDealForm.data.end_date,
+      products: editSelectedProducts,
+    };
+
+    router.post(`/seller/deals/update/${editingDeal.id}`, completeFormData, {
+      onSuccess: () => {
+        fetchDeals();
+        closeEditDealModal();
+        alert('Deal updated successfully!');
+      },
+      onError: (errors) => {
+        console.error('Deal update errors:', errors);
+        alert('Failed to update deal. Please check the form.');
+      }
+    });
+  };
+
   // Fetch deals on component mount
   useEffect(() => {
     fetchDeals();
@@ -441,34 +608,12 @@ const Seller = () => {
 
   // Handle delete reply
   const deleteReply = (reviewId) => {
-    if (confirm('Are you sure you want to delete this reply?')) {
-      router.delete(`/seller/reviews/${reviewId}/reply`, {
-        onSuccess: () => {
-          fetchSellerReviews();
-          alert('Reply deleted successfully!');
-        },
-        onError: (errors) => {
-          console.error('Error deleting reply:', errors);
-          alert('Failed to delete reply');
-        }
-      });
-    }
+    openDeleteModal('reply', reviewId, 'this reply');
   };
 
   // Delete a deal
   const deleteDeal = (dealId) => {
-    if (confirm('Are you sure you want to delete this deal?')) {
-      router.delete(`/seller/deals/delete/${dealId}`, {
-        onSuccess: () => {
-          fetchDeals();
-          alert('Deal deleted successfully!');
-        },
-        onError: (errors) => {
-          console.error('Delete error:', errors);
-          alert('Failed to delete deal');
-        }
-      });
-    }
+    openDeleteModal('deal', dealId, 'this deal');
   };
   
   // Form for status update
@@ -888,12 +1033,13 @@ const Seller = () => {
                               >
                                 <i className="bi bi-pencil"></i>
                               </Link>
-                              <Link 
-                                href={`/seller/deleteProduct/${item.id}`} 
+                              <button 
+                                type="button"
                                 className="btn btn-sm btn-danger"
+                                onClick={() => openDeleteModal('product', item.id, item.name)}
                               >
                                 <i className="bi bi-trash"></i>
-                              </Link>
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1374,6 +1520,10 @@ const Seller = () => {
                     <span className="info-value">#{selectedOrder.oid}</span>
                   </div>
                   <div className="info-row">
+                    <span className="info-label">Customer Name:</span>
+                    <span className="info-value">{selectedOrder.customer_name || 'N/A'}</span>
+                  </div>
+                  <div className="info-row">
                     <span className="info-label">Date:</span>
                     <span className="info-value">
                       {new Date(selectedOrder.created_at).toLocaleDateString('en-US', {
@@ -1552,6 +1702,279 @@ const Seller = () => {
                   </div>
                 </form>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* DELETE WARNING MODAL */}
+      {showDeleteModal && (
+        <>
+          <div className="modal-overlay" onClick={closeDeleteModal}></div>
+          <div className="status-modal" style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h4>
+                <i className="bi bi-exclamation-triangle-fill me-2 text-warning"></i>
+                Confirm Deletion
+              </h4>
+              <button className="btn-close-modal" onClick={closeDeleteModal}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="alert alert-warning mb-3" role="alert">
+                You are about to permanently delete {deleteTarget.label || 'this item'}. Its related things may also be deleted
+              </div>
+              <p className="text-muted mb-4">This action cannot be undone.</p>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline-secondary" onClick={closeDeleteModal}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-danger" onClick={executeDeleteAction}>
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* EDIT DEAL MODAL */}
+      {showEditDealModal && editingDeal && (
+        <>
+          <div className="modal-overlay" onClick={closeEditDealModal}></div>
+          <div className="status-modal" style={{ maxWidth: '1000px' }}>
+            <div className="modal-header">
+              <h4>
+                <i className="bi bi-pencil-square me-2"></i>
+                Edit Deal: {editingDeal.title}
+              </h4>
+              <button className="btn-close-modal" onClick={closeEditDealModal}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <form onSubmit={handleEditDealSubmit}>
+                <div className="row g-3 mb-4">
+                  <div className="col-md-6">
+                    <label className="form-label">Deal Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editDealForm.data.deal_name}
+                      onChange={(e) => editDealForm.setData('deal_name', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Discount Type</label>
+                    <select
+                      className="form-select"
+                      value={editDealForm.data.discount_type}
+                      onChange={(e) => editDealForm.setData('discount_type', e.target.value)}
+                    >
+                      <option value="percentage">Percentage (%)</option>
+                      <option value="fixed">Fixed Amount (RM)</option>
+                    </select>
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Discount Value</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={editDealForm.data.discount_value}
+                      onChange={(e) => editDealForm.setData('discount_value', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Start Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      className="form-control"
+                      value={editDealForm.data.start_date}
+                      onChange={(e) => editDealForm.setData('start_date', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">End Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      className="form-control"
+                      value={editDealForm.data.end_date}
+                      onChange={(e) => editDealForm.setData('end_date', e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <h6 className="mb-2">Products In This Deal</h6>
+                  <div className="d-flex flex-wrap gap-2">
+                    {editingDeal.products && editingDeal.products.length > 0 ? (
+                      editingDeal.products.map((p) => (
+                        <span key={p.id} className="badge bg-primary-subtle text-primary border">{p.name}</span>
+                      ))
+                    ) : (
+                      <span className="text-muted">No products currently linked.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <h6 className="mb-2">Select Products (Paginated)</h6>
+                  <div className="search-bar mb-3">
+                    <i className="bi bi-search"></i>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search products..."
+                      value={editDealSearch}
+                      onChange={(e) => {
+                        setEditDealSearch(e.target.value);
+                        setEditDealCurrentPage(1);
+                      }}
+                    />
+                  </div>
+
+                  {(() => {
+                    const allDealProducts = Array.isArray(productsArray) ? productsArray : [];
+                    const filteredEditProducts = allDealProducts.filter((product) =>
+                      product.name.toLowerCase().includes(editDealSearch.toLowerCase())
+                    );
+                    const totalEditPages = Math.ceil(filteredEditProducts.length / editDealItemsPerPage) || 1;
+                    const editStartIndex = (editDealCurrentPage - 1) * editDealItemsPerPage;
+                    const editEndIndex = editStartIndex + editDealItemsPerPage;
+                    const paginatedEditProducts = filteredEditProducts.slice(editStartIndex, editEndIndex);
+
+                    return (
+                      <>
+                        <div className="products-table-container">
+                          <table className="products-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '50px' }}>Select</th>
+                                <th style={{ width: '100px' }}>Image</th>
+                                <th>Product Name</th>
+                                <th style={{ width: '120px' }}>Price</th>
+                                <th style={{ width: '100px' }}>Stock</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paginatedEditProducts.length > 0 ? (
+                                paginatedEditProducts.map((product) => (
+                                  <tr key={`edit-deal-product-${product.id}`} className={editSelectedProducts.includes(product.id) ? 'table-active' : ''}>
+                                    <td>
+                                      <input
+                                        type="checkbox"
+                                        checked={editSelectedProducts.includes(product.id)}
+                                        onChange={() => handleEditProductCheckbox(product.id)}
+                                        className="form-check-input"
+                                      />
+                                    </td>
+                                    <td>
+                                      {product.image ? (
+                                        <img
+                                          src={`http://localhost:8000/storage/${product.image}`}
+                                          alt={product.name}
+                                          className="product-thumbnail"
+                                        />
+                                      ) : (
+                                        <div className="placeholder-image">
+                                          <i className="bi bi-image"></i>
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td><strong>{product.name}</strong></td>
+                                    <td><span className="product-price">RM {parseFloat(product.price).toFixed(2)}</span></td>
+                                    <td>
+                                      <span className={`stock-quantity ${product.instock > 10 ? 'high' : product.instock > 0 ? 'low' : 'out'}`}>
+                                        {product.instock}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan="5" className="text-center">No products found</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div className="pagination-section">
+                          <div className="pagination-info">
+                            <p>
+                              Showing {filteredEditProducts.length > 0 ? editStartIndex + 1 : 0} to {Math.min(editEndIndex, filteredEditProducts.length)} of {filteredEditProducts.length} products
+                            </p>
+                            <div className="items-per-page">
+                              <label>Items per page:</label>
+                              <select
+                                value={editDealItemsPerPage}
+                                onChange={(e) => {
+                                  setEditDealItemsPerPage(parseInt(e.target.value));
+                                  setEditDealCurrentPage(1);
+                                }}
+                                className="form-select"
+                              >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={15}>15</option>
+                                <option value={20}>20</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="pagination-controls">
+                            <button
+                              type="button"
+                              className="btn btn-pagination"
+                              onClick={() => setEditDealCurrentPage((prev) => Math.max(prev - 1, 1))}
+                              disabled={editDealCurrentPage === 1}
+                            >
+                              <i className="bi bi-chevron-left"></i> Previous
+                            </button>
+
+                            <div className="pagination-numbers">
+                              {Array.from({ length: totalEditPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                  type="button"
+                                  key={`edit-deal-page-${page}`}
+                                  className={`page-number ${editDealCurrentPage === page ? 'active' : ''}`}
+                                  onClick={() => setEditDealCurrentPage(page)}
+                                >
+                                  {page}
+                                </button>
+                              ))}
+                            </div>
+
+                            <button
+                              type="button"
+                              className="btn btn-pagination"
+                              onClick={() => setEditDealCurrentPage((prev) => Math.min(prev + 1, totalEditPages))}
+                              disabled={editDealCurrentPage === totalEditPages}
+                            >
+                              Next <i className="bi bi-chevron-right"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-outline-secondary" onClick={closeEditDealModal}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={editDealForm.processing}>
+                    {editDealForm.processing ? 'Updating...' : 'Update Deal'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </>
@@ -1878,7 +2301,7 @@ const Seller = () => {
                         </div>
                         <div className="deal-actions">
                           {dealStatus !== 'expired' && (
-                            <button className="btn btn-sm btn-outline-primary">
+                            <button className="btn btn-sm btn-outline-primary" onClick={() => openEditDealModal(deal)}>
                               <i className="bi bi-pencil"></i>
                             </button>
                           )}

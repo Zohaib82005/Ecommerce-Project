@@ -362,6 +362,11 @@ const Checkout = () => {
     }
     
     setAddressError(false);
+
+    const shouldProceed = window.confirm("Are you sure you want to confirm this order and proceed?");
+    if (!shouldProceed) {
+      return;
+    }
     
     // Submit only address_id and payment method
     orderData.post("/success", {

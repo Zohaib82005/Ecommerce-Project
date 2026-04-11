@@ -387,16 +387,19 @@ const Product = () => {
                        * 4. Button: group-hover:translate-y-0 → slides up on card hover
                        * 5. Button must be the LAST child (outside p-3) to sit flush at the bottom
                        */
+
                       <div
                         key={product.id}
                         className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col"
-                      >
+                        style={{height: "390px"}}
+                     >
+                          <Link href={`/product/details/${product.id}`} className="text-decoration-none">
                         {/* ── Image ── */}
                         <div className="relative aspect-square bg-gray-50 overflow-hidden flex-shrink-0">
                           <img
                             src={product.image
                               ? `/storage/${product.image}`
-                              : "http://127.0.0.1:8000/storage/images/default-product.png"}
+                              : "/storage/images/default-product.png"}
                             alt={product.name}
                             className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                           />
@@ -426,13 +429,14 @@ const Product = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
                           </Link>
+                          
                         </div>
 
                         {/* ── Product info (flex-1 fills remaining height) ── */}
                         <div className="p-3 flex flex-col flex-1">
-                          <h5 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 leading-snug min-h-[2.5rem]">
+                          <h6 className=" font-medium text-gray-900 line-clamp-2 mb-2 leading-snug min-h-[2.5rem]">
                             {product.name}
-                          </h5>
+                          </h6>
 
                           <div className="flex items-center gap-1.5 mb-2">
                             <Stars rating={Math.round(product.rating)} />
@@ -458,6 +462,7 @@ const Product = () => {
                           )}
                         </div>
 
+                          </Link>
                         {/*
                           ── ADD TO CART BUTTON ──────────────────────────────────────
                           • Outside p-3 → no padding gap, spans full card width

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Flashdeals_product;
 use App\Models\Product;
 use App\Models\Productimage;
 use App\Utils\PriceCalculator;
@@ -13,6 +14,46 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
+    private function getActiveDealPricingForProduct(int $productId, float $originalPrice): ?array
+    {
+        $today = now()->format('Y-m-d');
+
+        $dealProduct = Flashdeals_product::where('product_id', $productId)
+            ->whereHas('flashdeal', function ($query) use ($today) {
+                $query->where('status', '1')
+                    ->whereDate('start_date', '<=', $today)
+                    ->whereDate('end_date', '>=', $today);
+            })
+            ->latest('id')
+            ->first();
+
+        if (!$dealProduct) {
+            return null;
+        }
+
+        $dealPercentage = (float) ($dealProduct->discount_percentage ?? 0);
+        $dealAmount = (float) ($dealProduct->discount_amount ?? 0);
+        $discountType = $dealPercentage > 0 ? 'percentage' : 'fixed';
+        $discountValue = $dealPercentage > 0 ? $dealPercentage : $dealAmount;
+
+        if ($discountValue <= 0) {
+            return null;
+        }
+
+        $savings = $discountType === 'percentage'
+            ? ($originalPrice * $discountValue / 100)
+            : $discountValue;
+        $savings = min($originalPrice, max(0, $savings));
+
+        return [
+            'discount_type' => $discountType,
+            'discount_value' => $discountValue,
+            'savings' => round($savings, 2),
+            'final_price' => round(max(0, $originalPrice - $savings), 2),
+            'discount_percentage' => $originalPrice > 0 ? round(($savings / $originalPrice) * 100, 2) : 0,
+        ];
+    }
+
     public function addcate(Request $req)
     {
         $req->validate([
@@ -86,7 +127,7 @@ class ProductController extends Controller
             'image' => $data['image'],
             'category_id' => $data['category_id'],
             'subcategory_id' => $data['subcategory_id'],
-            'sub_subcategory_id' => $data['sub_subcategory_id'],
+            'sub_subcategory_id' => $data['sub_subcategory_id'] ?? null,
             'added_by' => Auth::user()->id,
             'status' => 'Pending',
         ]);
@@ -245,12 +286,27 @@ class ProductController extends Controller
         // Calculate delivery date (current date + 3 days)
         $deliveryDate = now()->addDays(3);
 
-        // Ensure final_price is calculated if not already in DB
-        $priceCalc = $product->getPriceCalculation();
-        $product->final_price = $priceCalc['final_price'];
-        $product->discount_amount = $priceCalc['discount_amount'];
-        $product->discount_percentage = $priceCalc['discount_percentage'];
-        $product->is_discounted = $priceCalc['is_discounted'];
+        $originalPrice = (float) $product->price;
+        $dealPricing = $this->getActiveDealPricingForProduct((int) $product->id, $originalPrice);
+
+        if ($dealPricing) {
+            // Active deal takes priority: ignore product discount for display/pricing.
+            $product->discount_type = $dealPricing['discount_type'];
+            $product->discount_price = $dealPricing['discount_value'];
+            $product->final_price = $dealPricing['final_price'];
+            $product->discount_amount = $dealPricing['savings'];
+            $product->discount_percentage = $dealPricing['discount_percentage'];
+            $product->is_discounted = $dealPricing['savings'] > 0;
+            $product->effective_discount_source = 'deal';
+        } else {
+            // Fallback to product-level discount when no active deal exists.
+            $priceCalc = $product->getPriceCalculation();
+            $product->final_price = $priceCalc['final_price'];
+            $product->discount_amount = $priceCalc['discount_amount'];
+            $product->discount_percentage = $priceCalc['discount_percentage'];
+            $product->is_discounted = $priceCalc['is_discounted'];
+            $product->effective_discount_source = 'product';
+        }
 
         return Inertia::render('ProductDetail', [
             'product' => $product,

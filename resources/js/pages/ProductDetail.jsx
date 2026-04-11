@@ -1,6 +1,6 @@
-import React, { useState, useEffect, use } from "react";
-import { usePage, Link, useForm } from "@inertiajs/react";
-import Navbar from "../Components/Navbar";
+import React, { useState, useEffect } from "react";
+import { usePage, Link, useForm, router } from "@inertiajs/react";
+import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import FlashMessage from "../components/FlashMessage";
 
@@ -14,6 +14,9 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState("description");
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
+  const [isWishlistLoading, setIsWishlistLoading] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [productRating, setProductRating] = useState({ average_rating: 0, total_reviews: 0 });
@@ -130,6 +133,17 @@ const ProductDetail = () => {
     fetchAverageRating();
   }, [product?.id]);
 
+  useEffect(() => {
+    setIsWishlisted(Boolean(product?.is_wishlisted));
+  }, [product?.id, product?.is_wishlisted]);
+
+  const toNumber = (value) => {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value !== 'string') return 0;
+    const parsed = parseFloat(value.replace(/,/g, '').replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   // Calculate pricing based on discount percentage
   // const calculatePricing = () => {
   //   // Import and use centralized price calculator
@@ -155,9 +169,10 @@ const ProductDetail = () => {
 
   const productData = {
     name: product?.name || "Product Name",
-    price: product?.final_price || 0,
-    discount_price: product?.discount_price || null,
-    originalPrice: product?.price || 0,
+    price: toNumber(product?.final_price),
+    discount_price: toNumber(product?.discount_price),
+    discount_type: product?.discount_type || 'percentage',
+    originalPrice: toNumber(product?.price),
     rating: averageRating,
     reviewCount: productRating.total_reviews || reviews.length || 0,
     inStock: product?.instock > 0,
@@ -165,24 +180,47 @@ const ProductDetail = () => {
     brand: "Generic",
     seller: "BrightMaxTrading",
     deliveryDate: formatDeliveryDate(),
-    discount: product?.discount_price || 0,
-    savings: product?.discount_type === 'percentage' ? (product?.price * (product?.discount_price || 0) / 100) : (product?.discount_price || 0),
+    discount: toNumber(product?.discount_price),
+    savings: Math.max(0, toNumber(product?.price) - toNumber(product?.final_price)),
     description: product?.description || "No description available.",
     category: "Mobiles & Tablets",
     subcategory: "Mobile Phones",
     images: buildImages(),
-    coupon: {
-      code: "WLC10",
-      discount: 2,
-      minCartValue: 10,
-    },
-    cashback: 1.5,
+    
+    // cashback: 1.5,
   };
 
   function handleCartAdd(e) {
     e.preventDefault();
-    cart.setData('quantity', cart.data.quantity);
-    cart.post('/cart/add');
+    if (!product?.id || isAddingToCart || isBuyingNow) return;
+
+    setIsAddingToCart(true);
+    router.post('/cart/add', {
+      product_id: product.id,
+      quantity: cart.data.quantity,
+    }, {
+      preserveScroll: true,
+      preserveState: true,
+      onFinish: () => setIsAddingToCart(false),
+    });
+  }
+
+  function handleBuyNow(e) {
+    e.preventDefault();
+    if (!product?.id || isBuyingNow || isAddingToCart) return;
+
+    setIsBuyingNow(true);
+    router.post('/cart/add', {
+      product_id: product.id,
+      quantity: cart.data.quantity,
+    }, {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: () => {
+        router.visit('/checkout');
+      },
+      onFinish: () => setIsBuyingNow(false),
+    });
   }
 
   const incrementQuantity = () => {
@@ -197,8 +235,20 @@ const ProductDetail = () => {
     }
   };
 
-  const toggleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
+  const handleWishlistClick = (e) => {
+    e.preventDefault();
+    if (!product?.id || isWishlistLoading || isWishlisted) return;
+
+    setIsWishlistLoading(true);
+
+    router.get(`/addtowishlist/${product.id}`, {}, {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: () => {
+        setIsWishlisted(true);
+      },
+      onFinish: () => setIsWishlistLoading(false),
+    });
   };
 
   const nextImage = () => {
@@ -297,19 +347,19 @@ const ProductDetail = () => {
 
                 {/* Price Section */}
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-2">
-                  <span className="text-2xl sm:text-3xl font-bold text-gray-900">RM {productData.price}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-gray-900">RM {productData.price.toFixed(2)}</span>
                   <span className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded-full flex items-center gap-1 w-fit">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    You saved RM {productData.savings}
+                    You saved RM {productData.savings.toFixed(2)}
                   </span>
                 </div>
 
                 {/* Original Price and Discount */}
                 <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
-                  <span className="text-gray-400 line-through text-sm sm:text-base">RM {productData.originalPrice}</span>
-                  <span className="text-green-600 font-semibold text-sm sm:text-base">{ (productData.discount_price && productData.discount_type === 'percentage' ? productData.discount_price + '%' : 'RM ' + productData.discount_price) || '0' } OFF</span>
+                  <span className="text-gray-400 line-through text-sm sm:text-base">RM {productData.originalPrice.toFixed(2)}</span>
+                  <span className="text-green-600 font-semibold text-sm sm:text-base">{productData.discount_price > 0 ? (productData.discount_type === 'percentage' ? `${Math.round(productData.discount_price)}%` : `RM ${productData.discount_price.toFixed(2)}`) : '0%'} OFF</span>
                   <span className="text-gray-400 text-xs sm:text-sm">(Inc. of VAT)</span>
                 </div>
 
@@ -323,7 +373,7 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Available Coupons */}
-                <div className="mb-3 sm:mb-4">
+                {/* <div className="mb-3 sm:mb-4">
                   <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-2">Available Coupons</h3>
                   <div className="border border-gray-200 rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 justify-between bg-gradient-to-r from-orange-50 to-white">
                     <div className="flex items-center gap-2 sm:gap-3 flex-1">
@@ -341,7 +391,7 @@ const ProductDetail = () => {
                       </svg>
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Cashback Info */}
                 <div className="flex items-center gap-2 mb-4 sm:mb-6">
@@ -380,25 +430,31 @@ const ProductDetail = () => {
                   {/* Add to Cart */}
                   <button
                     onClick={handleCartAdd}
+                    disabled={!productData.inStock || isAddingToCart || isBuyingNow}
                     className="flex-1 bg-indigo-700 text-white font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-indigo-800 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
                     <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    ADD TO CART
+                    {isAddingToCart ? 'ADDING...' : 'ADD TO CART'}
                   </button>
 
                   {/* Buy Now */}
-                  <button className="flex-1 bg-yellow-400 text-gray-900 font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base">
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={!productData.inStock || isBuyingNow || isAddingToCart}
+                    className="flex-1 bg-yellow-400 text-gray-900 font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
                     <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    BUY NOW
+                    {isBuyingNow ? 'PROCESSING...' : 'BUY NOW'}
                   </button>
 
                   {/* Wishlist */}
                   <button
-                    onClick={toggleWishlist}
+                    onClick={handleWishlistClick}
+                    disabled={isWishlistLoading}
                     className={`w-10 sm:w-12 h-10 sm:h-12 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
                       isWishlisted ? 'border-red-500 text-red-500' : 'border-gray-300 text-gray-400 hover:border-gray-400'
                     }`}

@@ -4,7 +4,6 @@ import FlashMessage from "../components/FlashMessage";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { calculatePrice, calculateCartTotal, formatPrice } from '@/utils/priceCalculator';
-
 const Cart = () => {
   const products = usePage().props.products || [];
   const [cartItems, setCartItems] = useState(products);
@@ -125,24 +124,7 @@ const Cart = () => {
 
                       <div className="flex items-center justify-between">
                         {/* Quantity Controls */}
-                        <div className="flex items-center border border-gray-300 rounded-md">
-                          <button 
-                            onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity - 1)}
-                            disabled={item.quantity <= 1}
-                            className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-md"
-                          >
-                            −
-                          </button>
-                          <span className="px-4 py-1 text-gray-900 font-medium border-x border-gray-300">
-                            {item.quantity}
-                          </span>
-                          <button 
-                            onClick={() => updateQuantity(item.cart_item_id || item.cartitem_id, item.quantity + 1)}
-                            className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md"
-                          >
-                            +
-                          </button>
-                        </div>
+                        
 
                         {/* Remove Button */}
                         <button 

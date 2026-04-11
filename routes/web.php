@@ -61,6 +61,8 @@ Route::middleware([CheckAdmin::class])->group(function () {
     Route::get('/reject/{id}', [AdminController::class, 'rejectProduct']);
     Route::post('/admin/user/update', [AdminController::class, 'updateUser']);
     Route::delete('/admin/user/delete/{id}', [AdminController::class, 'deleteUser']);
+    Route::post('/admin/category/update', [AdminController::class, 'updateCategory']);
+    Route::post('/admin/category/delete', [AdminController::class, 'deleteCategory']);
 });
 
 // ========== SELLER ROUTES (Seller only) ==========

@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Category;
-use App\Models\Subcategory;
-use App\Models\Sub_subcategory;
 use App\Models\Product;
-use App\Models\Image;
 
 
 class HomeController extends Controller
 {
     public function index()
     {
-        // Fetch all categories with their images stored directly in the column
-        $categories = Subcategory::all();
+        // Fetch main categories for the welcome scrolling strip
+        $categories = Category::all();
         // dd($categories);
         
         // Fetch products grouped by category for various sections
