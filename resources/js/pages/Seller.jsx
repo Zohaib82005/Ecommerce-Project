@@ -977,7 +977,7 @@ const Seller = () => {
                           </td>
                           <td>
                             <img 
-                              src={`http://localhost:8000/storage/${item.image}`} 
+                              src={`/storage/${item.image}`} 
                               alt={item.name}
                               className="product-thumbnail"
                             />
@@ -1877,7 +1877,7 @@ const Seller = () => {
                                     <td>
                                       {product.image ? (
                                         <img
-                                          src={`http://localhost:8000/storage/${product.image}`}
+                                          src={`/storage/${product.image}`}
                                           alt={product.name}
                                           className="product-thumbnail"
                                         />
@@ -2148,7 +2148,7 @@ const Seller = () => {
                                   <td>
                                     {product.image ? (
                                       <img 
-                                        src={`http://localhost:8000/storage/${product.image}`}
+                                        src={`/storage/${product.image}`}
                                         alt={product.name}
                                         className="product-thumbnail"
                                       />
@@ -2501,7 +2501,7 @@ const Seller = () => {
                             <div className="product-info">
                               {product?.image && (
                                 <img 
-                                  src={`http://localhost:8000/storage/${product.image}`} 
+                                  src={`/storage/${product.image}`} 
                                   alt={product?.name}
                                   className="product-thumbnail-review"
                                 />
