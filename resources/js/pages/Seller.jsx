@@ -1491,9 +1491,7 @@ const Seller = () => {
                       
                       <div className="order-total">
                         <strong>Total: {formatMoney(orderTotals[groupedOrder.oid] || 0)}</strong>
-                        <p className="mb-0 text-muted">
-                          Placed total: {formatByCurrencyCode((groupedOrder.total_amount_in_currency ?? orderTotals[groupedOrder.oid] ?? 0), (groupedOrder.order_currency_code || 'MYR'))}
-                        </p>
+                        
                       </div>
                     </div>
                     
@@ -1571,12 +1569,7 @@ const Seller = () => {
                       {formatMoney(orderTotals[selectedOrder.oid] || 0)}
                     </span>
                   </div>
-                  <div className="info-row">
-                    <span className="info-label">Placed Currency:</span>
-                    <span className="info-value text-primary fw-bold">
-                      {formatByCurrencyCode((selectedOrder.total_amount_in_currency ?? orderTotals[selectedOrder.oid] ?? 0), (selectedOrder.order_currency_code || 'MYR'))}
-                    </span>
-                  </div>
+                  
                   <div className="info-row">
                     <span className="info-label">Placed From Country:</span>
                     <span className="info-value">{selectedOrder.order_country_name || selectedOrder.shipping_country || 'Unknown'}</span>

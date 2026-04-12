@@ -124,9 +124,12 @@ const Cart = () => {
                       <p className="text-lg font-bold text-gray-900 mb-4">
                         {formatMoney(item.final_price)}
                       </p>
+                      <p className="text-sm text-gray-600 mb-4">Qty: {item.quantity}</p>
 
                       <div className="flex items-center justify-between">
-                        {/* Quantity Controls */}
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium">
+                          Quantity: {item.quantity}
+                        </span>
                         
 
                         {/* Remove Button */}

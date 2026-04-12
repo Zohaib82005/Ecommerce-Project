@@ -284,6 +284,31 @@ const Checkout = () => {
 
   });
 
+  useEffect(() => {
+    if (!orderItems.length || !conversionRates || !selectedCountry?.currency) {
+      return;
+    }
+
+    const csrfToken = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute('content');
+
+    fetch('/checkout/currency-snapshot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': csrfToken || '',
+      },
+      body: JSON.stringify({
+        selectedCountry,
+        conversionRates,
+      }),
+    }).catch((error) => {
+      console.error('Error snapshotting checkout currency:', error);
+    });
+  }, [orderItems.length, selectedCountry?.code, selectedCountry?.currency, conversionRates]);
+
   
   // Handle address selection from modal
   const handleSelectAddress = (address) => {
@@ -738,6 +763,7 @@ const Checkout = () => {
                             {item.name.split(' ')[0]} {item.name.split(' ')[1]}
                           </p>
                           <p className="text-sm text-gray-900 font-medium truncate">{item.name}</p>
+                          <p className="text-xs text-gray-600 mt-1">Quantity: {item.quantity}</p>
                           <p className="text-sm font-semibold text-gray-900 mt-1">{formatMoney(item.final_price)}</p>
                         </div>
                       </div>
