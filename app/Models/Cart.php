@@ -11,6 +11,8 @@ class Cart extends Model
         'product_id',
         'quantity',
         'amount',
+        'amount_in_currency',
+        'currency_code',
         'status',
         'order_id',
     ];

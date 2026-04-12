@@ -3,9 +3,12 @@ import { usePage, Link, useForm, router } from "@inertiajs/react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import FlashMessage from "../components/FlashMessage";
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const ProductDetail = () => {
   const { product, productImages, deliveryDate, auth } = usePage().props;
+  const { formatCurrencyFromMYR } = useCurrency();
+  const formatMoney = (value, options = {}) => formatCurrencyFromMYR(value, options);
   const cart = useForm({
     product_id: product?.id || null,
     quantity: 1,
@@ -347,19 +350,19 @@ const ProductDetail = () => {
 
                 {/* Price Section */}
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3 mb-2">
-                  <span className="text-2xl sm:text-3xl font-bold text-gray-900">RM {productData.price.toFixed(2)}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-gray-900">{formatMoney(productData.price)}</span>
                   <span className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded-full flex items-center gap-1 w-fit">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    You saved RM {productData.savings.toFixed(2)}
+                    You saved {formatMoney(productData.savings)}
                   </span>
                 </div>
 
                 {/* Original Price and Discount */}
                 <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
-                  <span className="text-gray-400 line-through text-sm sm:text-base">RM {productData.originalPrice.toFixed(2)}</span>
-                  <span className="text-green-600 font-semibold text-sm sm:text-base">{productData.discount_price > 0 ? (productData.discount_type === 'percentage' ? `${Math.round(productData.discount_price)}%` : `RM ${productData.discount_price.toFixed(2)}`) : '0%'} OFF</span>
+                  <span className="text-gray-400 line-through text-sm sm:text-base">{formatMoney(productData.originalPrice)}</span>
+                  <span className="text-green-600 font-semibold text-sm sm:text-base">{productData.discount_price > 0 ? (productData.discount_type === 'percentage' ? `${Math.round(productData.discount_price)}%` : `${formatMoney(productData.discount_price)}`) : '0%'} OFF</span>
                   <span className="text-gray-400 text-xs sm:text-sm">(Inc. of VAT)</span>
                 </div>
 
@@ -381,8 +384,8 @@ const ProductDetail = () => {
                         <span className="text-orange-600 font-bold text-xs transform -rotate-90">DISCOUNT</span>
                       </div>
                       <div className="min-w-0">
-                        <div className="font-semibold text-gray-900 text-sm">Flat RM {productData.coupon.discount} OFF*</div>
-                        <div className="text-xs text-gray-600 line-clamp-1">{productData.coupon.code} <span className="text-gray-400">(Min: RM {productData.coupon.minCartValue})</span></div>
+                        <div className="font-semibold text-gray-900 text-sm">Flat {formatMoney(productData.coupon.discount)} OFF*</div>
+                        <div className="text-xs text-gray-600 line-clamp-1">{productData.coupon.code} <span className="text-gray-400">(Min: {formatMoney(productData.coupon.minCartValue)})</span></div>
                       </div>
                     </div>
                     <button className="w-8 h-8 flex-shrink-0 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-50">

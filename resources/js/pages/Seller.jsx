@@ -3,6 +3,7 @@ import "../css/seller.css";
 import { useForm, usePage, Link, router} from "@inertiajs/react";
 import FlashMessage from '../components/FlashMessage.jsx';
 import LoadingScreen from "../components/LoadingScreen.jsx";
+import { useCurrency } from '../contexts/CurrencyContext';
 const Seller = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -40,6 +41,24 @@ const Seller = () => {
   });
 
   const props = usePage().props;
+  const { formatCurrencyFromMYR, selectedCountry } = useCurrency();
+
+  const formatMoney = (amount, options = {}) => formatCurrencyFromMYR(amount, options);
+
+  const formatByCurrencyCode = (amount, currencyCode = 'MYR') => {
+    const numericAmount = Number(amount || 0);
+
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currencyCode,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(numericAmount);
+    } catch (error) {
+      return `${currencyCode} ${numericAmount.toFixed(2)}`;
+    }
+  };
 
   // Helper function to calculate order totals
   const calculateOrderTotals = () => {
@@ -78,6 +97,9 @@ const Seller = () => {
   };
 
   const stats = calculateStats();
+  const totalRevenueValue = parseFloat(stats.totalRevenue) || 0;
+  const analyticsTargetValue = 20000;
+  const revenueProgressPercent = Math.min((totalRevenueValue / analyticsTargetValue) * 100, 100);
 
   // Get recent activity from orders and products
   const getRecentActivity = () => {
@@ -860,7 +882,7 @@ const Seller = () => {
                   </div>
                   <div className="stat-content">
                     <p className="stat-label">Total Revenue</p>
-                    <h3 className="stat-value">RM {stats.totalRevenue}</h3>
+                    <h3 className="stat-value">{formatMoney(stats.totalRevenue)}</h3>
                     <div className="stat-trend positive">
                       <i className="bi bi-arrow-up"></i> {props.orders?.length > 0 ? ((stats.deliveredOrders / props.orders.length) * 100).toFixed(0) : 0}%
                     </div>
@@ -983,14 +1005,14 @@ const Seller = () => {
                             />
                           </td>
                           <td>
-                            <span className="product-price">RM {item.price}</span>
+                            <span className="product-price">{formatMoney(item.price)}</span>
                           </td>
                           <td>
                             <div className="discount-display">
                               {item.discount_price ? (
                                 <>
                                   <span className="discount-value">
-                                    {item.discount_price}{item.discount_type === 'percentage' ? '%' : ' RM'}
+                                    {item.discount_type === 'percentage' ? `${item.discount_price}%` : formatMoney(item.discount_price)}
                                   </span>
                                   <span className="discount-type-badge">
                                     {item.discount_type === 'percentage' ? 'Percent' : 'Fixed'}
@@ -1453,10 +1475,13 @@ const Seller = () => {
                           })}
                         </p>
                         <p className="order-meta">
-                          <i className="bi bi-currency-dollar"></i> RM {parseFloat(orderTotals[groupedOrder.oid] || 0).toFixed(2)}
+                          <i className="bi bi-currency-dollar"></i> {formatMoney(orderTotals[groupedOrder.oid] || 0)}
                         </p>
                         <p className="order-meta">
-                          <i className="bi bi-geo-alt"></i> {groupedOrder.city}, {groupedOrder.state}
+                          <i className="bi bi-geo-alt"></i> {groupedOrder.order_country_name || groupedOrder.shipping_country || 'Unknown'}
+                        </p>
+                        <p className="order-meta">
+                          <i className="bi bi-globe2"></i> Placed as {groupedOrder.order_currency_code || 'MYR'}
                         </p>
                         <p className="order-meta">
                           <i className="bi bi-credit-card"></i> 
@@ -1465,7 +1490,10 @@ const Seller = () => {
                       </div>
                       
                       <div className="order-total">
-                        <strong>Total: RM {parseFloat(orderTotals[groupedOrder.oid] || 0).toFixed(2)}</strong>
+                        <strong>Total: {formatMoney(orderTotals[groupedOrder.oid] || 0)}</strong>
+                        <p className="mb-0 text-muted">
+                          Placed total: {formatByCurrencyCode((groupedOrder.total_amount_in_currency ?? orderTotals[groupedOrder.oid] ?? 0), (groupedOrder.order_currency_code || 'MYR'))}
+                        </p>
                       </div>
                     </div>
                     
@@ -1540,8 +1568,18 @@ const Seller = () => {
                   <div className="info-row">
                     <span className="info-label">Total Amount:</span>
                     <span className="info-value text-primary fw-bold">
-                      RM {parseFloat(orderTotals[selectedOrder.oid] || 0).toFixed(2)}
+                      {formatMoney(orderTotals[selectedOrder.oid] || 0)}
                     </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Placed Currency:</span>
+                    <span className="info-value text-primary fw-bold">
+                      {formatByCurrencyCode((selectedOrder.total_amount_in_currency ?? orderTotals[selectedOrder.oid] ?? 0), (selectedOrder.order_currency_code || 'MYR'))}
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Placed From Country:</span>
+                    <span className="info-value">{selectedOrder.order_country_name || selectedOrder.shipping_country || 'Unknown'}</span>
                   </div>
                 </div>
               </div>
@@ -1561,7 +1599,10 @@ const Seller = () => {
                       <div className="product-detail-info">
                         <h6>{product.product_name}</h6>
                         <p className="product-price">
-                          RM {parseFloat(product.pprice).toFixed(2)} × {product.quantity}
+                          {formatMoney(product.pprice)} × {product.quantity}
+                        </p>
+                        <p className="product-price text-muted mb-0">
+                          {formatByCurrencyCode(product.pprice_local ?? product.pprice, product.item_currency || selectedOrder.order_currency_code || 'MYR')} × {product.quantity}
                         </p>
                       </div>
                     </div>
@@ -1576,8 +1617,8 @@ const Seller = () => {
                   <div className="address-details">
                     <p>{selectedOrder.address}</p>
                     {selectedOrder.apartment && <p>{selectedOrder.apartment}</p>}
-                    <p>{selectedOrder.city}, {selectedOrder.state} {selectedOrder.zip}</p>
-                    <p>{selectedOrder.country}</p>
+                    <p>{selectedOrder.city}</p>
+                    <p>{selectedOrder.shipping_country || selectedOrder.order_country_name}</p>
                     <p className="phone-number">
                       <i className="bi bi-phone"></i> {selectedOrder.phone}
                     </p>
@@ -1775,7 +1816,7 @@ const Seller = () => {
                       onChange={(e) => editDealForm.setData('discount_type', e.target.value)}
                     >
                       <option value="percentage">Percentage (%)</option>
-                      <option value="fixed">Fixed Amount (RM)</option>
+                      <option value="fixed">Fixed Amount ({selectedCountry.currency})</option>
                     </select>
                   </div>
                   <div className="col-md-3">
@@ -1888,7 +1929,7 @@ const Seller = () => {
                                       )}
                                     </td>
                                     <td><strong>{product.name}</strong></td>
-                                    <td><span className="product-price">RM {parseFloat(product.price).toFixed(2)}</span></td>
+                                    <td><span className="product-price">{formatMoney(product.price)}</span></td>
                                     <td>
                                       <span className={`stock-quantity ${product.instock > 10 ? 'high' : product.instock > 0 ? 'low' : 'out'}`}>
                                         {product.instock}
@@ -2018,7 +2059,7 @@ const Seller = () => {
                         onChange={(e) => dealForm.setData('discount_type', e.target.value)}
                       >
                         <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed Amount (RM)</option>
+                        <option value="fixed">Fixed Amount ({selectedCountry.currency})</option>
                       </select>
                     </div>
                   </div>
@@ -2035,7 +2076,7 @@ const Seller = () => {
                           required
                         />
                         <span className="discount-unit">
-                          {dealForm.data.discount_type === 'percentage' ? '%' : 'RM'}
+                          {dealForm.data.discount_type === 'percentage' ? '%' : selectedCountry.currency}
                         </span>
                       </div>
                     </div>
@@ -2167,12 +2208,12 @@ const Seller = () => {
                                     </span>
                                   </td>
                                   <td>
-                                    <span className="product-price">RM {parseFloat(product.price).toFixed(2)}</span>
+                                    <span className="product-price">{formatMoney(product.price)}</span>
                                   </td>
                                   <td>
                                     {product.discount_price ? (
                                       <span className="discount-badge">
-                                        {product.discount_price}{product.discount_type === 'percentage' ? '%' : ' RM'} OFF
+                                        {product.discount_type === 'percentage' ? `${product.discount_price}%` : `${formatMoney(product.discount_price)} OFF`}
                                       </span>
                                     ) : (
                                       <span className="no-discount">No discount</span>
@@ -2334,13 +2375,13 @@ const Seller = () => {
                 <div className="analytics-card">
                   <div className="analytics-header">
                     <h6>Total Revenue</h6>
-                    <span className="analytics-value">RM {stats.totalRevenue}</span>
+                    <span className="analytics-value">{formatMoney(stats.totalRevenue)}</span>
                   </div>
                   <div className="progress-wrapper">
                     <div className="progress">
-                      <div className="progress-bar bg-primary" style={{ width: `${Math.min((parseFloat(stats.totalRevenue) / 20000) * 100, 100)}%` }}></div>
+                      <div className="progress-bar bg-primary" style={{ width: `${revenueProgressPercent}%` }}></div>
                     </div>
-                    <span className="progress-label">RM {stats.totalRevenue} / RM 20,000 target ({Math.min((parseFloat(stats.totalRevenue) / 20000) * 100, 100).toFixed(1)}%)</span>
+                    <span className="progress-label">{formatMoney(stats.totalRevenue)} / {formatMoney(analyticsTargetValue)} target ({revenueProgressPercent.toFixed(1)}%)</span>
                   </div>
                 </div>
 
@@ -2385,7 +2426,7 @@ const Seller = () => {
                   </div>
                   <div className="payout-info">
                     <p className="payout-label">Total Earnings</p>
-                    <h2 className="payout-amount">RM {stats.totalRevenue}</h2>
+                    <h2 className="payout-amount">{formatMoney(stats.totalRevenue)}</h2>
                     <p className="payout-pending">From {props.orders?.length || 0} orders</p>
                   </div>
                 </div>
@@ -2397,7 +2438,7 @@ const Seller = () => {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Avg Order Value</span>
-                      <span className="detail-value">RM {props.orders?.length > 0 ? (parseFloat(stats.totalRevenue) / props.orders.length).toFixed(2) : '0.00'}</span>
+                      <span className="detail-value">{formatMoney(props.orders?.length > 0 ? (totalRevenueValue / props.orders.length) : 0)}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Pending Orders</span>
@@ -2430,7 +2471,7 @@ const Seller = () => {
                             <p className="history-title">Order #{order.oid} - {order.status}</p>
                             <p className="history-date">{new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                           </div>
-                          <div className="history-amount">+RM {parseFloat(order.total_amount).toFixed(2)}</div>
+                          <div className="history-amount">+{formatMoney(order.total_amount)}</div>
                         </div>
                       ));
                     })()

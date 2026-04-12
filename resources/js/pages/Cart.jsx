@@ -3,9 +3,12 @@ import { Link, usePage, router } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { calculatePrice, calculateCartTotal, formatPrice } from '@/utils/priceCalculator';
+import { calculatePrice } from '@/utils/priceCalculator';
+import { useCurrency } from '../contexts/CurrencyContext';
 const Cart = () => {
   const products = usePage().props.products || [];
+  const { formatCurrencyFromMYR } = useCurrency();
+  const formatMoney = (value) => formatCurrencyFromMYR(value);
   const [cartItems, setCartItems] = useState(products);
   
   useEffect(() => {
@@ -119,7 +122,7 @@ const Cart = () => {
                         {item.name}
                       </h3>
                       <p className="text-lg font-bold text-gray-900 mb-4">
-                        RM {item.final_price}
+                        {formatMoney(item.final_price)}
                       </p>
 
                       <div className="flex items-center justify-between">
@@ -151,7 +154,7 @@ const Cart = () => {
                     {/* Subtotal */}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Subtotal</span>
-                      <span className="font-semibold text-gray-900">RM {subtotal.toFixed(2)}</span>
+                      <span className="font-semibold text-gray-900">{formatMoney(subtotal)}</span>
                     </div>
 
                     {/* Processing Fee */}
@@ -172,7 +175,7 @@ const Cart = () => {
                         <span className="text-gray-900 font-semibold">
                           Total <span className="text-gray-500 font-normal text-sm">(Inclusive of VAT)</span>
                         </span>
-                        <span className="text-xl font-bold text-gray-900">RM {total.toFixed(2)}</span>
+                        <span className="text-xl font-bold text-gray-900">{formatMoney(total)}</span>
                       </div>
                     </div>
 

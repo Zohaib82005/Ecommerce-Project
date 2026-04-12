@@ -2,23 +2,17 @@ import { Link, usePage, router } from '@inertiajs/react';
 import React, { useState, useRef } from 'react';
 import CategoryDropdown from './CategoryDropdown';
 import LoadingScreen from './LoadingScreen';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState({ code: 'MY', name: 'Malaysia', flag: '🇲🇾', currency: 'MYR' });
   const dropdownTimeoutRef = useRef(null);
   const countryDropdownTimeoutRef = useRef(null);
   const { auth, cartCount } = usePage().props;
-
-  const countries = [
-    { code: 'MY', name: 'Malaysia', flag: `🇲🇾`, currency: 'RM' },
-    { code: 'CN', name: 'China', flag: '🇨🇳', currency: 'CNY' },
-    { code: 'AE', name: 'UAE', flag: '🇦🇪', currency: 'AED' },
-    { code: 'PK', name: 'Pakistan', flag: '🇵🇰', currency: 'PKR' },
-  ];
+  const { countries, selectedCountry, setSelectedCountry } = useCurrency();
 
   const handleDropdownMouseEnter = () => {
     if (dropdownTimeoutRef.current) {
@@ -144,7 +138,7 @@ const Navbar = () => {
               onMouseLeave={handleCountryDropdownMouseLeave}
             >
               <div className="hidden lg:flex items-center gap-1 px-2 py-1.5 rounded hover:bg-indigo-900 transition cursor-pointer">
-                <span className="text-base leading-none">{selectedCountry.flag}</span>
+                <img src={selectedCountry.flag} alt={selectedCountry.name} className="w-5 h-5 rounded-sm" />
                 <span className="text-xs font-medium">{selectedCountry.code}</span>
                 <svg className={`w-3 h-3 text-indigo-300 transition-transform ${countryDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -169,7 +163,7 @@ const Navbar = () => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-xl">{country.flag}</span>
+                        <img src={country.flag} alt={country.name} className="w-5 h-5 rounded-sm" />
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-gray-800">{country.name}</span>
                           <span className="text-xs text-gray-500">{country.currency}</span>
@@ -349,7 +343,7 @@ const Navbar = () => {
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{country.flag}</span>
+                        <img src={country.flag} alt={country.name} className="w-5 h-5 rounded-sm" />
                         <div className="flex flex-col">
                           <span className="font-medium">{country.name}</span>
                           <span className="text-xs opacity-80">{country.currency}</span>

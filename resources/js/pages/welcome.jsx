@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import LoadingScreen from '../components/LoadingScreen';
 import FlashMessage from '../components/FlashMessage';
+import { useCurrency } from '../contexts/CurrencyContext';
 // ─── Scroll Animation Hook ───────────────────────────────────────────────────
 const useScrollAnimation = () => {
   const ref = useRef(null);
@@ -108,8 +109,8 @@ const makeProducts = (names) => names.map((name, i) => {
   return {
     id: i + 1,
     name,
-    price: `RM ${price}`,
-    originalPrice: `RM ${originalPrice}`,
+    price,
+    originalPrice,
     discount: `${discount}%`,
     savings,
   };
@@ -235,7 +236,7 @@ const ProductCard = ({ product, delay = 0, onAddToCart, rating = 0, totalReviews
               overflow: 'hidden',
             }}
           >
-            You saved RM {product.savings}
+            You saved {product.savingsText || product.savings}
           </p>
 
           {/* Add to Cart — shown on hover */}
@@ -372,6 +373,14 @@ const Welcome = ({
   topPicks: dbTopPicks = [],
   dealsOfTheDay: dbDealsOfTheDay = [],
 }) => {
+  const { formatCurrencyFromMYR } = useCurrency();
+
+  const formatMoney = (value, decimals = 2) =>
+    formatCurrencyFromMYR(value, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+
   // Initialize form for add to cart
  const { post, processing, reset, setData } = useForm({
   product_id: null,
@@ -433,7 +442,7 @@ const handleAddToCart = (productId) => {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  const formatCurrency = (value, decimals = 0) => `RM ${parseNumericValue(value).toFixed(decimals)}`;
+  const formatCurrency = (value, decimals = 2) => formatMoney(parseNumericValue(value), decimals);
 
   const formatPercentage = (value) => `${Math.round(parseNumericValue(value))}%`;
 
@@ -496,11 +505,26 @@ const handleAddToCart = (productId) => {
       discount: formatPercentage(discountPercentage),
       image: p.image,
       savings: Math.round(savings),
+      savingsText: formatCurrency(savings),
     };
   };
 
-  const displayTopPicks      = dbTopPicks.length > 0      ? dbTopPicks.map((p) => mapProduct(p))      : topPicks;
-  const displayDealsOfTheDay = dbDealsOfTheDay.length > 0 ? dbDealsOfTheDay.map((p) => mapProduct(p)) : dealsOfTheDay;
+  const fallbackTopPicks = topPicks.map((p) => ({
+    ...p,
+    price: formatCurrency(p.price),
+    originalPrice: formatCurrency(p.originalPrice),
+    savingsText: formatCurrency(p.savings),
+  }));
+
+  const fallbackDealsOfTheDay = dealsOfTheDay.map((p) => ({
+    ...p,
+    price: formatCurrency(p.price),
+    originalPrice: formatCurrency(p.originalPrice),
+    savingsText: formatCurrency(p.savings),
+  }));
+
+  const displayTopPicks      = dbTopPicks.length > 0      ? dbTopPicks.map((p) => mapProduct(p))      : fallbackTopPicks;
+  const displayDealsOfTheDay = dbDealsOfTheDay.length > 0 ? dbDealsOfTheDay.map((p) => mapProduct(p)) : fallbackDealsOfTheDay;
 
   // ── State ──
   const [currentSlide, setCurrentSlide]             = useState(0);
@@ -638,6 +662,7 @@ const handleAddToCart = (productId) => {
       discount: formatPercentage(discountPercentage),
       image: product.image,
       savings: Math.round(savings),
+      savingsText: formatCurrency(savings),
     };
   };
 
@@ -898,7 +923,7 @@ const handleAddToCart = (productId) => {
                 <h2 className="text-3xl font-black mb-1" style={{ color: '#1a0533' }}>3% Cashback</h2>
                 <p className="text-sm mb-1" style={{ color: '#1a0533', opacity: 0.8 }}>On every Purchase</p>
                 <p className="text-xs mb-4" style={{ color: '#1a0533', opacity: 0.7 }}>
-                  On all purchases above RM 5000
+                  On all purchases above {formatCurrency(5000, 0)}
                 </p>
                 <button
                   className="px-5 py-2 rounded-xl font-bold text-sm w-fit transition hover:opacity-90"
@@ -1005,7 +1030,7 @@ const handleAddToCart = (productId) => {
                             <span className="line-through text-gray-400 text-xs">{p.originalPrice}</span>
                           </div>
                           <p className="text-xs font-semibold mt-0.5" style={{ color: '#7c3aed' }}>
-                            You saved RM {p.savings}
+                            You saved {p.savingsText || formatCurrency(p.savings)}
                           </p>
                         </div>
                       </div>
@@ -1186,10 +1211,10 @@ const handleAddToCart = (productId) => {
                               </div>
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="font-bold text-xs" style={{ color: '#059669' }}>
-                                  RM {pricing.finalPrice.toFixed(2)}
+                                  {formatCurrency(pricing.finalPrice)}
                                 </span>
                                 <span className="text-gray-400 line-through text-xs">
-                                  RM {Math.round(pricing.originalPrice)}
+                                  {formatCurrency(Math.round(pricing.originalPrice), 0)}
                                 </span>
                               </div>
 
@@ -1209,7 +1234,7 @@ const handleAddToCart = (productId) => {
                                   overflow: 'hidden',
                                 }}
                               >
-                                You saved RM {pricing.totalSavings.toFixed(2)}
+                                You saved {formatCurrency(pricing.totalSavings)}
                               </p>
 
                               {/* Add to Cart — shown on hover */}

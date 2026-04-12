@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link, usePage, router, useForm } from "@inertiajs/react";
-import FlashMessage from "../Components/FlashMessage";
+import FlashMessage from "../components/FlashMessage";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const Dashboard = () => {
+  const { formatCurrencyFromMYR } = useCurrency();
+  const formatMoney = (value, options = {}) => formatCurrencyFromMYR(value, options);
   const [activeTab, setActiveTab] = useState("profile");
   const [showNotifications, setShowNotifications] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -215,9 +218,9 @@ const Dashboard = () => {
 
   // Sample data
   const recentOrders = [
-    { id: "CB10991", product: "Smart Watch Pro", status: "Shipped", date: "Jan 25, 2026", amount: "$299", image: "🎁" },
-    { id: "CB10987", product: "Wireless Headphones", status: "Processing", date: "Jan 28, 2026", amount: "$149", image: "🎧" },
-    { id: "CB10983", product: "Laptop Stand", status: "Delivered", date: "Jan 20, 2026", amount: "$45", image: "💻" },
+    { id: "CB10991", product: "Smart Watch Pro", status: "Shipped", date: "Jan 25, 2026", amount: 299, image: "🎁" },
+    { id: "CB10987", product: "Wireless Headphones", status: "Processing", date: "Jan 28, 2026", amount: 149, image: "🎧" },
+    { id: "CB10983", product: "Laptop Stand", status: "Delivered", date: "Jan 20, 2026", amount: 45, image: "💻" },
   ];
 
   const wishlistItems = props.wishlists || [];
@@ -443,7 +446,7 @@ const Dashboard = () => {
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <h5 className="font-semibold text-gray-900">Total:</h5>
-                                  <h5 className="text-lg font-bold text-indigo-600">${parseFloat(order.total_amount).toFixed(2)}</h5>
+                                  <h5 className="text-lg font-bold text-indigo-600">{formatMoney(order.total_amount)}</h5>
                                 </div>
                               </div>
                             </div>
@@ -676,7 +679,7 @@ const Dashboard = () => {
                                     <div className="flex-1 min-w-0">
                                       <h5 className="font-semibold text-gray-900 truncate">{product.name}</h5>
                                       <p className="text-sm text-gray-600 mt-1">Qty: {product.quantity}</p>
-                                      <p className="text-sm font-semibold text-indigo-600">${parseFloat(product.price).toFixed(2)} each</p>
+                                      <p className="text-sm font-semibold text-indigo-600">{formatMoney(product.price)} each</p>
                                     </div>
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${getStatusBgClass(product.cstatus)}`}>
                                       {product.cstatus}
@@ -689,7 +692,7 @@ const Dashboard = () => {
                               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
                                 <div>
                                   <p className="text-sm text-gray-600">Order Total</p>
-                                  <h5 className="text-2xl font-bold text-indigo-600">${parseFloat(order.total_amount).toFixed(2)}</h5>
+                                  <h5 className="text-2xl font-bold text-indigo-600">{formatMoney(order.total_amount)}</h5>
                                 </div>
                                 <div className="flex gap-3">
                                   
@@ -1423,10 +1426,10 @@ const Dashboard = () => {
                         <i className="bi bi-wallet-fill text-2xl"></i>
                       </div>
                       <span className="text-sm font-medium bg-white bg-opacity-20 px-3 py-1 rounded-full">
-                        <i className="bi bi-arrow-up mr-1"></i>$20
+                        <i className="bi bi-arrow-up mr-1"></i>{formatMoney(20, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </span>
                     </div>
-                    <h3 className="text-3xl font-bold mb-1">$120</h3>
+                    <h3 className="text-3xl font-bold mb-1">{formatMoney(120, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h3>
                     <p className="text-cyan-100">Wallet Balance</p>
                   </div>
                 </div>
@@ -1455,7 +1458,7 @@ const Dashboard = () => {
                           }`}>
                             {order.status}
                           </span>
-                          <p className="font-bold text-gray-900">{order.amount}</p>
+                          <p className="font-bold text-gray-900">{formatMoney(order.amount)}</p>
                         </div>
                       </div>
                     ))}

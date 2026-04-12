@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import Footer from '../components/Footer';
 import { Link, usePage, router } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
+import { useCurrency } from '../contexts/CurrencyContext';
 
 // ─── Star rating ─────────────────────────────────────────────────────────────
 const Stars = ({ rating }) => (
@@ -23,7 +24,7 @@ const Stars = ({ rating }) => (
 // • "You saved" fades + slides UP and OUT on hover
 // • Add to Cart fades + slides UP and IN on hover (from inside the card bottom)
 // • overflow:hidden on card clips both transitions cleanly
-const ProductCard = ({ product, currentPrice, savings, discountPercent, isOutOfStock, isAdding, cartError, onAddToCart }) => {
+const ProductCard = ({ product, currentPrice, savings, discountPercent, isOutOfStock, isAdding, cartError, onAddToCart, formatMoney }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -143,11 +144,11 @@ const ProductCard = ({ product, currentPrice, savings, discountPercent, isOutOfS
           {/* Price row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
             <span style={{ fontWeight: 700, fontSize: '12px', color: '#059669' }}>
-              PKR {currentPrice?.toLocaleString()}
+              {formatMoney(currentPrice)}
             </span>
             {discountPercent > 0 && (
               <span style={{ color: '#9ca3af', fontSize: '11px', textDecoration: 'line-through' }}>
-                PKR {Math.round(currentPrice / (1 - discountPercent / 100)).toLocaleString()}
+                {formatMoney(Math.round(currentPrice / (1 - discountPercent / 100)))}
               </span>
             )}
           </div>
@@ -176,7 +177,7 @@ const ProductCard = ({ product, currentPrice, savings, discountPercent, isOutOfS
                 pointerEvents: 'none',
                 whiteSpace: 'nowrap',
               }}>
-                You saved PKR {Math.round(savings).toLocaleString()}
+                You saved {formatMoney(Math.round(savings))}
               </p>
             )}
 
@@ -243,6 +244,8 @@ const ProductCard = ({ product, currentPrice, savings, discountPercent, isOutOfS
 const Product = () => {
   const props = usePage().props;
   const allProducts = props.products || [];
+  const { formatCurrencyFromMYR } = useCurrency();
+  const formatMoney = (value, options = {}) => formatCurrencyFromMYR(value, options);
 
   const [addingToCart, setAddingToCart] = useState({});
   const [cartErrors, setCartErrors]     = useState({});
@@ -519,7 +522,7 @@ const Product = () => {
                             <p className="text-sm font-medium text-gray-900">{product.name}</p>
                             <p className="text-xs text-gray-500">{product.category}</p>
                           </div>
-                          <span className="text-xs text-indigo-600 font-semibold flex-shrink-0">PKR {product.price?.toLocaleString()}</span>
+                          <span className="text-xs text-indigo-600 font-semibold flex-shrink-0">{formatMoney(product.price)}</span>
                         </button>
                       ))}
                       <div className="px-4 py-2 border-t border-gray-100 text-center">
@@ -571,6 +574,7 @@ const Product = () => {
                         isAdding={!!addingToCart[product.id]}
                         cartError={cartErrors[product.id]}
                         onAddToCart={handleAddToCart}
+                        formatMoney={formatMoney}
                       />
                     );
                   })}

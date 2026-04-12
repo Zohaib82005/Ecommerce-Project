@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useForm, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Link, router } from '@inertiajs/react';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import LoadingScreen from '../components/LoadingScreen';
 import FlashMessage from '../components/FlashMessage';
-import { calculatePrice, formatPrice } from '@/utils/priceCalculator';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 
 const CategoryWiseProducts = ({ categoryId }) => {
+  const { formatCurrencyFromMYR } = useCurrency();
+  const formatMoney = (value, options = {}) => formatCurrencyFromMYR(value, options);
   const [category, setCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,8 +59,8 @@ const CategoryWiseProducts = ({ categoryId }) => {
     return {
       id: product.id,
       name: product.name,
-      price: formatPrice(finalPrice, 'RM'),
-      originalPrice: formatPrice(originalPrice, 'RM'),
+      price: formatMoney(finalPrice),
+      originalPrice: formatMoney(originalPrice),
       discount: `${discountPercentage}%`,
       image: product.image,
       savings: savings,
@@ -201,11 +203,11 @@ const CategoryWiseProducts = ({ categoryId }) => {
                           <div className="mb-2">
                             <div className="flex items-center gap-2">
                               <span className="text-sm sm:text-base font-bold text-gray-900">
-                                RM {Math.round(product.price - (product.price * (product.discount_price || 0) / 100))}
+                                {formatMoney(Math.round(product.price - (product.price * (product.discount_price || 0) / 100)), { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </span>
                               {product.discount_price > 0 && (
                                 <span className="text-xs text-gray-500 line-through">
-                                  RM {Math.round(product.price)}
+                                  {formatMoney(Math.round(product.price), { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </span>
                               )}
                             </div>

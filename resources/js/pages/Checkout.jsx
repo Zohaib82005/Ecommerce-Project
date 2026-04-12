@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Link, useForm, usePage } from "@inertiajs/react";
-import Navbar from "../Components/Navbar";
+import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import FlashMessage from "../components/FlashMessage";
 import LoadingScreen from "../components/LoadingScreen";
 import { calculatePrice, formatPrice, calculateCartTotal } from '@/utils/priceCalculator';
+import { useCurrency } from '../contexts/CurrencyContext';
+
+const LOCATION_API_BASE_URL = "/api/locations";
+
 const Checkout = () => {
   const props = usePage().props;
+  const { formatCurrencyFromMYR, selectedCountry, conversionRates, countries } = useCurrency();
+  const formatMoney = (value, options = {}) => formatCurrencyFromMYR(value, options);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [addresses, setAddresses] = useState([]);
@@ -17,11 +23,19 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [useWallet, setUseWallet] = useState(false);
   const [addressError, setAddressError] = useState(false);
+  const [countryOptions, setCountryOptions] = useState([]);
+  const [stateOptions, setStateOptions] = useState([]);
+  const [cityOptions, setCityOptions] = useState([]);
+  const [locationLoading, setLocationLoading] = useState({
+    countries: false,
+    states: false,
+    cities: false,
+  });
 
   const formData = useForm({
     name: props.auth.user.name,
     phone: "",
-    country: "Pakistan",
+    country: "",
     location: "",
     area: "",
     address: "",
@@ -45,171 +59,156 @@ const Checkout = () => {
     fetchAddresses();
   }, []);
 
-  // Mala provinces
-  const malaysianProvinces = [
-  "Johor",
-  "Kedah",
-  "Kelantan",
-  "Melaka",
-  "Negeri Sembilan",
-  "Pahang",
-  "Penang",
-  "Perak",
-  "Perlis",
-  "Sabah",
-  "Sarawak",
-  "Selangor",
-  "Terengganu",
-  "Kuala Lumpur",
-  "Labuan",
-  "Putrajaya"
-];
+  useEffect(() => {
+    const fetchCountries = async () => {
+      setLocationLoading((prev) => ({ ...prev, countries: true }));
 
-  // Pakistan cities mapped by province
-  const malaysiaCities = {
-  Johor: [
-    "Johor Bahru",
-    "Batu Pahat",
-    "Muar",
-    "Kluang",
-    "Segamat",
-    "Kota Tinggi",
-    "Kulai",
-    "Mersing",
-    "Pontian"
-  ],
-  Kedah: [
-    "Alor Setar",
-    "Sungai Petani",
-    "Kulim",
-    "Langkawi",
-    "Jitra",
-    "Baling",
-    "Sik",
-    "Yan"
-  ],
-  Kelantan: [
-    "Kota Bharu",
-    "Pasir Mas",
-    "Tanah Merah",
-    "Kuala Krai",
-    "Tumpat",
-    "Machang",
-    "Gua Musang",
-    "Jeli"
-  ],
-  Melaka: [
-    "Melaka City",
-    "Alor Gajah",
-    "Jasin",
-    "Masjid Tanah",
-    "Klebang",
-    "Sungai Udang"
-  ],
-  "Negeri Sembilan": [
-    "Seremban",
-    "Port Dickson",
-    "Nilai",
-    "Kuala Pilah",
-    "Bahau",
-    "Tampin",
-    "Gemas"
-  ],
-  Pahang: [
-    "Kuantan",
-    "Temerloh",
-    "Bentong",
-    "Raub",
-    "Pekan",
-    "Jerantut",
-    "Cameron Highlands",
-    "Rompin"
-  ],
-  Penang: [
-    "George Town",
-    "Butterworth",
-    "Bukit Mertajam",
-    "Bayan Lepas",
-    "Balik Pulau",
-    "Tanjung Bungah"
-  ],
-  Perak: [
-    "Ipoh",
-    "Taiping",
-    "Teluk Intan",
-    "Sitiawan",
-    "Lumut",
-    "Kampar",
-    "Kuala Kangsar",
-    "Gerik"
-  ],
-  Perlis: [
-    "Kangar",
-    "Arau",
-    "Padang Besar",
-    "Kuala Perlis",
-    "Chuping"
-  ],
-  Sabah: [
-    "Kota Kinabalu",
-    "Sandakan",
-    "Tawau",
-    "Lahad Datu",
-    "Keningau",
-    "Semporna",
-    "Kudat",
-    "Ranau",
-    "Tambunan"
-  ],
-  Sarawak: [
-    "Kuching",
-    "Miri",
-    "Sibu",
-    "Bintulu",
-    "Limbang",
-    "Sarikei",
-    "Kapit",
-    "Betong",
-    "Sri Aman"
-  ],
-  Selangor: [
-    "Shah Alam",
-    "Petaling Jaya",
-    "Subang Jaya",
-    "Klang",
-    "Kajang",
-    "Ampang",
-    "Cyberjaya",
-    "Rawang",
-    "Sepang",
-    "Selayang"
-  ],
-  Terengganu: [
-    "Kuala Terengganu",
-    "Dungun",
-    "Kemaman",
-    "Marang",
-    "Besut",
-    "Jerteh",
-    "Kuala Berang"
-  ],
-  "Kuala Lumpur": [
-    "Kuala Lumpur",
-    "Cheras",
-    "Kepong",
-    "Bangsar",
-    "Bukit Bintang",
-    "Wangsa Maju"
-  ],
-  Labuan: [
-    "Victoria (Bandar Labuan)",
-    "Sungai Bedaun",
-    "Batu Manikar"
-  ],
-  Putrajaya: [
-    "Putrajaya"
-  ]
-};
+      try {
+        const response = await fetch(`${LOCATION_API_BASE_URL}/countries`);
+
+        if (!response.ok) {
+          throw new Error("Failed to load countries");
+        }
+
+        const data = await response.json();
+        const allowedCountryCodes = new Set((countries || []).map((country) => country.code));
+        const filteredCountries = (Array.isArray(data) ? data : [])
+          .filter((country) => allowedCountryCodes.has(country.iso2))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setCountryOptions(filteredCountries);
+
+        setFormData((prev) => {
+          if (prev.country && filteredCountries.some((country) => country.name === prev.country)) {
+            return prev;
+          }
+
+          const defaultFromNavbar = filteredCountries.find((country) => country.iso2 === selectedCountry?.code);
+          const fallbackCountry = defaultFromNavbar || filteredCountries[0];
+
+          return {
+            ...prev,
+            country: fallbackCountry?.name || "",
+            location: "",
+            area: "",
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching countries:", error);
+      } finally {
+        setLocationLoading((prev) => ({ ...prev, countries: false }));
+      }
+    };
+
+    fetchCountries();
+  }, [countries, selectedCountry?.code]);
+
+  useEffect(() => {
+    const selectedCountryInfo = countryOptions.find((country) => country.name === formData.data.country);
+
+    if (!selectedCountryInfo?.iso2) {
+      setStateOptions([]);
+      setCityOptions([]);
+      return;
+    }
+
+    const fetchStatesAndCities = async () => {
+      setLocationLoading((prev) => ({ ...prev, states: true }));
+
+      try {
+        const statesResponse = await fetch(
+          `${LOCATION_API_BASE_URL}/countries/${selectedCountryInfo.iso2}/states`,
+        );
+
+        if (!statesResponse.ok) {
+          throw new Error("Failed to load states");
+        }
+
+        const statesData = await statesResponse.json();
+
+        const normalizedStates = (Array.isArray(statesData) ? statesData : []).sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
+
+        setStateOptions(normalizedStates);
+        setCityOptions([]);
+
+        setFormData((prev) => {
+          const hasValidState = normalizedStates.some((state) => state.name === prev.location);
+
+          return {
+            ...prev,
+            location: hasValidState ? prev.location : "",
+            area: "",
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching states:", error);
+        setStateOptions([]);
+        setCityOptions([]);
+      } finally {
+        setLocationLoading((prev) => ({ ...prev, states: false }));
+      }
+    };
+
+    fetchStatesAndCities();
+  }, [countryOptions, formData.data.country]);
+
+  useEffect(() => {
+    const selectedCountryInfo = countryOptions.find((country) => country.name === formData.data.country);
+    const selectedStateInfo = stateOptions.find((state) => state.name === formData.data.location);
+
+    if (!selectedCountryInfo?.iso2 || !selectedStateInfo?.iso2) {
+      setCityOptions([]);
+      return;
+    }
+
+    const fetchCities = async () => {
+      setLocationLoading((prev) => ({ ...prev, cities: true }));
+
+      try {
+        const citiesResponse = await fetch(
+          `${LOCATION_API_BASE_URL}/countries/${selectedCountryInfo.iso2}/states/${selectedStateInfo.iso2}/cities`,
+        );
+
+        if (!citiesResponse.ok) {
+          throw new Error("Failed to load cities");
+        }
+
+        const citiesData = await citiesResponse.json();
+        const normalizedCities = (Array.isArray(citiesData) ? citiesData : []).sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
+
+        setCityOptions(normalizedCities);
+
+        setFormData((prev) => {
+          const hasValidCity = normalizedCities.some((city) => city.name === prev.area);
+
+          return {
+            ...prev,
+            area: hasValidCity ? prev.area : "",
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+        setCityOptions([]);
+      } finally {
+        setLocationLoading((prev) => ({ ...prev, cities: false }));
+      }
+    };
+
+    fetchCities();
+  }, [countryOptions, stateOptions, formData.data.country, formData.data.location]);
+
+  const filteredCities = cityOptions.filter((city) => {
+    return Boolean(city?.name);
+  });
+
+  const setFormData = (updater) => {
+    const nextValue = typeof updater === "function" ? updater(formData.data) : updater;
+    formData.setData(nextValue);
+  };
 
   const orderItems = props.cartItems || [
     {
@@ -255,6 +254,26 @@ const Checkout = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "country") {
+      setFormData({
+        ...formData.data,
+        country: value,
+        location: "",
+        area: "",
+      });
+      return;
+    }
+
+    if (name === "location") {
+      setFormData({
+        ...formData.data,
+        location: value,
+        area: "",
+      });
+      return;
+    }
+
     formData.setData({ ...formData.data, [name]: value });
   };
 
@@ -272,7 +291,7 @@ const Checkout = () => {
       ...formData.data,
       name: address.name,
       phone: address.phone,
-      country: address.country || "Pakistan",
+      country: address.country || "",
       location: address.province,
       area: address.city,
       address: address.address,
@@ -374,6 +393,8 @@ const Checkout = () => {
         address_id: selectedAddress.id,
         paymentMethod: paymentMethod,
         total: total,
+        selectedCountry,
+        conversionRates,
       },
     });
   };
@@ -551,7 +572,7 @@ const Checkout = () => {
                             value={formData.data.phone}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
-                            placeholder="+92 ********"
+                            placeholder="+***********"
                           />
                         </div>
                         <div>
@@ -560,9 +581,15 @@ const Checkout = () => {
                             name="country"
                             value={formData.data.country}
                             onChange={handleInputChange}
+                            disabled={locationLoading.countries}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           >
-                            <option value="Malaysia">Malaysia</option>
+                            <option value="">{locationLoading.countries ? "Loading countries..." : "Select Country"}</option>
+                            {countryOptions.map((country) => (
+                              <option key={country.iso2} value={country.name}>
+                                {country.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div>
@@ -571,12 +598,15 @@ const Checkout = () => {
                             name="location"
                             value={formData.data.location}
                             onChange={handleInputChange}
+                            disabled={locationLoading.states || !formData.data.country}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           >
-                            <option value="">Select Province</option>
-                            {malaysianProvinces.map((province) => (
-                              <option key={province} value={province}>
-                                {province}
+                            <option value="">
+                              {locationLoading.states ? "Loading states..." : "Select Province"}
+                            </option>
+                            {stateOptions.map((state) => (
+                              <option key={state.id || state.iso2 || state.name} value={state.name}>
+                                {state.name}
                               </option>
                             ))}
                           </select>
@@ -587,15 +617,15 @@ const Checkout = () => {
                             name="area"
                             value={formData.data.area}
                             onChange={handleInputChange}
+                            disabled={locationLoading.cities || !formData.data.country}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
                           >
-                            <option value="">Select City</option>
-                            {formData.data.location &&
-                              malaysiaCities[formData.data.location]?.map((city) => (
-                                <option key={city} value={city}>
-                                  {city}
-                                </option>
-                              ))}
+                            <option value="">{locationLoading.cities ? "Loading cities..." : "Select City"}</option>
+                            {filteredCities.map((city) => (
+                              <option key={`${city.id || city.name}-${city.state_code || city.state_name || ""}`} value={city.name}>
+                                {city.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </div>
@@ -708,7 +738,7 @@ const Checkout = () => {
                             {item.name.split(' ')[0]} {item.name.split(' ')[1]}
                           </p>
                           <p className="text-sm text-gray-900 font-medium truncate">{item.name}</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">RM {item.final_price}</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">{formatMoney(item.final_price)}</p>
                         </div>
                       </div>
                     ))}
@@ -733,7 +763,7 @@ const Checkout = () => {
                       />
                       <div>
                         <p className="font-semibold text-gray-900">Pay by Card</p>
-                        <p className="text-sm text-gray-600">Processing Fees: 0.00 RM</p>
+                        <p className="text-sm text-gray-600">Processing Fees: {formatMoney(0)}</p>
                       </div>
                     </div>
                   </label>
@@ -750,7 +780,7 @@ const Checkout = () => {
                       />
                       <div>
                         <p className="font-semibold text-gray-900">Cash On Delivery</p>
-                        <p className="text-sm text-gray-600">Processing Fees: 1.00 RM</p>
+                        <p className="text-sm text-gray-600">Processing Fees: {formatMoney(1)}</p>
                       </div>
                     </div>
                   </label>
@@ -769,13 +799,13 @@ const Checkout = () => {
                       />
                       <div>
                         <p className="font-medium text-gray-900">Pay Using Wallet Balance</p>
-                        <p className="text-sm text-gray-600">Available Balance: RM {walletBalance.toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">Available Balance: {formatMoney(walletBalance)}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600 flex items-center gap-1">
                         <span className="text-orange-500">🎁</span>
-                        Used Balance: RM {walletUsed.toFixed(2)}
+                        Used Balance: {formatMoney(walletUsed)}
                       </p>
                     </div>
                   </label>
@@ -800,7 +830,7 @@ const Checkout = () => {
                       <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-sm text-green-800">Congrats! You've saved RM {appliedCoupon.discount}</span>
+                      <span className="text-sm text-green-800">Congrats! You've saved {formatMoney(appliedCoupon.discount)}</span>
                     </div>
                     <button onClick={removeCoupon} className="text-gray-400 hover:text-gray-600">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -834,13 +864,13 @@ const Checkout = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold text-gray-900">RM {subtotal.toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">{formatMoney(subtotal)}</span>
                   </div>
                   
                   {appliedCoupon && (
                     <div className="flex justify-between text-sm bg-green-50 p-2 rounded">
                       {/* <span className="text-gray-600">Coupon Discount</span> */}
-                      {/* <span className="font-semibold text-green-600">RM -{appliedCoupon.discount}</span> */}
+                      {/* <span className="font-semibold text-green-600">{formatMoney(-appliedCoupon.discount)}</span> */}
                     </div>
                   )}
                   
@@ -859,7 +889,7 @@ const Checkout = () => {
                       <span className="font-semibold text-gray-900">
                         Total <span className="text-gray-500 font-normal text-sm">(Inclusive of VAT)</span>
                       </span>
-                      <span className="text-lg font-bold text-gray-900">RM {total.toFixed(2)}</span>
+                      <span className="text-lg font-bold text-gray-900">{formatMoney(total)}</span>
                     </div>
                   </div>
                   
@@ -872,7 +902,7 @@ const Checkout = () => {
                         </svg>
                         <span className="font-semibold text-green-800">Your Total Savings</span>
                       </div>
-                      <span className="font-bold text-green-700">RM {totalSavings}</span>
+                      <span className="font-bold text-green-700">{formatMoney(totalSavings)}</span>
                     </div>
                   </div>
                   

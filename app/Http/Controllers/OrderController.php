@@ -9,10 +9,20 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Cart;
+use App\Models\Addresse;
 use App\Models\Flashdeals_product;
 use App\Utils\PriceCalculator;
 class OrderController extends Controller
 {
+    private function convertFromMyr(float $amountMyr, float $myrRate, float $targetRate): float
+    {
+        if ($myrRate <= 0 || $targetRate <= 0) {
+            return $amountMyr;
+        }
+
+        return ($amountMyr / $myrRate) * $targetRate;
+    }
+
     private function getActiveDealPricingForProduct(int $productId, float $originalPrice): ?array
     {
         $today = now()->format('Y-m-d');
@@ -55,6 +65,11 @@ class OrderController extends Controller
         $validated = $request->validate([
             'address_id' => 'required|exists:addresses,id',
             'paymentMethod' => 'required|string',
+            'selectedCountry' => 'nullable|array',
+            'selectedCountry.name' => 'nullable|string|max:100',
+            'selectedCountry.code' => 'nullable|string|max:10',
+            'selectedCountry.currency' => 'nullable|string|max:10',
+            'conversionRates' => 'nullable|array',
         ]);
         // dd($validated);
         $user = Auth::user();
@@ -69,7 +84,31 @@ class OrderController extends Controller
             return redirect('/cart')->with('error', 'Your cart is empty');
         }
 
+        $address = Addresse::where('id', $validated['address_id'])
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$address) {
+            return redirect('/checkout')->with('error', 'Selected address is invalid.');
+        }
+
+        $selectedCountry = $validated['selectedCountry'] ?? [];
+        $rates = $validated['conversionRates'] ?? [];
+
+        $orderCurrencyCode = strtoupper((string) ($selectedCountry['currency'] ?? 'MYR'));
+        $orderCountryName = (string) ($selectedCountry['name'] ?? $address->country ?? 'Malaysia');
+        $orderCountryCode = strtoupper((string) ($selectedCountry['code'] ?? 'MY'));
+        $myrRate = (float) ($rates['MYR'] ?? 0);
+        $currencyRate = (float) ($rates[$orderCurrencyCode] ?? 0);
+
+        if ($myrRate <= 0 || $currencyRate <= 0) {
+            $orderCurrencyCode = 'MYR';
+            $currencyRate = 1;
+            $myrRate = 1;
+        }
+
         $totalAmount = 0;
+        $totalAmountInCurrency = 0;
 
         DB::beginTransaction();
 
@@ -100,22 +139,34 @@ class OrderController extends Controller
                 $calculatedAmount = (float) ($priceCalc['final_price'] ?? $originalPrice);
                 $totalAmount += ($calculatedAmount * (int) $cart->quantity);
 
+                $convertedAmount = $this->convertFromMyr($calculatedAmount, $myrRate, $currencyRate);
+                $totalAmountInCurrency += ($convertedAmount * (int) $cart->quantity);
+
                 $cart->update([
                     'amount' => round($calculatedAmount, 2),
+                    'amount_in_currency' => round($convertedAmount, 2),
+                    'currency_code' => $orderCurrencyCode,
                 ]);
 
                 $product->decrement('instock', (int) $cart->quantity);
             }
 
             $totalAmount = round($totalAmount, 2);
+            $totalAmountInCurrency = round($totalAmountInCurrency, 2);
 
             // Create order with calculated total
             $order = Order::create([
                 'user_id' => $user->id,
                 'total_amount' => $totalAmount,
+                'total_amount_in_currency' => $totalAmountInCurrency,
                 'address_id' => $validated['address_id'],
                 'payment_method' => $validated['paymentMethod'],
-                'status' => 'Pending'
+                'status' => 'Pending',
+                'order_country_name' => $orderCountryName,
+                'order_country_code' => $orderCountryCode,
+                'order_currency_code' => $orderCurrencyCode,
+                'order_currency_rate' => $currencyRate,
+                'myr_rate' => $myrRate,
             ]);
 
             // Update all cart items to mark them as ordered

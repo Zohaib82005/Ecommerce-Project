@@ -107,7 +107,32 @@ class UserController extends Controller
             ->join('addresses', 'orders.address_id', '=', 'addresses.id')
             ->where('products.added_by', Auth::user()->id)
             ->where('carts.status', 'ordered')
-            ->select('orders.id as oid', 'orders.total_amount', 'orders.user_id', 'users.name as customer_name', 'orders.payment_method', 'orders.status', 'orders.created_at', 'orders.updated_at', 'products.name as product_name', 'carts.quantity as quantity', 'carts.orderstatus as cart_status', 'products.image as product_image', 'carts.amount as pprice', 'products.id as pid', 'addresses.address', 'addresses.city', 'addresses.phone')
+            ->select(
+                'orders.id as oid',
+                'orders.total_amount',
+                'orders.total_amount_in_currency',
+                'orders.order_country_name',
+                'orders.order_country_code',
+                'orders.order_currency_code',
+                'orders.user_id',
+                'users.name as customer_name',
+                'orders.payment_method',
+                'orders.status',
+                'orders.created_at',
+                'orders.updated_at',
+                'products.name as product_name',
+                'carts.quantity as quantity',
+                'carts.orderstatus as cart_status',
+                'products.image as product_image',
+                'carts.amount as pprice',
+                'carts.amount_in_currency as pprice_local',
+                'carts.currency_code as item_currency',
+                'products.id as pid',
+                'addresses.address',
+                'addresses.city',
+                'addresses.country as shipping_country',
+                'addresses.phone'
+            )
             ->get();
         
     // dd($order);
