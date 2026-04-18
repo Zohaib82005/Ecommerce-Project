@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\Wishlist;
+use App\Models\WebsiteSetting;
 class UserController extends Controller
 {
     public function Register(Request $req)
@@ -67,6 +68,46 @@ class UserController extends Controller
         }
 
         return redirect()->back()->withErrors('Incorrect email or password');
+    }
+
+    public function adminLoginPage(string $slug)
+    {
+        $settings = WebsiteSetting::getSettings();
+
+        if ($slug !== $settings->admin_login_slug) {
+            abort(404);
+        }
+
+        return Inertia::render('AdminLogin', [
+            'adminLoginSlug' => $settings->admin_login_slug,
+        ]);
+    }
+
+    public function adminLogin(Request $req)
+    {
+        $req->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+            'admin_login_slug' => 'required|string',
+        ]);
+
+        $settings = WebsiteSetting::getSettings();
+
+        if ($req->admin_login_slug !== $settings->admin_login_slug) {
+            return redirect()->back()->withErrors('Invalid admin login URL.');
+        }
+
+        $cred = Auth::attempt([
+            'email' => $req->email,
+            'password' => $req->password,
+            'role' => 'Admin',
+        ]);
+
+        if ($cred) {
+            return redirect('/admin');
+        }
+
+        return redirect()->back()->withErrors('Incorrect admin credentials.');
     }
 
     

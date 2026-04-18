@@ -37,6 +37,7 @@ return [
 
     'countrystatecity' => [
         'key' => env('CSC_API_KEY', '809afdacfa5f41dcf73c8f2cc2bb695876c4b40bf62521d1895dce7f2759a8fa'),
+        'base_url' => rtrim(env('CSC_API_BASE_URL', 'https://api.countrystatecity.in/v1'), '/'),
     ],
 
 ];

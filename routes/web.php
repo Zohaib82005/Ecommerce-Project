@@ -28,8 +28,11 @@ Route::get('/login', function () {
     return Inertia::render('Login');
 });
 
+Route::get('/login/{slug}', [UserController::class, 'adminLoginPage']);
+
 Route::post('/submitreg', [UserController::class, 'register']);
 Route::post('/submitlog', [UserController::class, 'Login']);
+Route::post('/submitlog/admin', [UserController::class, 'adminLogin']);
 
 // Public category routes
 Route::get('/api/categories', [CategoryController::class, 'getAllCategories']);
@@ -63,6 +66,7 @@ Route::middleware([CheckAdmin::class])->group(function () {
     Route::delete('/admin/user/delete/{id}', [AdminController::class, 'deleteUser']);
     Route::post('/admin/category/update', [AdminController::class, 'updateCategory']);
     Route::post('/admin/category/delete', [AdminController::class, 'deleteCategory']);
+    Route::post('/admin/website-settings/update', [AdminController::class, 'updateWebsiteSettings']);
 });
 
 // ========== SELLER ROUTES (Seller only) ==========

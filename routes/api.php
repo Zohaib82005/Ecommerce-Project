@@ -30,14 +30,15 @@ Route::get('/products/category/{categoryId}', [ProductController::class, 'getPro
 
 Route::get('/locations/countries', function () {
     $apiKey = config('services.countrystatecity.key');
+    $baseUrl = config('services.countrystatecity.base_url');
 
-    if (!$apiKey) {
+    if (!$apiKey || !$baseUrl) {
         return response()->json(['message' => 'Country API key is not configured.'], 500);
     }
 
     $response = Http::withHeaders([
         'X-CSCAPI-KEY' => $apiKey,
-    ])->get('https://api.countrystatecity.in/v1/countries');
+    ])->get("{$baseUrl}/countries");
 
     if (!$response->successful()) {
         return response()->json([
@@ -51,14 +52,15 @@ Route::get('/locations/countries', function () {
 
 Route::get('/locations/countries/{countryCode}/states', function (string $countryCode) {
     $apiKey = config('services.countrystatecity.key');
+    $baseUrl = config('services.countrystatecity.base_url');
 
-    if (!$apiKey) {
+    if (!$apiKey || !$baseUrl) {
         return response()->json(['message' => 'Country API key is not configured.'], 500);
     }
 
     $response = Http::withHeaders([
         'X-CSCAPI-KEY' => $apiKey,
-    ])->get("https://api.countrystatecity.in/v1/countries/{$countryCode}/states");
+    ])->get("{$baseUrl}/countries/{$countryCode}/states");
 
     if (!$response->successful()) {
         return response()->json([
@@ -72,14 +74,15 @@ Route::get('/locations/countries/{countryCode}/states', function (string $countr
 
 Route::get('/locations/countries/{countryCode}/states/{stateCode}/cities', function (string $countryCode, string $stateCode) {
     $apiKey = config('services.countrystatecity.key');
+    $baseUrl = config('services.countrystatecity.base_url');
 
-    if (!$apiKey) {
+    if (!$apiKey || !$baseUrl) {
         return response()->json(['message' => 'Country API key is not configured.'], 500);
     }
 
     $response = Http::withHeaders([
         'X-CSCAPI-KEY' => $apiKey,
-    ])->get("https://api.countrystatecity.in/v1/countries/{$countryCode}/states/{$stateCode}/cities");
+    ])->get("{$baseUrl}/countries/{$countryCode}/states/{$stateCode}/cities");
 
     if (!$response->successful()) {
         return response()->json([

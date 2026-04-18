@@ -1,22 +1,29 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const EXCHANGE_API_URL = 'https://v6.exchangerate-api.com/v6/10ebdb74b1b1eb396d1694c7/latest/USD';
+const EXCHANGE_API_URL =
+  import.meta.env.VITE_EXCHANGE_RATE_API_URL ||
+  'https://v6.exchangerate-api.com/v6/10ebdb74b1b1eb396d1694c7/latest/USD';
+const FLAG_CDN_BASE_URL = (import.meta.env.VITE_FLAG_CDN_BASE_URL || 'https://flagcdn.com').replace(/\/$/, '');
+const FLAG_CDN_SIZE = import.meta.env.VITE_FLAG_CDN_SIZE || '48x36';
 const CURRENCY_STORAGE_KEY = 'corebuy_selected_country';
 const RATES_STORAGE_KEY = 'corebuy_exchange_rates';
+
+const getFlagUrl = (countryCode) =>
+  `${FLAG_CDN_BASE_URL}/${FLAG_CDN_SIZE}/${String(countryCode || '').toLowerCase()}.png`;
 
 const defaultCountry = {
   code: 'MY',
   name: 'Malaysia',
-  flag: 'https://flagcdn.com/48x36/my.png',
+  flag: getFlagUrl('MY'),
   currency: 'MYR',
 };
 
 const countries = [
   defaultCountry,
-  { code: 'QA', name: 'Qatar', flag: 'https://flagcdn.com/48x36/qa.png', currency: 'QAR' },
-  { code: 'AE', name: 'UAE', flag: 'https://flagcdn.com/48x36/ae.png', currency: 'AED' },
-  { code: 'BH', name: 'Bahrain', flag: 'https://flagcdn.com/48x36/bh.png', currency: 'BHD' },
-  { code: 'OM', name: 'Oman', flag: 'https://flagcdn.com/48x36/om.png', currency: 'OMR' },
+  { code: 'QA', name: 'Qatar', flag: getFlagUrl('QA'), currency: 'QAR' },
+  { code: 'AE', name: 'UAE', flag: getFlagUrl('AE'), currency: 'AED' },
+  { code: 'BH', name: 'Bahrain', flag: getFlagUrl('BH'), currency: 'BHD' },
+  { code: 'OM', name: 'Oman', flag: getFlagUrl('OM'), currency: 'OMR' },
 ];
 
 const CurrencyContext = createContext(null);

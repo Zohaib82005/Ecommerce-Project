@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Subcategory;
 use App\Models\Sub_subcategory;
 use App\Models\Order;
+use App\Models\WebsiteSetting;
 use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
@@ -43,6 +44,7 @@ class AdminController extends Controller
                        )
                        ->orderBy('orders.created_at', 'desc')
                        ->get();
+        $websiteSettings = WebsiteSetting::getSettings();
         return Inertia::render('Admin',
             [
                 'categories' => $categories,
@@ -51,7 +53,8 @@ class AdminController extends Controller
                 'users' => $users,
                 'products' => $products,
                 'sellers' => $sellers,
-                'orders' => $orders
+                'orders' => $orders,
+                'websiteSettings' => $websiteSettings,
             ]
         );
         
@@ -198,5 +201,21 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to delete category.');
         }
+    }
+
+    /**
+     * Update website-level settings from admin panel.
+     */
+    public function updateWebsiteSettings(Request $request)
+    {
+        $data = $request->validate([
+            'admin_login_slug' => ['required', 'string', 'max:120', 'regex:/^[a-zA-Z0-9_-]+$/'],
+        ]);
+
+        $settings = WebsiteSetting::getSettings();
+        $settings->admin_login_slug = strtolower(trim($data['admin_login_slug']));
+        $settings->save();
+
+        return redirect()->back()->with('success', 'Website settings updated successfully.');
     }
 }

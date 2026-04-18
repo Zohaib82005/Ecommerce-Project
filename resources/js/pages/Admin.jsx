@@ -1,1304 +1,692 @@
 import React, { useState } from "react";
-import "../css/admin.css";
 import { useForm, usePage, Link, router } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
 import LoadingScreen from "../Components/LoadingScreen";
+
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const props = usePage().props;
-  // console.log( props); // Debugging line to check props
-  const [categoryLevel, setCategoryLevel] = useState("main"); // "main", "sub", "subsub"
+
+  const [categoryLevel, setCategoryLevel] = useState("main");
   const [selectedMainCategory, setSelectedMainCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
-  
-  // Calculate dashboard statistics from real data
+
   const calculateStats = () => {
     const pendingUsers = props.users?.filter(u => u.status === 'Pending').length || 0;
-    const approvedUsers = props.users?.filter(u => u.status === 'Approved').length || 0;
     const pendingProducts = props.products?.filter(p => p.status === 'Pending').length || 0;
     const reportedOrders = props.reported_orders?.length || 0;
     const flaggedSellers = props.sellers?.filter(s => s.status === 'Flagged').length || 0;
-    const userNotifications = pendingUsers + pendingProducts + reportedOrders + flaggedSellers;
-    
     return {
-      pendingUsers,
-      approvedUsers,
-      pendingProducts,
-      reportedOrders,
-      flaggedSellers,
-      userNotifications,
+      pendingUsers, pendingProducts, reportedOrders, flaggedSellers,
+      userNotifications: pendingUsers + pendingProducts + reportedOrders + flaggedSellers,
       totalUsers: props.users?.length || 0,
       totalProducts: props.products?.length || 0,
-      totalSellers: props.sellers?.length || 0
     };
   };
 
   const stats = calculateStats();
-  
-  const category = useForm({
-    category: '',
-    parent_id: null,
-    level: 'main', // 'main', 'sub', 'subsub'
-    image: null
-  });
-  
-  const subCategory = useForm({
-    name: '',
-    category_id: '',
-    image: null
-  });
-  
-  const subSubCategory = useForm({
-    name: '',
-    subcategory_id: '',
-    image: null
-  });
 
-  // Edit user modal form
+  const category = useForm({ category: '', parent_id: null, level: 'main', image: null });
+  const subCategory = useForm({ name: '', category_id: '', image: null });
+  const subSubCategory = useForm({ name: '', subcategory_id: '', image: null });
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editCategoryModalOpen, setEditCategoryModalOpen] = useState(false);
   const [deleteCategoryModalOpen, setDeleteCategoryModalOpen] = useState(false);
-  const editForm = useForm({
-    id: '',
-    name: '',
-    email: '',
-    role: '',
-    password: '',
-    password_confirmation: ''
-  });
 
-  const editCategoryForm = useForm({
-    id: '',
-    name: '',
-    level: 'main',
-  });
-
-  const deleteCategoryForm = useForm({
-    id: '',
-    level: 'main',
+  const editForm = useForm({ id: '', name: '', email: '', role: '', password: '', password_confirmation: '' });
+  const editCategoryForm = useForm({ id: '', name: '', level: 'main' });
+  const deleteCategoryForm = useForm({ id: '', level: 'main' });
+  const websiteSettingsForm = useForm({
+    admin_login_slug: props.websiteSettings?.admin_login_slug || 'admin',
   });
 
   function openEditModal(user) {
-    editForm.setData({
-      id: user.id,
-      name: user.name || '',
-      email: user.email || '',
-      role: user.role || 'User',
-      password: '',
-      password_confirmation: ''
-    });
+    editForm.setData({ id: user.id, name: user.name || '', email: user.email || '', role: user.role || 'User', password: '', password_confirmation: '' });
     setEditModalOpen(true);
   }
 
   function handleEditSubmit(e) {
     e.preventDefault();
     editForm.post('/admin/user/update', {
-      onSuccess: () => {
-        setEditModalOpen(false);
-        editForm.setData('password', '');
-        editForm.setData('password_confirmation', '');
-      }
+      onSuccess: () => { setEditModalOpen(false); editForm.setData('password', ''); editForm.setData('password_confirmation', ''); }
     });
   }
 
   function deleteUser(userId, userName) {
-    if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+    if (confirm(`Delete user "${userName}"? This cannot be undone.`)) {
       router.delete(`/admin/user/delete/${userId}`, {
-        onSuccess: () => {
-          alert('User deleted successfully');
-        },
-        onError: () => {
-          alert('Failed to delete user');
-        }
+        onSuccess: () => alert('User deleted successfully'),
+        onError: () => alert('Failed to delete user')
       });
     }
   }
 
   function openEditCategoryModal(item, level) {
-    editCategoryForm.setData({
-      id: item.id,
-      name: level === 'main' ? (item.category || '') : (item.name || ''),
-      level,
-    });
+    editCategoryForm.setData({ id: item.id, name: level === 'main' ? (item.category || '') : (item.name || ''), level });
     setEditCategoryModalOpen(true);
   }
 
   function handleCategoryEditSubmit(e) {
     e.preventDefault();
-    editCategoryForm.post('/admin/category/update', {
-      onSuccess: () => {
-        setEditCategoryModalOpen(false);
-      }
-    });
+    editCategoryForm.post('/admin/category/update', { onSuccess: () => setEditCategoryModalOpen(false) });
   }
 
   function openDeleteCategoryModal(item, level) {
-    deleteCategoryForm.setData({
-      id: item.id,
-      level,
-    });
+    deleteCategoryForm.setData({ id: item.id, level });
     setDeleteCategoryModalOpen(true);
   }
 
   function handleCategoryDeleteSubmit(e) {
     e.preventDefault();
-    deleteCategoryForm.post('/admin/category/delete', {
-      onSuccess: () => {
-        setDeleteCategoryModalOpen(false);
-      }
-    });
+    deleteCategoryForm.post('/admin/category/delete', { onSuccess: () => setDeleteCategoryModalOpen(false) });
+  }
+
+  function handleWebsiteSettingsSubmit(e) {
+    e.preventDefault();
+    websiteSettingsForm.post('/admin/website-settings/update');
   }
 
   function handleCatSubmit(e) {
     e.preventDefault();
-    
     if (categoryLevel === "main") {
-      category.post('/addcate', {
-        onSuccess: () => {
-          category.reset();
-          alert('Main category added successfully!');
-        },
-        onError: () => {
-          alert('Failed to add main category');
-        }
-      });
+      category.post('/addcate', { onSuccess: () => { category.reset(); alert('Main category added!'); }, onError: () => alert('Failed to add category') });
     } else if (categoryLevel === "sub") {
-      if (!subCategory.data.category_id) {
-        alert('Please select a main category');
-        return;
-      }
-      
-      subCategory.post('/add-subcategory', {
-        onSuccess: () => {
-          subCategory.reset();
-          setSelectedMainCategory('');
-          alert('Sub category added successfully!');
-        },
-        onError: () => {
-          alert('Failed to add sub category');
-        }
-      });
+      if (!subCategory.data.category_id) { alert('Please select a main category'); return; }
+      subCategory.post('/add-subcategory', { onSuccess: () => { subCategory.reset(); setSelectedMainCategory(''); alert('Sub category added!'); }, onError: () => alert('Failed') });
     } else if (categoryLevel === "subsub") {
-      if (!subSubCategory.data.subcategory_id) {
-        alert('Please select a sub category');
-        return;
-      }
-      
-      subSubCategory.post('/add-sub-subcategory', {
-        onSuccess: () => {
-          subSubCategory.reset();
-          setSelectedMainCategory('');
-          setSelectedSubCategory('');
-          alert('Sub-sub category added successfully!');
-        },
-        onError: () => {
-          alert('Failed to add sub-sub category');
-        }
-      });
+      if (!subSubCategory.data.subcategory_id) { alert('Please select a sub category'); return; }
+      subSubCategory.post('/add-sub-subcategory', { onSuccess: () => { subSubCategory.reset(); setSelectedMainCategory(''); setSelectedSubCategory(''); alert('Sub-sub category added!'); }, onError: () => alert('Failed') });
     }
   }
 
-  function approveProduct(productId) {
-    // Implement product approval logic here (e.g., send request to backend)
-    // console.log(`Approving product with ID: ${productId}`);
-  }
-
-  // Sample data (replace with props data when available)
   const users = props.users || [];
   const products = props.products || [];
   const orders = props.orders || [];
   const reports = props.reports || [];
   const logs = props.logs || [];
+  const adminLoginPath = `/login/${websiteSettingsForm.data.admin_login_slug || ''}`;
+
+  const navItems = [
+    { key: "overview", label: "Overview", icon: "bi-grid" },
+    { key: "users", label: "Users", icon: "bi-people", badge: stats.pendingUsers },
+    { key: "products", label: "Products", icon: "bi-box-seam", badge: stats.pendingProducts },
+    { key: "category", label: "Categories", icon: "bi-tags" },
+    { key: "orders", label: "Orders", icon: "bi-receipt" },
+    { key: "website-settings", label: "Website Settings", icon: "bi-sliders" },
+    { key: "reports", label: "Reports", icon: "bi-flag" },
+    { key: "logs", label: "Logs", icon: "bi-clock-history" },
+  ];
+
+  const inputCls = "w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500";
+  const btnPrimary = "px-4 py-2 text-sm bg-gray-800 text-white rounded hover:bg-gray-700 disabled:opacity-50 transition-colors";
+  const btnSecondary = "px-4 py-2 text-sm border border-gray-300 rounded text-gray-600 hover:bg-gray-50 transition-colors";
+
+  const Modal = ({ open, onClose, title, children }) => {
+    if (!open) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md mx-4 z-10">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+            <h5 className="text-sm font-semibold text-gray-800">{title}</h5>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+          </div>
+          <div className="p-5">{children}</div>
+        </div>
+      </div>
+    );
+  };
+
+  const Badge = ({ children, color = "gray" }) => {
+    const colors = { gray: "bg-gray-100 text-gray-600", green: "bg-green-100 text-green-700", yellow: "bg-yellow-100 text-yellow-700", red: "bg-red-100 text-red-700", blue: "bg-blue-100 text-blue-700" };
+    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[color]}`}>{children}</span>;
+  };
 
   return (
-    <div className="admin-dashboard">
+    <div className="flex h-screen bg-gray-50 text-sm overflow-hidden">
       <FlashMessage />
       <LoadingScreen />
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>
-      )}
+
+      {sidebarOpen && <div className="fixed inset-0 bg-black/30 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* SIDEBAR */}
-      <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-header">
-          <div className="brand-section">
-            <div className="brand-icon">
-              <img src={`/logo.png`} width="100" height="100" alt="" />
-            </div>
-            <div className="brand-info">
-              <h3 className="brand-name">Bright Max</h3>
-              <span className="admin-badge">ADMIN PANEL</span>
-            </div>
-          </div>
-          <button className="close-sidebar d-lg-none" onClick={() => setSidebarOpen(false)}>
-            <i className="bi bi-x-lg"></i>
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-52 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
+        <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-100">
+          <img src="/logo.png" className="w-6 h-6 rounded object-cover" alt="logo" />
+          <p className="text-sm font-semibold text-gray-800 leading-tight">Admin</p>
+          <button className="ml-auto lg:hidden text-gray-400" onClick={() => setSidebarOpen(false)}>
+            <i className="bi bi-x-lg text-sm" />
           </button>
         </div>
 
-        {/* Admin Profile */}
-        <div className="admin-profile-card">
-          <div className="admin-avatar">
-            <i className="bi bi-person-badge"></i>
-          </div>
-          <div className="admin-info">
-            <h5 className="admin-name">Administrator</h5>
-            <p className="admin-role">Super Admin</p>
-          </div>
-          <div className="admin-status-badge">
-            <i className="bi bi-circle-fill"></i>
-            <span>Active</span>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="sidebar-nav">
-          <ul className="nav-list">
-            <li
-              className={`nav-item ${activeTab === "overview" ? "active" : ""}`}
-              onClick={() => { setActiveTab("overview"); setSidebarOpen(false); }}
+        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+          {navItems.map(item => (
+            <button
+              key={item.key}
+              onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded text-left transition-colors ${activeTab === item.key ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"}`}
             >
-              <i className="bi bi-speedometer2"></i>
-              <span>Dashboard</span>
-            </li>
-            <li
-              className={`nav-item ${activeTab === "users" ? "active" : ""}`}
-              onClick={() => { setActiveTab("users"); setSidebarOpen(false); }}
-            >
-              <i className="bi bi-people"></i>
-              <span>User Verification</span>
-              <span className="badge bg-warning ms-auto">{stats.pendingUsers}</span>
-            </li>
-            <li
-              className={`nav-item ${activeTab === "products" ? "active" : ""}`}
-              onClick={() => { setActiveTab("products"); setSidebarOpen(false); }}
-            >
-              <i className="bi bi-box-seam"></i>
-              <span>Product Review</span>
-              <span className="badge bg-danger ms-auto">{stats.pendingProducts}</span>
-            </li>
-            <li
-              className={`nav-item ${activeTab === "category" ? "active" : ""}`}
-              onClick={() => { setActiveTab("category"); setSidebarOpen(false); }}
-            >
-              <i className="bi bi-tags"></i>
-              <span>Manage Categories</span>
-            </li>
-            <li
-              className={`nav-item ${activeTab === "orders" ? "active" : ""}`}
-              onClick={() => { setActiveTab("orders"); setSidebarOpen(false); }}
-            >
-              <i className="bi bi-receipt"></i>
-              <span>Order Oversight</span>
-            </li>
-            <li
-              className={`nav-item ${activeTab === "reports" ? "active" : ""}`}
-              onClick={() => { setActiveTab("reports"); setSidebarOpen(false); }}
-            >
-              <i className="bi bi-flag"></i>
-              <span>Reports</span>
-            </li>
-            <li
-              className={`nav-item ${activeTab === "logs" ? "active" : ""}`}
-              onClick={() => { setActiveTab("logs"); setSidebarOpen(false); }}
-            >
-              <i className="bi bi-clock-history"></i>
-              <span>Audit Logs</span>
-            </li>
-          </ul>
+              <i className={`bi ${item.icon} text-xs w-4 text-center`} />
+              <span className="flex-1">{item.label}</span>
+              {item.badge > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${activeTab === item.key ? "bg-white text-gray-800" : "bg-gray-200 text-gray-700"}`}>{item.badge}</span>
+              )}
+            </button>
+          ))}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="sidebar-footer">
-          <Link className="btn btn-outline-danger w-100" href="/logout">
-            <i className="bi bi-box-arrow-right me-2"></i>
-            Logout
+        <div className="p-3 border-t border-gray-100">
+          <Link href="/logout" className="flex items-center gap-2 px-3 py-2 rounded text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors w-full">
+            <i className="bi bi-box-arrow-right text-sm" />
+            <span>Logout</span>
           </Link>
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="admin-main-content">
-        {/* TOP HEADER */}
-        <header className="admin-top-header">
-          <div className="header-left">
-            <button
-              className="btn btn-light sidebar-toggle d-lg-none me-3"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              <i className="bi bi-list fs-4"></i>
-            </button>
-            <div className="header-title-section">
-              <h2 className="page-title">
-                {activeTab === "overview" && "Dashboard Overview"}
-                {activeTab === "users" && "User Verification"}
-                {activeTab === "products" && "Product Review"}
-                {activeTab === "category" && "Manage Categories"}
-                {activeTab === "orders" && "Order Oversight"}
-                {activeTab === "reports" && "Reports & Flags"}
-                {activeTab === "logs" && "Audit Logs"}
-              </h2>
-              <p className="page-subtitle">Moderate & verify platform activity</p>
-            </div>
-          </div>
-          <div className="header-right">
-            <button className="btn btn-light notification-btn position-relative">
-              <i className="bi bi-bell-fill fs-5"></i>
-              <span className="notification-badge">{stats.userNotifications}</span>
-            </button>
+      {/* MAIN */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-white border-b border-gray-200 px-5 py-3 flex items-center gap-3 shrink-0">
+          <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
+            <i className="bi bi-list text-xl" />
+          </button>
+          <h2 className="font-semibold text-gray-800">{navItems.find(n => n.key === activeTab)?.label}</h2>
+          <div className="ml-auto flex items-center gap-2">
+            {stats.userNotifications > 0 && <Badge color="red">{stats.userNotifications} alerts</Badge>}
+            <span className="text-xs text-gray-400 hidden sm:inline">{new Date().toLocaleDateString()}</span>
           </div>
         </header>
 
-        {/* CONTENT AREA */}
-        <div className="admin-content-area">
-          {/* OVERVIEW TAB */}
+        <div className="flex-1 overflow-y-auto p-5">
+
+          {/* OVERVIEW */}
           {activeTab === "overview" && (
-            <div className="overview-section">
-              {/* Stats Cards */}
-              <div className="stats-grid">
-                <div className="stat-card stat-warning">
-                  <div className="stat-icon">
-                    <i className="bi bi-people"></i>
-                  </div>
-                  <div className="stat-content">
-                    <p className="stat-label">Pending Users</p>
-                  <h3 className="stat-value">{stats.pendingUsers}</h3>
-                    <span className="stat-trend">
-                      <i className="bi bi-clock"></i> Awaiting approval
-                    </span>
-                  </div>
+            <div className="space-y-4">
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Summary</p>
                 </div>
-
-                <div className="stat-card stat-danger">
-                  <div className="stat-icon">
-                    <i className="bi bi-box-seam"></i>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+                {[
+                  { label: "Pending Users", value: stats.pendingUsers, sub: "Need approval" },
+                  { label: "Pending Products", value: stats.pendingProducts, sub: "Need review" },
+                  { label: "Reported Orders", value: stats.reportedOrders, sub: "Active disputes" },
+                  { label: "Flagged Sellers", value: stats.flaggedSellers, sub: "Under review" },
+                ].map((s, i) => (
+                  <div key={i} className="p-4">
+                    <p className="text-xs text-gray-500">{s.label}</p>
+                    <p className="text-2xl font-semibold text-gray-900 mt-1">{s.value}</p>
+                    <p className="text-xs text-gray-400 mt-1">{s.sub}</p>
                   </div>
-                  <div className="stat-content">
-                    <p className="stat-label">Pending Products</p>
-                    <h3 className="stat-value">{stats.pendingProducts}</h3>
-                    <span className="stat-trend">
-                      <i className="bi bi-clock"></i> Needs review
-                    </span>
-                  </div>
-                </div>
-
-                <div className="stat-card stat-info">
-                  <div className="stat-icon">
-                    <i className="bi bi-exclamation-triangle"></i>
-                  </div>
-                  <div className="stat-content">
-                    <p className="stat-label">Reported Orders</p>
-                    <h3 className="stat-value">{stats.reportedOrders}</h3>
-                    <span className="stat-trend">
-                      <i className="bi bi-flag"></i> Disputes active
-                    </span>
-                  </div>
-                </div>
-
-                <div className="stat-card stat-primary">
-                  <div className="stat-icon">
-                    <i className="bi bi-shield-exclamation"></i>
-                  </div>
-                  <div className="stat-content">
-                    <p className="stat-label">Flagged Sellers</p>
-                    <h3 className="stat-value">{stats.flaggedSellers}</h3>
-                    <span className="stat-trend">
-                      <i className="bi bi-eye"></i> Under investigation
-                    </span>
-                  </div>
+                ))}
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="quick-actions-section mt-4">
-                <h5 className="section-title">Quick Actions</h5>
-                <div className="quick-actions-grid">
-                  <button className="action-card" onClick={() => setActiveTab("users")}>
-                    <i className="bi bi-person-check"></i>
-                    <span>Verify Users</span>
-                  </button>
-                  <button className="action-card" onClick={() => setActiveTab("products")}>
-                    <i className="bi bi-box-seam-fill"></i>
-                    <span>Review Products</span>
-                  </button>
-                  <button className="action-card" onClick={() => setActiveTab("category")}>
-                    <i className="bi bi-tags-fill"></i>
-                    <span>Add Category</span>
-                  </button>
-                  <button className="action-card" onClick={() => setActiveTab("reports")}>
-                    <i className="bi bi-flag-fill"></i>
-                    <span>View Reports</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="recent-activity-section mt-4">
-                <h5 className="section-title">Recent Activity</h5>
-                <div className="activity-list">
-                  {logs.slice(0, 5).map((log) => (
-                    <div key={log.id} className="activity-item">
-                      <div className="activity-icon">
-                        <i className="bi bi-clock-history"></i>
-                      </div>
-                      <div className="activity-content">
-                        <p className="activity-text">{log.action}</p>
-                        <span className="activity-time">{log.timestamp}</span>
-                      </div>
-                    </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Quick Actions</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { tab: "users", label: "Verify Users" },
+                    { tab: "products", label: "Review Products" },
+                    { tab: "category", label: "Add Category" },
+                    { tab: "reports", label: "View Reports" },
+                  ].map(a => (
+                    <button key={a.tab} onClick={() => setActiveTab(a.tab)} className="py-2 text-xs text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
+                      {a.label}
+                    </button>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* USER VERIFICATION TAB */}
-          {activeTab === "users" && (
-            <div className="users-section">
-              <div className="table-card">
-                <div className="table-header">
-                  <h5>Pending User Verifications</h5>
-                  <div className="filter-buttons">
-                    <button className="btn btn-sm btn-outline-primary active">All</button>
-                    <button className="btn btn-sm btn-outline-primary">Pending</button>
-                    <button className="btn btn-sm btn-outline-primary">Approved</button>
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Activity</p>
+                </div>
+                {logs.slice(0, 5).length > 0 ? logs.slice(0, 5).map(log => (
+                  <div key={log.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0">
+                    <p className="flex-1 text-xs text-gray-700">{log.action}</p>
+                    <span className="text-xs text-gray-400 shrink-0">{log.timestamp}</span>
                   </div>
-                </div>
-                <div className="table-responsive">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>User</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Joined</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {props.users && props.users.length > 0 ? (
-                        props.users.map((user) => (
-                          <tr key={user.id}>
-                            <td>
-                              <div className="user-info">
-                                <div className="user-avatar">
-                                  {user.name.charAt(0)}
-                                </div>
-                                <strong>{user.name}</strong>
-                              </div>
-                            </td>
-                            <td>{user.email}</td>
-                            <td>
-                              <span className={`role-badge ${user.role.toLowerCase()}`}>
-                                {user.role}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`status-badge status-${user.status}`}>
-                                {user.status}
-                              </span>
-                            </td>
-                            <td>{new Date(user.created_at).toLocaleDateString()}</td>
-                            <td>
-                              <div className="action-buttons">
-                                <button className="btn btn-sm btn-success">
-                                  <i className="bi bi-check-lg"></i>
-                                </button>
-                                <button className="btn btn-sm btn-danger">
-                                  <i className="bi bi-x-lg"></i>
-                                </button>
-                                <button className="btn btn-sm btn-outline-secondary" onClick={() => openEditModal(user)}>
-                                  <i className="bi bi-pencil"></i>
-                                </button>
-                                <button className="btn btn-sm btn-outline-danger" onClick={() => deleteUser(user.id, user.name)}>
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="6" className="text-center text-muted py-4">
-                            No users found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* PRODUCT REVIEW TAB */}
-          {activeTab === "products" && (
-            <div className="products-section">
-              <div className="table-card">
-                <div className="table-header">
-                  <h5>Products Awaiting Approval</h5>
-                  <button className="btn btn-primary btn-sm">
-                    <i className="bi bi-filter me-2"></i>
-                    Filter
-                  </button>
-                </div>
-                <div className="table-responsive">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Seller</th>
-                        <th>Price</th>
-                        <th>Instock</th>
-                        <th>Submitted</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {props.products && props.products.length > 0 ? (
-                        props.products.map((product) => (
-                          <tr key={product.id}>
-                            <td>
-                              <div className="product-info">
-                                <div className="product-icon">
-                                  <i className="bi bi-box"></i>
-                                </div>
-                                <strong>{product.name}</strong>
-                              </div>
-                            </td>
-                            <td>{product.seller_name || 'N/A'}</td>
-                            <td className="fw-bold">RM {product.price}</td>
-                            <td>
-                              <span className={`status-badge status-${product.instock > 0 ? 'active' : 'danger'}`}>
-                                {product.instock}
-                              </span>
-                            </td>
-                            <td>{new Date(product.created_at).toLocaleDateString()}</td>
-                            <td>{product.status}</td>
-                            <td>
-                              <div className="action-buttons">
-                                <Link href={`/approve/${product.id}`} className="btn btn-sm btn-success">
-                                  <i className="bi bi-check-lg me-1"></i>
-                                  Approve
-                                </Link>
-                                <Link href={`/reject/${product.id}`} className="btn btn-sm btn-danger">
-                                  <i className="bi bi-x-lg me-1"></i>
-                                  Reject
-                                </Link>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="7" className="text-center text-muted py-4">
-                            No products pending review
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ORDERS TAB */}
-          {activeTab === "orders" && (
-            <div className="orders-section">
-              <div className="table-card">
-                <div className="table-header">
-                  <h5>All Order Details</h5>
-                  <span className="badge bg-primary">{orders.length} Records</span>
-                </div>
-                <div className="table-responsive">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Order ID</th>
-                        <th>Product</th>
-                        <th>Customer</th>
-                        <th>Seller</th>
-                        <th>Qty</th>
-                        <th>Amount</th>
-                        <th>Product Status</th>
-                        <th>Order Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.length > 0 ? (
-                        orders.map((order, index) => (
-                          <tr key={`${order.order_id || order.id}-${index}`}>
-                            <td><strong>#{order.order_id || order.id}</strong></td>
-                            <td>{order.product_name || 'N/A'}</td>
-                            <td>{order.customer_name || order.customer || 'N/A'}</td>
-                            <td>{order.seller_name || 'N/A'}</td>
-                            <td>{order.quantity || 1}</td>
-                            <td className="fw-bold">RM {order.total_amount || order.amount || 0}</td>
-                            <td>
-                              <span className="status-badge status-active">
-                                {order.product_order_status || order.cart_status || 'Pending'}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="status-badge status-active">
-                                {order.order_status || order.status || 'Pending'}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="action-buttons">
-                                <button className="btn btn-sm btn-primary">
-                                  <i className="bi bi-eye me-1"></i>
-                                  Details
-                                </button>
-                                <button className="btn btn-sm btn-outline-secondary">
-                                  <i className="bi bi-box-arrow-up-right me-1"></i>
-                                  Track
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="9" className="text-center text-muted py-4">
-                            No orders found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* CATEGORY TAB */}
-          {activeTab === "category" && (
-            <div className="category-section">
-              <div className="row g-4">
-                <div className="col-lg-5">
-                  <div className="form-card">
-                    <div className="form-header">
-                      <h4>Add New Category</h4>
-                      <p>Manage hierarchical category structure</p>
-                    </div>
-
-                    {/* Category Level Tabs */}
-                    <div className="nav nav-pills mb-3" role="tablist" style={{ gap: '0.5rem', marginBottom: '1.5rem' }}>
-                      <button
-                        className={`btn btn-sm ${categoryLevel === 'main' ? 'btn-primary' : 'btn-outline-primary'}`}
-                        onClick={() => {
-                          setCategoryLevel('main');
-                          setSelectedMainCategory('');
-                          setSelectedSubCategory('');
-                          category.reset();
-                          subCategory.reset();
-                          subSubCategory.reset();
-                        }}
-                      >
-                        Main Category
-                      </button>
-                      <button
-                        className={`btn btn-sm ${categoryLevel === 'sub' ? 'btn-primary' : 'btn-outline-primary'}`}
-                        onClick={() => {
-                          setCategoryLevel('sub');
-                          setSelectedSubCategory('');
-                          subCategory.reset();
-                          subSubCategory.reset();
-                        }}
-                      >
-                        Sub Category
-                      </button>
-                      <button
-                        className={`btn btn-sm ${categoryLevel === 'subsub' ? 'btn-primary' : 'btn-outline-primary'}`}
-                        onClick={() => {
-                          setCategoryLevel('subsub');
-                          subSubCategory.reset();
-                        }}
-                      >
-                        Sub-Sub Category
-                      </button>
-                    </div>
-
-                    {/* Main Category Form */}
-                    {categoryLevel === 'main' && (
-                      <form onSubmit={handleCatSubmit} className="category-form">
-                        <div className="mb-3">
-                          <label className="form-label">Main Category Name *</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="e.g., Electronics, Fashion"
-                            value={category.data.category}
-                            onChange={(e) => category.setData('category', e.target.value)}
-                            required
-                          />
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="form-label">Category Image (Optional)</label>
-                          <div className="input-group">
-                            <input
-                              type="file"
-                              className="form-control"
-                              accept="image/*"
-                              onChange={(e) => category.setData('image', e.target.files[0])}
-                            />
-                          </div>
-                          {category.data.image && (
-                            <small className="text-success mt-1 d-block">
-                              ✓ Image selected: {category.data.image.name}
-                            </small>
-                          )}
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="btn btn-primary w-100"
-                          disabled={category.processing}
-                        >
-                          {category.processing ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Adding...
-                            </>
-                          ) : (
-                            <>
-                              <i className="bi bi-plus-lg me-2"></i>
-                              Add Main Category
-                            </>
-                          )}
-                        </button>
-                      </form>
-                    )}
-
-                    {/* Sub Category Form */}
-                    {categoryLevel === 'sub' && (
-                      <form onSubmit={handleCatSubmit} className="category-form">
-                        <div className="mb-3">
-                          <label className="form-label">Select Main Category *</label>
-                          <select
-                            className="form-select"
-                            value={subCategory.data.category_id}
-                            onChange={(e) => {
-                              subCategory.setData('category_id', e.target.value);
-                              setSelectedMainCategory(e.target.value);
-                            }}
-                            required
-                          >
-                            <option value="">-- Choose a main category --</option>
-                            {props.categories?.map((cat) => (
-                              <option key={cat.id} value={cat.id}>
-                                {cat.category}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="form-label">Sub Category Name *</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="e.g., Smartphones, Laptops"
-                            value={subCategory.data.name}
-                            onChange={(e) => subCategory.setData('name', e.target.value)}
-                            required
-                          />
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="form-label">Sub Category Image (Optional)</label>
-                          <div className="input-group">
-                            <input
-                              type="file"
-                              className="form-control"
-                              accept="image/*"
-                              onChange={(e) => subCategory.setData('image', e.target.files[0])}
-                            />
-                          </div>
-                          {subCategory.data.image && (
-                            <small className="text-success mt-1 d-block">
-                              ✓ Image selected: {subCategory.data.image.name}
-                            </small>
-                          )}
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="btn btn-primary w-100"
-                          disabled={subCategory.processing || !subCategory.data.category_id}
-                        >
-                          {subCategory.processing ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Adding...
-                            </>
-                          ) : (
-                            <>
-                              <i className="bi bi-plus-lg me-2"></i>
-                              Add Sub Category
-                            </>
-                          )}
-                        </button>
-                      </form>
-                    )}
-
-                    {/* Sub-Sub Category Form */}
-                    {categoryLevel === 'subsub' && (
-                      <form onSubmit={handleCatSubmit} className="category-form">
-                        <div className="mb-3">
-                          <label className="form-label">Select Main Category *</label>
-                          <select
-                            className="form-select"
-                            value={selectedMainCategory}
-                            onChange={(e) => {
-                              setSelectedMainCategory(e.target.value);
-                              setSelectedSubCategory('');
-                              subSubCategory.setData('subcategory_id', '');
-                            }}
-                            required
-                          >
-                            <option value="">-- Choose a main category --</option>
-                            {props.categories?.map((cat) => (
-                              <option key={cat.id} value={cat.id}>
-                                {cat.category}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="form-label">Select Sub Category *</label>
-                          <select
-                            className="form-select"
-                            value={subSubCategory.data.subcategory_id}
-                            onChange={(e) => {
-                              subSubCategory.setData('subcategory_id', e.target.value);
-                              setSelectedSubCategory(e.target.value);
-                            }}
-                            disabled={!selectedMainCategory}
-                            required
-                          >
-                            <option value="">-- Choose a sub category --</option>
-                            {selectedMainCategory && props.subcategories?.filter(s => s.category_id == selectedMainCategory).map((subcat) => (
-                              <option key={subcat.id} value={subcat.id}>
-                                {subcat.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="form-label">Sub-Sub Category Name *</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="e.g., iPhone, Android"
-                            value={subSubCategory.data.name}
-                            onChange={(e) => subSubCategory.setData('name', e.target.value)}
-                            required
-                          />
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="form-label">Sub-Sub Category Image (Optional)</label>
-                          <div className="input-group">
-                            <input
-                              type="file"
-                              className="form-control"
-                              accept="image/*"
-                              onChange={(e) => subSubCategory.setData('image', e.target.files[0])}
-                            />
-                          </div>
-                          {subSubCategory.data.image && (
-                            <small className="text-success mt-1 d-block">
-                              ✓ Image selected: {subSubCategory.data.image.name}
-                            </small>
-                          )}
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="btn btn-primary w-100"
-                          disabled={subSubCategory.processing || !subSubCategory.data.subcategory_id}
-                        >
-                          {subSubCategory.processing ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Adding...
-                            </>
-                          ) : (
-                            <>
-                              <i className="bi bi-plus-lg me-2"></i>
-                              Add Sub-Sub Category
-                            </>
-                          )}
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                </div>
-
-                <div className="col-lg-7">
-                  <div className="table-card">
-                    <div className="table-header">
-                      <h5>All Categories ({props.categories?.length || 0})</h5>
-                      <div className="search-box-small">
-                        <i className="bi bi-search"></i>
-                        <input type="text" placeholder="Search categories..." />
-                      </div>
-                    </div>
-                    <div className="table-responsive">
-                      <table className="admin-table">
-                        <thead>
-                          <tr>
-                            <th>ID</th>
-                            <th>Category Name</th>
-                            <th>Type</th>
-                            <th>Products</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {/* Main Categories */}
-                          {props.categories?.map((item, index) => (
-                            <React.Fragment key={`main-${index}`}>
-                              <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
-                                <td>#{item.id}</td>
-                                <td>
-                                  <div className="category-name">
-                                    <i className="bi bi-tag-fill me-2"></i>
-                                    <strong>{item.category}</strong>
-                                  </div>
-                                </td>
-                                <td>
-                                  <span className="badge bg-primary">Main</span>
-                                </td>
-                                <td>
-                                  <span className="badge bg-info">
-                                    {props.products?.filter(p => p.category_id === item.id).length || 0}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className="status-badge status-active">Active</span>
-                                </td>
-                                <td>
-                                  <div className="action-buttons">
-                                    <button className="btn btn-sm btn-outline-primary" onClick={() => openEditCategoryModal(item, 'main')}>
-                                      <i className="bi bi-pencil"></i>
-                                    </button>
-                                    <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteCategoryModal(item, 'main')}>
-                                      <i className="bi bi-trash"></i>
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                              
-                              {/* Sub Categories */}
-                              {props.subcategories?.filter(s => s.category_id === item.id).map((subcat, subindex) => (
-                                <React.Fragment key={`sub-${subindex}`}>
-                                  <tr style={{ backgroundColor: '#fafafa', paddingLeft: '2rem' }}>
-                                    <td style={{ paddingLeft: '2rem' }}></td>
-                                    <td>
-                                      <div className="category-name">
-                                        <i className="bi bi-list me-2"></i>
-                                        {subcat.name}
-                                      </div>
-                                    </td>
-                                    <td>
-                                      <span className="badge bg-success">Sub</span>
-                                    </td>
-                                    <td>-</td>
-                                    <td>
-                                      <span className="status-badge status-active">Active</span>
-                                    </td>
-                                    <td>
-                                      <div className="action-buttons">
-                                        <button className="btn btn-sm btn-outline-primary" onClick={() => openEditCategoryModal(subcat, 'sub')}>
-                                          <i className="bi bi-pencil"></i>
-                                        </button>
-                                        <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteCategoryModal(subcat, 'sub')}>
-                                          <i className="bi bi-trash"></i>
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                  
-                                  {/* Sub-Sub Categories */}
-                                  {props.subSubcategories?.filter(ss => ss.subcategory_id === subcat.id).map((subsubcat, subsubindex) => (
-                                    <tr key={`subsub-${subsubindex}`} style={{ backgroundColor: '#ffffff', paddingLeft: '4rem' }}>
-                                      <td style={{ paddingLeft: '4rem' }}></td>
-                                      <td>
-                                        <div className="category-name">
-                                          <i className="bi bi-dot me-2"></i>
-                                          {subsubcat.name}
-                                        </div>
-                                      </td>
-                                      <td>
-                                        <span className="badge bg-warning">Sub-Sub</span>
-                                      </td>
-                                      <td>-</td>
-                                      <td>
-                                        <span className="status-badge status-active">Active</span>
-                                      </td>
-                                      <td>
-                                        <div className="action-buttons">
-                                          <button className="btn btn-sm btn-outline-primary" onClick={() => openEditCategoryModal(subsubcat, 'subsub')}>
-                                            <i className="bi bi-pencil"></i>
-                                          </button>
-                                          <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteCategoryModal(subsubcat, 'subsub')}>
-                                            <i className="bi bi-trash"></i>
-                                          </button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </React.Fragment>
-                              ))}
-                            </React.Fragment>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* REPORTS TAB */}
-          {activeTab === "reports" && (
-            <div className="reports-section">
-              <div className="reports-grid">
-                {props.reports && props.reports.length > 0 ? (
-                  props.reports.map((report) => (
-                    <div key={report.id} className="report-card">
-                      <div className="report-header">
-                        <span className={`report-type ${report.type.toLowerCase()}`}>
-                          <i className={`bi bi-${report.type === 'Product' ? 'box' : 'shop'}`}></i>
-                          {report.type} Report
-                        </span>
-                        <span className="report-date">{new Date(report.date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="report-body">
-                        <p className="report-description">
-                          <i className="bi bi-flag-fill me-2"></i>
-                          {report.description}
-                        </p>
-                        <p className="report-meta">
-                          Reported by: <strong>{report.reported_by}</strong>
-                        </p>
-                      </div>
-                      <div className="report-actions">
-                        <button className="btn btn-sm btn-outline-primary">
-                          <i className="bi bi-eye me-1"></i>
-                          Investigate
-                        </button>
-                        <button className="btn btn-sm btn-success">
-                          <i className="bi bi-check-lg me-1"></i>
-                          Resolve
-                        </button>
-                        <button className="btn btn-sm btn-danger">
-                          <i className="bi bi-x-lg me-1"></i>
-                          Dismiss
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="alert alert-info w-100">No reports found</div>
+                )) : (
+                  <p className="px-4 py-6 text-center text-xs text-gray-400">No recent activity</p>
                 )}
               </div>
             </div>
           )}
 
-          {/* AUDIT LOGS TAB */}
-          {activeTab === "logs" && (
-            <div className="logs-section">
-              <div className="table-card">
-                <div className="table-header">
-                  <h5>Audit Trail</h5>
-                  <div className="filter-buttons">
-                    <button className="btn btn-sm btn-outline-primary active">Today</button>
-                    <button className="btn btn-sm btn-outline-primary">This Week</button>
-                    <button className="btn btn-sm btn-outline-primary">This Month</button>
-                  </div>
-                </div>
-                <div className="logs-list">
-                  {props.logs && props.logs.length > 0 ? (
-                    props.logs.map((log) => (
-                      <div key={log.id} className="log-item">
-                        <div className="log-icon">
-                          <i className="bi bi-shield-check"></i>
-                        </div>
-                        <div className="log-content">
-                          <p className="log-action">{log.action}</p>
-                          <div className="log-meta">
-                            <span>
-                              <i className="bi bi-person me-1"></i>
-                              {log.admin}
-                            </span>
-                            <span>
-                              <i className="bi bi-clock me-1"></i>
-                              {log.timestamp}
-                            </span>
+          {/* USERS */}
+          {activeTab === "users" && (
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <p className="font-medium text-gray-700">User Verifications</p>
+                <Badge>{users.length} total</Badge>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 uppercase text-left">
+                      {["Name", "Email", "Role", "Status", "Joined", "Actions"].map(h => (
+                        <th key={h} className="px-4 py-2.5 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {users.length > 0 ? users.map(user => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-semibold shrink-0">{user.name.charAt(0)}</div>
+                            <span className="font-medium text-gray-800">{user.name}</span>
                           </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-muted py-4">No audit logs found</div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">{user.email}</td>
+                        <td className="px-4 py-3"><Badge>{user.role}</Badge></td>
+                        <td className="px-4 py-3">
+                          <Badge color={user.status === 'Approved' ? 'green' : user.status === 'Pending' ? 'yellow' : 'red'}>{user.status}</Badge>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400">{new Date(user.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button className="px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors">✓</button>
+                            <button className="px-2 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors">✕</button>
+                            <button onClick={() => openEditModal(user)} className="px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Edit</button>
+                            <button onClick={() => deleteUser(user.id, user.name)} className="px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors">Del</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No users found</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* PRODUCTS */}
+          {activeTab === "products" && (
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <p className="font-medium text-gray-700">Products Awaiting Approval</p>
+                <Badge color="yellow">{stats.pendingProducts} pending</Badge>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 uppercase text-left">
+                      {["Product", "Seller", "Price", "Stock", "Date", "Status", "Actions"].map(h => (
+                        <th key={h} className="px-4 py-2.5 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {products.length > 0 ? products.map(product => (
+                      <tr key={product.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-800">{product.name}</td>
+                        <td className="px-4 py-3 text-gray-500">{product.seller_name || 'N/A'}</td>
+                        <td className="px-4 py-3 font-medium text-gray-700">RM {product.price}</td>
+                        <td className="px-4 py-3">
+                          <Badge color={product.instock > 0 ? 'green' : 'red'}>{product.instock}</Badge>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400">{new Date(product.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3"><Badge color="yellow">{product.status}</Badge></td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1">
+                            <Link href={`/approve/${product.id}`} className="px-2.5 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors">Approve</Link>
+                            <Link href={`/reject/${product.id}`} className="px-2.5 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors">Reject</Link>
+                          </div>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No products pending review</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ORDERS */}
+          {activeTab === "orders" && (
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <p className="font-medium text-gray-700">All Orders</p>
+                <Badge>{orders.length} records</Badge>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 uppercase text-left">
+                      {["Order ID", "Product", "Customer", "Seller", "Qty", "Amount", "Status", "Actions"].map(h => (
+                        <th key={h} className="px-4 py-2.5 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {orders.length > 0 ? orders.map((order, i) => (
+                      <tr key={`${order.order_id || order.id}-${i}`} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-700">#{order.order_id || order.id}</td>
+                        <td className="px-4 py-3 text-gray-600">{order.product_name || 'N/A'}</td>
+                        <td className="px-4 py-3 text-gray-600">{order.customer_name || order.customer || 'N/A'}</td>
+                        <td className="px-4 py-3 text-gray-600">{order.seller_name || 'N/A'}</td>
+                        <td className="px-4 py-3 text-gray-600">{order.quantity || 1}</td>
+                        <td className="px-4 py-3 font-medium text-gray-700">RM {order.total_amount || order.amount || 0}</td>
+                        <td className="px-4 py-3"><Badge color="blue">{order.order_status || order.status || 'Pending'}</Badge></td>
+                        <td className="px-4 py-3">
+                          <button className="px-2.5 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Details</button>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No orders found</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* WEBSITE SETTINGS */}
+          {activeTab === "website-settings" && (
+            <div className="max-w-2xl bg-white border border-gray-200 rounded-lg p-5">
+              <p className="font-medium text-gray-700">Admin Login URL</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Set a custom path after <span className="font-semibold">/login/</span> for the separate admin login page.
+              </p>
+
+              <form onSubmit={handleWebsiteSettingsSubmit} className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Custom URL slug</label>
+                  <div className="flex items-center">
+                    <span className="px-3 py-2 border border-r-0 border-gray-300 bg-gray-50 text-xs text-gray-500 rounded-l">/login/</span>
+                    <input
+                      type="text"
+                      className={inputCls + " rounded-l-none"}
+                      value={websiteSettingsForm.data.admin_login_slug}
+                      onChange={e => websiteSettingsForm.setData('admin_login_slug', e.target.value)}
+                      placeholder="admin"
+                      required
+                    />
+                  </div>
+                  {websiteSettingsForm.errors.admin_login_slug && (
+                    <p className="text-xs text-red-500 mt-1">{websiteSettingsForm.errors.admin_login_slug}</p>
                   )}
+                </div>
+
+                <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-2 break-all">
+                  Active admin login path: {adminLoginPath}
+                </div>
+
+                <button type="submit" disabled={websiteSettingsForm.processing} className={btnPrimary}>
+                  {websiteSettingsForm.processing ? 'Saving...' : 'Save Website Settings'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* CATEGORIES */}
+          {activeTab === "category" && (
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-4">
+                <p className="font-medium text-gray-700 mb-3">Add Category</p>
+
+                <div className="flex border border-gray-200 rounded overflow-hidden mb-4">
+                  {["main", "sub", "subsub"].map((lvl, i) => (
+                    <button
+                      key={lvl}
+                      onClick={() => {
+                        setCategoryLevel(lvl);
+                        if (lvl !== 'subsub') { setSelectedSubCategory(''); subSubCategory.reset(); }
+                        if (lvl === 'main') { setSelectedMainCategory(''); category.reset(); subCategory.reset(); }
+                      }}
+                      className={`flex-1 py-1.5 text-xs font-medium transition-colors ${categoryLevel === lvl ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                      {["Main", "Sub", "Sub-Sub"][i]}
+                    </button>
+                  ))}
+                </div>
+
+                <form onSubmit={handleCatSubmit} className="space-y-3">
+                  {categoryLevel === 'main' && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Category Name *</label>
+                        <input type="text" className={inputCls} placeholder="e.g., Electronics" value={category.data.category} onChange={e => category.setData('category', e.target.value)} required />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Image (Optional)</label>
+                        <input type="file" className={inputCls} accept="image/*" onChange={e => category.setData('image', e.target.files[0])} />
+                      </div>
+                      <button type="submit" disabled={category.processing} className={btnPrimary + " w-full"}>{category.processing ? 'Adding...' : 'Add Main Category'}</button>
+                    </>
+                  )}
+
+                  {categoryLevel === 'sub' && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Main Category *</label>
+                        <select className={inputCls} value={subCategory.data.category_id} onChange={e => { subCategory.setData('category_id', e.target.value); setSelectedMainCategory(e.target.value); }} required>
+                          <option value="">-- Select --</option>
+                          {props.categories?.map(cat => <option key={cat.id} value={cat.id}>{cat.category}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Sub Category Name *</label>
+                        <input type="text" className={inputCls} placeholder="e.g., Smartphones" value={subCategory.data.name} onChange={e => subCategory.setData('name', e.target.value)} required />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Image (Optional)</label>
+                        <input type="file" className={inputCls} accept="image/*" onChange={e => subCategory.setData('image', e.target.files[0])} />
+                      </div>
+                      <button type="submit" disabled={subCategory.processing || !subCategory.data.category_id} className={btnPrimary + " w-full"}>{subCategory.processing ? 'Adding...' : 'Add Sub Category'}</button>
+                    </>
+                  )}
+
+                  {categoryLevel === 'subsub' && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Main Category *</label>
+                        <select className={inputCls} value={selectedMainCategory} onChange={e => { setSelectedMainCategory(e.target.value); setSelectedSubCategory(''); subSubCategory.setData('subcategory_id', ''); }} required>
+                          <option value="">-- Select --</option>
+                          {props.categories?.map(cat => <option key={cat.id} value={cat.id}>{cat.category}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Sub Category *</label>
+                        <select className={inputCls + " disabled:bg-gray-50"} value={subSubCategory.data.subcategory_id} onChange={e => { subSubCategory.setData('subcategory_id', e.target.value); setSelectedSubCategory(e.target.value); }} disabled={!selectedMainCategory} required>
+                          <option value="">-- Select --</option>
+                          {selectedMainCategory && props.subcategories?.filter(s => s.category_id == selectedMainCategory).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Name *</label>
+                        <input type="text" className={inputCls} placeholder="e.g., iPhone" value={subSubCategory.data.name} onChange={e => subSubCategory.setData('name', e.target.value)} required />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Image (Optional)</label>
+                        <input type="file" className={inputCls} accept="image/*" onChange={e => subSubCategory.setData('image', e.target.files[0])} />
+                      </div>
+                      <button type="submit" disabled={subSubCategory.processing || !subSubCategory.data.subcategory_id} className={btnPrimary + " w-full"}>{subSubCategory.processing ? 'Adding...' : 'Add Sub-Sub Category'}</button>
+                    </>
+                  )}
+                </form>
+              </div>
+
+              <div className="lg:col-span-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="font-medium text-gray-700">All Categories ({props.categories?.length || 0})</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 text-gray-500 uppercase text-left">
+                        {["Name", "Type", "Actions"].map(h => (
+                          <th key={h} className="px-4 py-2.5 font-medium">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {props.categories?.map((item, i) => (
+                        <React.Fragment key={`main-${i}`}>
+                          <tr className="bg-gray-50 border-t border-gray-100">
+                            <td className="px-4 py-2.5 font-semibold text-gray-800">{item.category}</td>
+                            <td className="px-4 py-2.5"><Badge color="blue">Main</Badge></td>
+                            <td className="px-4 py-2.5">
+                              <div className="flex gap-1">
+                                <button onClick={() => openEditCategoryModal(item, 'main')} className="px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Edit</button>
+                                <button onClick={() => openDeleteCategoryModal(item, 'main')} className="px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors">Del</button>
+                              </div>
+                            </td>
+                          </tr>
+                          {props.subcategories?.filter(s => s.category_id === item.id).map((subcat, si) => (
+                            <React.Fragment key={`sub-${si}`}>
+                              <tr className="border-t border-gray-50 hover:bg-gray-50">
+                                <td className="px-4 py-2 pl-8 text-gray-600">↳ {subcat.name}</td>
+                                <td className="px-4 py-2"><Badge color="green">Sub</Badge></td>
+                                <td className="px-4 py-2">
+                                  <div className="flex gap-1">
+                                    <button onClick={() => openEditCategoryModal(subcat, 'sub')} className="px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Edit</button>
+                                    <button onClick={() => openDeleteCategoryModal(subcat, 'sub')} className="px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors">Del</button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {props.subSubcategories?.filter(ss => ss.subcategory_id === subcat.id).map((ss, ssi) => (
+                                <tr key={`subsub-${ssi}`} className="border-t border-gray-50 hover:bg-gray-50">
+                                  <td className="px-4 py-2 pl-14 text-gray-400">↳ {ss.name}</td>
+                                  <td className="px-4 py-2"><Badge color="yellow">Sub-Sub</Badge></td>
+                                  <td className="px-4 py-2">
+                                    <div className="flex gap-1">
+                                      <button onClick={() => openEditCategoryModal(ss, 'subsub')} className="px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Edit</button>
+                                      <button onClick={() => openDeleteCategoryModal(ss, 'subsub')} className="px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors">Del</button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           )}
-        </div>
-      </main>
-      {/* Edit User Modal */}
-      {editModalOpen && (
-        <div>
-          <div className="sidebar-overlay" onClick={() => setEditModalOpen(false)}></div>
-          <div className="admin-modal" style={{position: 'fixed',left: '50%',top: '50%',transform: 'translate(-50%, -50%)',zIndex:1100,width:'480px',background:'#fff',borderRadius:'8px',boxShadow:'0 10px 30px rgba(0,0,0,0.2)'}}>
-            <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <h5 style={{margin:0}}>Edit User</h5>
-              <button className="close-sidebar" onClick={() => setEditModalOpen(false)}>
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </div>
-            <form onSubmit={handleEditSubmit} style={{padding:'1rem 1.25rem'}}>
-              <div className="mb-3">
-                <label className="form-label">Name</label>
-                <input type="text" className="form-control" value={editForm.data.name} onChange={(e) => editForm.setData('name', e.target.value)} required />
-                {editForm.errors.name && <div className="text-danger small">{editForm.errors.name}</div>}
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Email</label>
-                <input type="email" className="form-control" value={editForm.data.email} onChange={(e) => editForm.setData('email', e.target.value)} required />
-                {editForm.errors.email && <div className="text-danger small">{editForm.errors.email}</div>}
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Role</label>
-                <select className="form-select" value={editForm.data.role} onChange={(e) => editForm.setData('role', e.target.value)}>
-                  <option value="Seller">Seller</option>
-                  <option value="Customer">Customer</option>
-                  <option value="Admin">Admin</option>
-                  
-                </select>
-              </div>
-              <div className="mb-3">
-                <label className="form-label">New Password (Optional)</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  value={editForm.data.password}
-                  onChange={(e) => editForm.setData('password', e.target.value)}
-                  placeholder="Leave blank to keep current password"
-                />
-                {editForm.errors.password && <div className="text-danger small">{editForm.errors.password}</div>}
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Confirm New Password</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  value={editForm.data.password_confirmation}
-                  onChange={(e) => editForm.setData('password_confirmation', e.target.value)}
-                  placeholder="Re-enter new password"
-                />
-              </div>
-              <div style={{display:'flex',gap:'0.5rem',justifyContent:'flex-end'}}>
-                <button type="button" className="btn btn-outline-secondary" onClick={() => setEditModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={editForm.processing}>
-                  {editForm.processing ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Edit Category Modal */}
-      {editCategoryModalOpen && (
-        <div>
-          <div className="sidebar-overlay" onClick={() => setEditCategoryModalOpen(false)}></div>
-          <div className="admin-modal" style={{position: 'fixed',left: '50%',top: '50%',transform: 'translate(-50%, -50%)',zIndex:1100,width:'460px',background:'#fff',borderRadius:'8px',boxShadow:'0 10px 30px rgba(0,0,0,0.2)'}}>
-            <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <h5 style={{margin:0}}>Edit Category</h5>
-              <button className="close-sidebar" onClick={() => setEditCategoryModalOpen(false)}>
-                <i className="bi bi-x-lg"></i>
-              </button>
+          {/* REPORTS */}
+          {activeTab === "reports" && (
+            <div className="space-y-3">
+              {reports.length > 0 ? reports.map(report => (
+                <div key={report.id} className="bg-white border border-gray-200 rounded-lg p-4 flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge color={report.type === 'Product' ? 'blue' : 'yellow'}>{report.type} Report</Badge>
+                      <span className="text-xs text-gray-400">{new Date(report.date).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-xs text-gray-700 mb-1">{report.description}</p>
+                    <p className="text-xs text-gray-400">By: <span className="text-gray-600">{report.reported_by}</span></p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button className="px-2.5 py-1 text-xs rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">View</button>
+                    <button className="px-2.5 py-1 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors">Resolve</button>
+                    <button className="px-2.5 py-1 text-xs rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors">Dismiss</button>
+                  </div>
+                </div>
+              )) : (
+                <div className="bg-white border border-gray-200 rounded-lg px-4 py-8 text-center text-gray-400 text-xs">No reports found</div>
+              )}
             </div>
-            <form onSubmit={handleCategoryEditSubmit} style={{padding:'1rem 1.25rem'}}>
-              <div className="mb-3">
-                <label className="form-label">Category Type</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={editCategoryForm.data.level === 'main' ? 'Main Category' : editCategoryForm.data.level === 'sub' ? 'Sub Category' : 'Sub-Sub Category'}
-                  disabled
-                />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Category Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={editCategoryForm.data.name}
-                  onChange={(e) => editCategoryForm.setData('name', e.target.value)}
-                  required
-                />
-                {editCategoryForm.errors.name && <div className="text-danger small">{editCategoryForm.errors.name}</div>}
-              </div>
-              <div style={{display:'flex',gap:'0.5rem',justifyContent:'flex-end'}}>
-                <button type="button" className="btn btn-outline-secondary" onClick={() => setEditCategoryModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={editCategoryForm.processing}>
-                  {editCategoryForm.processing ? 'Updating...' : 'Update Category'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Delete Category Modal */}
-      {deleteCategoryModalOpen && (
-        <div>
-          <div className="sidebar-overlay" onClick={() => setDeleteCategoryModalOpen(false)}></div>
-          <div className="admin-modal" style={{position: 'fixed',left: '50%',top: '50%',transform: 'translate(-50%, -50%)',zIndex:1100,width:'460px',background:'#fff',borderRadius:'8px',boxShadow:'0 10px 30px rgba(0,0,0,0.2)'}}>
-            <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <h5 style={{margin:0}}>Delete Category</h5>
-              <button className="close-sidebar" onClick={() => setDeleteCategoryModalOpen(false)}>
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </div>
-            <form onSubmit={handleCategoryDeleteSubmit} style={{padding:'1rem 1.25rem'}}>
-              <div className="alert alert-warning d-flex align-items-start gap-2" role="alert">
-                <i className="bi bi-exclamation-triangle-fill"></i>
-                <div>
-                  <strong>Warning:</strong> Deleting this {deleteCategoryForm.data.level === 'main' ? 'main category' : deleteCategoryForm.data.level === 'sub' ? 'sub category' : 'sub-sub category'} will also delete all related products.
+          {/* LOGS */}
+          {activeTab === "logs" && (
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <p className="font-medium text-gray-700">Audit Trail</p>
+                <div className="flex gap-1">
+                  {["Today", "Week", "Month"].map(f => (
+                    <button key={f} className="px-2.5 py-1 text-xs rounded border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors">{f}</button>
+                  ))}
                 </div>
               </div>
-              <p className="mb-3 text-muted">
-                This action is permanent and cannot be undone.
-              </p>
-              <div style={{display:'flex',gap:'0.5rem',justifyContent:'flex-end'}}>
-                <button type="button" className="btn btn-outline-secondary" onClick={() => setDeleteCategoryModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-danger" disabled={deleteCategoryForm.processing}>
-                  {deleteCategoryForm.processing ? 'Deleting...' : 'Delete Category'}
-                </button>
+              <div className="divide-y divide-gray-50">
+                {logs.length > 0 ? logs.map(log => (
+                  <div key={log.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                    <p className="flex-1 text-xs text-gray-700">{log.action}</p>
+                    <span className="text-xs text-gray-400">{log.admin}</span>
+                    <span className="text-xs text-gray-300">{log.timestamp}</span>
+                  </div>
+                )) : (
+                  <p className="px-4 py-8 text-center text-xs text-gray-400">No audit logs found</p>
+                )}
               </div>
-            </form>
-          </div>
+            </div>
+          )}
+
         </div>
-      )}
+      </main>
+
+      {/* MODALS */}
+      <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)} title="Edit User">
+        <form onSubmit={handleEditSubmit} className="space-y-3">
+          {[{ label: "Name", key: "name", type: "text" }, { label: "Email", key: "email", type: "email" }].map(f => (
+            <div key={f.key}>
+              <label className="block text-xs text-gray-600 mb-1">{f.label}</label>
+              <input type={f.type} className={inputCls} value={editForm.data[f.key]} onChange={e => editForm.setData(f.key, e.target.value)} required />
+              {editForm.errors[f.key] && <p className="text-xs text-red-500 mt-1">{editForm.errors[f.key]}</p>}
+            </div>
+          ))}
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Role</label>
+            <select className={inputCls} value={editForm.data.role} onChange={e => editForm.setData('role', e.target.value)}>
+              <option value="Seller">Seller</option>
+              <option value="Customer">Customer</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          {[{ label: "New Password (optional)", key: "password", ph: "Leave blank to keep current" }, { label: "Confirm Password", key: "password_confirmation", ph: "Re-enter password" }].map(f => (
+            <div key={f.key}>
+              <label className="block text-xs text-gray-600 mb-1">{f.label}</label>
+              <input type="password" className={inputCls} value={editForm.data[f.key]} onChange={e => editForm.setData(f.key, e.target.value)} placeholder={f.ph} />
+            </div>
+          ))}
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={() => setEditModalOpen(false)} className={btnSecondary}>Cancel</button>
+            <button type="submit" disabled={editForm.processing} className={btnPrimary}>{editForm.processing ? 'Saving...' : 'Save'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={editCategoryModalOpen} onClose={() => setEditCategoryModalOpen(false)} title="Edit Category">
+        <form onSubmit={handleCategoryEditSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Type</label>
+            <input type="text" className={inputCls + " bg-gray-50 text-gray-400"} value={editCategoryForm.data.level === 'main' ? 'Main' : editCategoryForm.data.level === 'sub' ? 'Sub' : 'Sub-Sub'} disabled />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Name</label>
+            <input type="text" className={inputCls} value={editCategoryForm.data.name} onChange={e => editCategoryForm.setData('name', e.target.value)} required />
+            {editCategoryForm.errors.name && <p className="text-xs text-red-500 mt-1">{editCategoryForm.errors.name}</p>}
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={() => setEditCategoryModalOpen(false)} className={btnSecondary}>Cancel</button>
+            <button type="submit" disabled={editCategoryForm.processing} className={btnPrimary}>{editCategoryForm.processing ? 'Updating...' : 'Update'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={deleteCategoryModalOpen} onClose={() => setDeleteCategoryModalOpen(false)} title="Delete Category">
+        <form onSubmit={handleCategoryDeleteSubmit} className="space-y-3">
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+            <strong>Warning:</strong> Deleting this {deleteCategoryForm.data.level === 'main' ? 'main category' : deleteCategoryForm.data.level === 'sub' ? 'sub category' : 'sub-sub category'} will also remove all related products. This cannot be undone.
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={() => setDeleteCategoryModalOpen(false)} className={btnSecondary}>Cancel</button>
+            <button type="submit" disabled={deleteCategoryForm.processing} className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors">{deleteCategoryForm.processing ? 'Deleting...' : 'Delete'}</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
