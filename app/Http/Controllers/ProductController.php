@@ -99,6 +99,7 @@ class ProductController extends Controller
             'image1' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'image2' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'image3' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'status' => 'nullable|in:Pending,Approved,Rejected'
         ]);
 
         // Store main image
@@ -129,7 +130,7 @@ class ProductController extends Controller
             'subcategory_id' => $data['subcategory_id'],
             'sub_subcategory_id' => $data['sub_subcategory_id'] ?? null,
             'added_by' => Auth::user()->id,
-            'status' => 'Pending',
+            'status' => $data['status'] ?? 'Pending',
         ]);
 
         // Handle optional extra images - save to productimages table
@@ -154,7 +155,7 @@ class ProductController extends Controller
     public function updateProduct(Request $req, $id)
     {
         $product = Product::findOrFail($id);
-
+        // dd($req->all());
         $data = $req->validate([
             'name' => 'required',
             'price' => 'required|numeric|min:0',

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm, usePage, Link, router } from "@inertiajs/react";
 import FlashMessage from "../components/FlashMessage";
 import LoadingScreen from "../Components/LoadingScreen";
@@ -11,6 +11,28 @@ const Admin = () => {
   const [categoryLevel, setCategoryLevel] = useState("main");
   const [selectedMainCategory, setSelectedMainCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [adminImagePreviews, setAdminImagePreviews] = useState({
+    image: null,
+    image1: null,
+    image2: null,
+    image3: null,
+  });
+
+  const adminProductForm = useForm({
+    name: '',
+    price: '',
+    discount_price: '',
+    discount_type: 'percentage',
+    instock: '',
+    desc: '',
+    image: null,
+    image1: null,
+    image2: null,
+    image3: null,
+    category_id: '',
+    subcategory_id: '',
+    sub_subcategory_id: '',
+  });
 
   const calculateStats = () => {
     const pendingUsers = props.users?.filter(u => u.status === 'Pending').length || 0;
@@ -34,12 +56,19 @@ const Admin = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editCategoryModalOpen, setEditCategoryModalOpen] = useState(false);
   const [deleteCategoryModalOpen, setDeleteCategoryModalOpen] = useState(false);
+  const [showOrderDetailModal, setShowOrderDetailModal] = useState(false);
+  const [selectedOrderRows, setSelectedOrderRows] = useState([]);
 
   const editForm = useForm({ id: '', name: '', email: '', role: '', password: '', password_confirmation: '' });
   const editCategoryForm = useForm({ id: '', name: '', level: 'main' });
   const deleteCategoryForm = useForm({ id: '', level: 'main' });
   const websiteSettingsForm = useForm({
     admin_login_slug: props.websiteSettings?.admin_login_slug || 'admin',
+  });
+  const adminOrderStatusForm = useForm({
+    order_id: '',
+    product_id: [],
+    status: '',
   });
 
   function openEditModal(user) {
@@ -88,6 +117,35 @@ const Admin = () => {
     websiteSettingsForm.post('/admin/website-settings/update');
   }
 
+  function openOrderDetails(orderId) {
+    const matchedRows = orders.filter((item) => String(item.order_id || item.id) === String(orderId));
+    if (matchedRows.length === 0) return;
+
+    setSelectedOrderRows(matchedRows);
+    adminOrderStatusForm.setData({
+      order_id: orderId,
+      product_id: matchedRows.map((item) => item.product_id).filter(Boolean),
+      status: matchedRows[0]?.product_order_status || 'Pending',
+    });
+    setShowOrderDetailModal(true);
+  }
+
+  function closeOrderDetails() {
+    setShowOrderDetailModal(false);
+    setSelectedOrderRows([]);
+    adminOrderStatusForm.reset();
+  }
+
+  function handleAdminOrderStatusUpdate(e) {
+    e.preventDefault();
+    adminOrderStatusForm.post('/admin/orders/update-status', {
+      onSuccess: () => {
+        router.reload({ only: ['orders'] });
+        closeOrderDetails();
+      },
+    });
+  }
+
   function handleCatSubmit(e) {
     e.preventDefault();
     if (categoryLevel === "main") {
@@ -101,6 +159,91 @@ const Admin = () => {
     }
   }
 
+  function handleAdminCategoryChange(e) {
+    const categoryId = e.target.value;
+    adminProductForm.setData('category_id', categoryId);
+    adminProductForm.setData('subcategory_id', '');
+    adminProductForm.setData('sub_subcategory_id', '');
+  }
+
+  function handleAdminSubcategoryChange(e) {
+    const subcategoryId = e.target.value;
+    adminProductForm.setData('subcategory_id', subcategoryId);
+    adminProductForm.setData('sub_subcategory_id', '');
+  }
+
+  function handleAdminImageChange(fieldName, file) {
+    if (!file) {
+      setAdminImagePreviews((prev) => ({ ...prev, [fieldName]: null }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAdminImagePreviews((prev) => ({ ...prev, [fieldName]: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleAdminProductSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append('name', adminProductForm.data.name);
+    formData.append('price', adminProductForm.data.price);
+    formData.append('instock', adminProductForm.data.instock);
+    formData.append('desc', adminProductForm.data.desc);
+    formData.append('category_id', adminProductForm.data.category_id);
+    formData.append('subcategory_id', adminProductForm.data.subcategory_id);
+    formData.append('discount_type', adminProductForm.data.discount_type);
+    formData.append('status', 'Approved'); // Directly approve products added by admin
+
+    if (adminProductForm.data.discount_price) {
+      formData.append('discount_price', adminProductForm.data.discount_price);
+    }
+
+
+
+    if (adminProductForm.data.sub_subcategory_id) {
+      formData.append('sub_subcategory_id', adminProductForm.data.sub_subcategory_id);
+    }
+
+    if (adminProductForm.data.image instanceof File) {
+      formData.append('image', adminProductForm.data.image);
+    }
+    if (adminProductForm.data.image1 instanceof File) {
+      formData.append('image1', adminProductForm.data.image1);
+    }
+    if (adminProductForm.data.image2 instanceof File) {
+      formData.append('image2', adminProductForm.data.image2);
+    }
+    if (adminProductForm.data.image3 instanceof File) {
+      formData.append('image3', adminProductForm.data.image3);
+    }
+
+    
+
+    router.post('/admin/addProduct', formData, {
+      forceFormData: true,
+      onSuccess: () => {
+        adminProductForm.reset();
+        setAdminImagePreviews({ image: null, image1: null, image2: null, image3: null });
+      },
+    });
+  }
+
+  const filteredAdminSubcategories = (props.subcategories || []).filter(
+    (sub) => String(sub.category_id) === String(adminProductForm.data.category_id),
+  );
+
+  const filteredAdminSubSubcategories = (props.subSubcategories || []).filter(
+    (subSub) => String(subSub.subcategory_id) === String(adminProductForm.data.subcategory_id),
+  );
+
+  useEffect(() => {
+    adminProductForm.clearErrors();
+  }, [activeTab]);
+
   const users = props.users || [];
   const products = props.products || [];
   const orders = props.orders || [];
@@ -112,6 +255,7 @@ const Admin = () => {
     { key: "overview", label: "Overview", icon: "bi-grid" },
     { key: "users", label: "Users", icon: "bi-people", badge: stats.pendingUsers },
     { key: "products", label: "Products", icon: "bi-box-seam", badge: stats.pendingProducts },
+    { key: "add-product", label: "Add Product", icon: "bi-plus-circle" },
     { key: "category", label: "Categories", icon: "bi-tags" },
     { key: "orders", label: "Orders", icon: "bi-receipt" },
     { key: "website-settings", label: "Website Settings", icon: "bi-sliders" },
@@ -229,8 +373,8 @@ const Admin = () => {
                   {[
                     { tab: "users", label: "Verify Users" },
                     { tab: "products", label: "Review Products" },
+                    { tab: "add-product", label: "Add Product" },
                     { tab: "category", label: "Add Category" },
-                    { tab: "reports", label: "View Reports" },
                   ].map(a => (
                     <button key={a.tab} onClick={() => setActiveTab(a.tab)} className="py-2 text-xs text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
                       {a.label}
@@ -333,8 +477,9 @@ const Admin = () => {
                         <td className="px-4 py-3"><Badge color="yellow">{product.status}</Badge></td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1">
-                            <Link href={`/approve/${product.id}`} className="px-2.5 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors">Approve</Link>
-                            <Link href={`/reject/${product.id}`} className="px-2.5 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors">Reject</Link>
+                            <Link href={`/admin/editProduct/${product.id}`} className="px-2.5 py-1 text-decoration-none rounded bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Edit</Link>
+                            <Link href={`/approve/${product.id}`} className="px-2.5 py-1 rounded bg-green-100 text-decoration-none text-green-700 hover:bg-green-200 transition-colors">Approve</Link>
+                            <Link href={`/reject/${product.id}`} className="px-2.5 py-1 rounded bg-red-100 text-decoration-none text-red-600 hover:bg-red-200 transition-colors">Reject</Link>
                           </div>
                         </td>
                       </tr>
@@ -374,7 +519,12 @@ const Admin = () => {
                         <td className="px-4 py-3 font-medium text-gray-700">RM {order.total_amount || order.amount || 0}</td>
                         <td className="px-4 py-3"><Badge color="blue">{order.order_status || order.status || 'Pending'}</Badge></td>
                         <td className="px-4 py-3">
-                          <button className="px-2.5 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Details</button>
+                          <button
+                            className="px-2.5 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                            onClick={() => openOrderDetails(order.order_id || order.id)}
+                          >
+                            Details
+                          </button>
                         </td>
                       </tr>
                     )) : (
@@ -383,6 +533,155 @@ const Admin = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* ADD PRODUCT */}
+          {activeTab === "add-product" && (
+            <div className="max-w-5xl bg-white border border-gray-200 rounded-lg p-5">
+              <p className="font-medium text-gray-700">Add Product</p>
+              <p className="text-xs text-gray-500 mt-1">Create products with the same fields available in seller panel.</p>
+
+              <form onSubmit={handleAdminProductSubmit} className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4" encType="multipart/form-data">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Product Name *</label>
+                  <input type="text" className={inputCls} value={adminProductForm.data.name} onChange={e => adminProductForm.setData('name', e.target.value)} required />
+                  {adminProductForm.errors.name && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Price *</label>
+                  <input type="number" step="0.01" className={inputCls} value={adminProductForm.data.price} onChange={e => adminProductForm.setData('price', e.target.value)} required />
+                  {adminProductForm.errors.price && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.price}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Discount Type</label>
+                  <select className={inputCls} value={adminProductForm.data.discount_type} onChange={e => adminProductForm.setData('discount_type', e.target.value)}>
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed Amount (RM)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Discount Value</label>
+                  <input type="number" step="0.01" className={inputCls} value={adminProductForm.data.discount_price} onChange={e => adminProductForm.setData('discount_price', e.target.value)} />
+                  {adminProductForm.errors.discount_price && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.discount_price}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Stock Quantity *</label>
+                  <input type="number" className={inputCls} value={adminProductForm.data.instock} onChange={e => adminProductForm.setData('instock', e.target.value)} required />
+                  {adminProductForm.errors.instock && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.instock}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Main Category *</label>
+                  <select className={inputCls} value={adminProductForm.data.category_id} onChange={handleAdminCategoryChange} required>
+                    <option value="">Select main category</option>
+                    {(props.categories || []).map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.category}</option>
+                    ))}
+                  </select>
+                  {adminProductForm.errors.category_id && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.category_id}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Category *</label>
+                  <select className={inputCls} value={adminProductForm.data.subcategory_id} onChange={handleAdminSubcategoryChange} disabled={!adminProductForm.data.category_id} required>
+                    <option value="">Select category</option>
+                    {filteredAdminSubcategories.map(sub => (
+                      <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    ))}
+                  </select>
+                  {adminProductForm.errors.subcategory_id && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.subcategory_id}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Sub Category</label>
+                  <select className={inputCls} value={adminProductForm.data.sub_subcategory_id} onChange={e => adminProductForm.setData('sub_subcategory_id', e.target.value)} disabled={!adminProductForm.data.subcategory_id}>
+                    <option value="">Select sub category (optional)</option>
+                    {filteredAdminSubSubcategories.map(subSub => (
+                      <option key={subSub.id} value={subSub.id}>{subSub.name}</option>
+                    ))}
+                  </select>
+                  {adminProductForm.errors.sub_subcategory_id && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.sub_subcategory_id}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">Description *</label>
+                  <textarea className={inputCls} rows={4} value={adminProductForm.data.desc} onChange={e => adminProductForm.setData('desc', e.target.value)} required />
+                  {adminProductForm.errors.desc && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.desc}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Main Image *</label>
+                  <input
+                    type="file"
+                    className={inputCls}
+                    accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files?.[0] || null;
+                      adminProductForm.setData('image', file);
+                      handleAdminImageChange('image', file);
+                    }}
+                    required
+                  />
+                  {adminProductForm.errors.image && <p className="text-xs text-red-500 mt-1">{adminProductForm.errors.image}</p>}
+                </div>
+
+                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { key: 'image1', label: 'Image 1' },
+                    { key: 'image2', label: 'Image 2' },
+                    { key: 'image3', label: 'Image 3' },
+                  ].map((img) => (
+                    <div key={img.key}>
+                      <label className="block text-xs text-gray-600 mb-1">{img.label} (Optional)</label>
+                      <input
+                        type="file"
+                        className={inputCls}
+                        accept="image/*"
+                        onChange={e => {
+                          const file = e.target.files?.[0] || null;
+                          adminProductForm.setData(img.key, file);
+                          handleAdminImageChange(img.key, file);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {(adminImagePreviews.image || adminImagePreviews.image1 || adminImagePreviews.image2 || adminImagePreviews.image3) && (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-gray-600 mb-1">Image Preview</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {Object.entries(adminImagePreviews).map(([key, src]) => src ? (
+                        <div key={key} className="border border-gray-200 rounded p-2 bg-gray-50">
+                          <img src={src} alt={key} className="w-full h-24 object-cover rounded" />
+                          <p className="text-[10px] text-gray-500 mt-1 text-center">{key}</p>
+                        </div>
+                      ) : null)}
+                    </div>
+                  </div>
+                )}
+
+                <div className="md:col-span-2 flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    className={btnSecondary}
+                    onClick={() => {
+                      adminProductForm.reset();
+                      setAdminImagePreviews({ image: null, image1: null, image2: null, image3: null });
+                    }}
+                  >
+                    Reset
+                  </button>
+                  <button type="submit" disabled={adminProductForm.processing} className={btnPrimary}>
+                    {adminProductForm.processing ? 'Adding...' : 'Add Product'}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
@@ -687,6 +986,82 @@ const Admin = () => {
           </div>
         </form>
       </Modal>
+
+      {showOrderDetailModal && selectedOrderRows.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={closeOrderDetails} />
+          <div className="relative bg-white rounded-lg shadow-lg w-full max-w-3xl z-10 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+              <h5 className="text-sm font-semibold text-gray-800">Order Details #{selectedOrderRows[0].order_id}</h5>
+              <button onClick={closeOrderDetails} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div className="border border-gray-200 rounded p-3">
+                  <p className="text-gray-500 mb-1">Customer</p>
+                  <p className="font-medium text-gray-800">{selectedOrderRows[0].customer_name || 'N/A'}</p>
+                  <p className="text-gray-600">{selectedOrderRows[0].customer_email || 'N/A'}</p>
+                </div>
+                <div className="border border-gray-200 rounded p-3">
+                  <p className="text-gray-500 mb-1">Payment</p>
+                  <p className="font-medium text-gray-800">{selectedOrderRows[0].payment_method || 'N/A'}</p>
+                  <p className="text-gray-600">Total: RM {selectedOrderRows[0].total_amount || 0}</p>
+                </div>
+                <div className="border border-gray-200 rounded p-3 md:col-span-2">
+                  <p className="text-gray-500 mb-1">Shipping Address</p>
+                  <p className="font-medium text-gray-800">{selectedOrderRows[0].address || 'N/A'}</p>
+                  <p className="text-gray-600">{selectedOrderRows[0].city || ''} {selectedOrderRows[0].shipping_country || ''}</p>
+                  <p className="text-gray-600">Phone: {selectedOrderRows[0].phone || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-gray-700 mb-2">Products</p>
+                <div className="space-y-2">
+                  {selectedOrderRows.map((item, idx) => (
+                    <div key={`${item.product_id}-${idx}`} className="flex items-center gap-3 border border-gray-200 rounded p-2">
+                      {item.product_image ? (
+                        <img src={`/storage/${item.product_image}`} alt={item.product_name} className="w-12 h-12 object-cover rounded" />
+                      ) : (
+                        <div className="w-12 h-12 rounded bg-gray-100" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{item.product_name}</p>
+                        <p className="text-xs text-gray-600">Qty: {item.quantity} | Line Amount: RM {item.line_amount || 0}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={handleAdminOrderStatusUpdate} className="space-y-3 border border-gray-200 rounded p-3">
+                <p className="text-xs font-medium text-gray-700">Update Order Status</p>
+                <div>
+                  <select
+                    className={inputCls}
+                    value={adminOrderStatusForm.data.status}
+                    onChange={(e) => adminOrderStatusForm.setData('status', e.target.value)}
+                    required
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Processing">Processing</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button type="button" className={btnSecondary} onClick={closeOrderDetails}>Close</button>
+                  <button type="submit" disabled={adminOrderStatusForm.processing} className={btnPrimary}>
+                    {adminOrderStatusForm.processing ? 'Updating...' : 'Update Status'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

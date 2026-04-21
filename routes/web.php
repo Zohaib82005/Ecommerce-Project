@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
-use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckSeller;
 use App\Http\Middleware\CheckCustomer;
 use Illuminate\Support\Facades\Route;
@@ -10,7 +9,6 @@ use Inertia\Inertia;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\CategoryController;
@@ -54,20 +52,7 @@ Route::get('/send-email', [MailController::class, 'sendEmail']);
 Route::post('/verify-otp', [MailController::class, 'verifyOtp'])->name('verify.otp');
 
 
-// ========== ADMIN ROUTES (Admin only) ==========
-Route::middleware([CheckAdmin::class])->group(function () {
-    Route::get('/admin', [AdminController::class, 'index']);
-    Route::post('/addcate', [ProductController::class, 'addcate']);
-    Route::post('/add-subcategory', [CategoryController::class, 'addSubcategory']);
-    Route::post('/add-sub-subcategory', [CategoryController::class, 'addSubSubcategory']);
-    Route::get('/approve/{id}', [AdminController::class, 'approveProduct']);
-    Route::get('/reject/{id}', [AdminController::class, 'rejectProduct']);
-    Route::post('/admin/user/update', [AdminController::class, 'updateUser']);
-    Route::delete('/admin/user/delete/{id}', [AdminController::class, 'deleteUser']);
-    Route::post('/admin/category/update', [AdminController::class, 'updateCategory']);
-    Route::post('/admin/category/delete', [AdminController::class, 'deleteCategory']);
-    Route::post('/admin/website-settings/update', [AdminController::class, 'updateWebsiteSettings']);
-});
+require __DIR__.'/admin/admin.php';
 
 // ========== SELLER ROUTES (Seller only) ==========
 Route::middleware([CheckSeller::class])->group(function () {

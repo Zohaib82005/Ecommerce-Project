@@ -4,7 +4,10 @@ import { usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 
 const EditProduct = () => {
-  const { product, categories, product_images } = usePage().props;
+  const { product, categories, product_images, auth } = usePage().props;
+  const isAdmin = auth?.user?.role === 'Admin';
+  const updateEndpoint = isAdmin ? `/admin/updateProduct/${product.id}` : `/seller/updateProduct/${product.id}`;
+  const backToDashboardPath = isAdmin ? '/admin' : '/seller';
   const [loading, setLoading]       = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg]     = useState('');
@@ -77,12 +80,12 @@ const EditProduct = () => {
     Object.keys(formData).forEach(key => {
       if (formData[key] !== null) submitData.append(key, formData[key]);
     });
-    router.post(`/seller/updateProduct/${product.id}`, submitData, {
+    router.post(updateEndpoint, submitData, {
       forceFormData: true,
       onSuccess: () => {
         setLoading(false);
         setSuccessMsg('Product updated successfully!');
-        setTimeout(() => router.visit('/seller'), 1500);
+        setTimeout(() => router.visit(backToDashboardPath), 1500);
       },
       onError: (errors) => {
         setLoading(false);
@@ -93,7 +96,7 @@ const EditProduct = () => {
     });
   };
 
-  const handleCancel = () => router.visit('/seller');
+  const handleCancel = () => router.visit(backToDashboardPath);
 
   const deleteImage = (imageId) => {
     if (window.confirm('Are you sure you want to delete this image?')) {

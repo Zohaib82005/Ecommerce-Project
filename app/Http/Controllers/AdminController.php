@@ -30,17 +30,27 @@ class AdminController extends Controller
                        ->join('carts', 'orders.id', '=', 'carts.order_id')
                        ->join('products', 'carts.product_id', '=', 'products.id')
                        ->leftJoin('users as sellers', 'products.added_by', '=', 'sellers.id')
+                       ->leftJoin('addresses', 'orders.address_id', '=', 'addresses.id')
                        ->select(
                            'orders.id as order_id',
+                           'orders.address_id',
                            'orders.total_amount',
                            'orders.status as order_status',
                            'orders.payment_method',
                            'orders.created_at',
                            'customers.name as customer_name',
+                           'customers.email as customer_email',
+                           'products.id as product_id',
                            'products.name as product_name',
+                           'products.image as product_image',
                            'carts.quantity',
+                           'carts.amount as line_amount',
                            'carts.orderstatus as product_order_status',
-                           'sellers.name as seller_name'
+                           'sellers.name as seller_name',
+                           'addresses.address',
+                           'addresses.city',
+                           'addresses.country as shipping_country',
+                           'addresses.phone'
                        )
                        ->orderBy('orders.created_at', 'desc')
                        ->get();
