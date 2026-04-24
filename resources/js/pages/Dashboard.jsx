@@ -229,6 +229,27 @@ const Dashboard = () => {
     { id: 2, type: "Office", address: "Plaza 5, Blue Area, Islamabad", default: false },
   ];
 
+  const isOrderCancellable = (order) => {
+    if (!order?.products?.length) return false;
+
+    return order.products.every((product) => {
+      const status = String(product?.cstatus || '').toLowerCase();
+      return status === 'pending' || status === 'processing';
+    });
+  };
+
+  const handleCancelOrder = (orderId) => {
+    if (!window.confirm('Are you sure you want to cancel this order?')) {
+      return;
+    }
+
+    router.post('/orders/cancel', {
+      order_id: orderId,
+    }, {
+      preserveScroll: true,
+    });
+  };
+
   return (
     <>
     <Navbar />
@@ -431,6 +452,7 @@ const Dashboard = () => {
                                       product.cstatus?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                       product.cstatus?.toLowerCase() === 'processing' ? 'bg-blue-100 text-blue-800' :
                                       product.cstatus?.toLowerCase() === 'shipped' ? 'bg-indigo-100 text-indigo-800' :
+                                      product.cstatus?.toLowerCase() === 'cancelled' || product.cstatus?.toLowerCase() === 'canceled' ? 'bg-red-100 text-red-800' :
                                       'bg-green-100 text-green-800'
                                     }`}>
                                       {product.cstatus}
@@ -452,7 +474,15 @@ const Dashboard = () => {
                             </div>
 
                             <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex gap-3 justify-end">
-                              
+                              {isOrderCancellable(order) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelOrder(order.oid)}
+                                  className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                                >
+                                  Cancel Order
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}

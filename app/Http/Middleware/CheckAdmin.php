@@ -20,8 +20,8 @@ class CheckAdmin
             return $next($request);
         }
         }catch(\Exception $e){
-            return redirect()->back();
+            return redirect('/');
         }
-        return redirect()->back();
+        return redirect('/');
     }
 }

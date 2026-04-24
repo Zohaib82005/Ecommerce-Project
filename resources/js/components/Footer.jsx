@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
+import { usePage } from '@inertiajs/react';
 
-const Footer = () => {
+const Footer = ({ websiteName, websiteLogo }) => {
   const [email, setEmail] = useState('');
+  const { websiteSettings } = usePage().props;
+  const resolvedWebsiteName = websiteName || websiteSettings?.website_name || 'BrightMaxTrading';
+  const resolvedWebsiteLogo = websiteLogo || (websiteSettings?.website_logo ? `/storage/${websiteSettings.website_logo}` : '/logo.png');
 
   return (
     <footer style={{ background: 'linear-gradient(135deg, #1a0533 0%, #2d0a4e 50%, #1a0533 100%)' }} className="text-white mt-16">
@@ -64,14 +68,14 @@ const Footer = () => {
           {/* Brand Column */}
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-                <img src={`/logo.png`} width="30" height="30" alt="Logo" />
+                <img src={resolvedWebsiteLogo} width="30" height="30" alt={resolvedWebsiteName} />
               
-              <span className="text-lg font-black">BrightMaxTrading.com</span>
+              <span className="text-lg font-black">{resolvedWebsiteName}</span>
             </div>
             <p className="text-purple-300 text-xs md:text-sm leading-relaxed mb-4">
               Established in 2015. brightmaxtrading.com is a prominent and rapidly growing online shopping platform in the region...
             </p>
-            <p className="text-purple-300 text-xs mb-1">© Copyright 2026, brightmaxtrading.com, All rights reserved.</p>
+            <p className="text-purple-300 text-xs mb-1">© Copyright 2026, {resolvedWebsiteName}, All rights reserved.</p>
           </div>
 
           <div>
@@ -104,7 +108,7 @@ const Footer = () => {
           <div>
             <h4 className="font-bold text-base mb-3 md:mb-4 text-white">24/7 Customer Support</h4>
             <p className="text-purple-300 text-xs mb-3 leading-relaxed">
-              BrightMaxTrading support team is here working 24/7 for our customers. We give high priority to troubleshoot and sort out all the complaints and issues of our customers.
+              {resolvedWebsiteName} support team is here working 24/7 for our customers. We give high priority to troubleshoot and sort out all the complaints and issues of our customers.
             </p>
             <p className="text-purple-300 text-xs mb-1">We're always here to help you.</p>
             <p className="text-purple-300 text-xs mb-1">Reach out to us through any of these support channels:</p>
@@ -150,7 +154,7 @@ const Footer = () => {
             </div>
           </div>
           <div className="text-center text-purple-400 text-xs mt-3">
-            © 2026 BrightMaxTrading. All Rights Reserved
+            © 2026 {resolvedWebsiteName}. All Rights Reserved
           </div>
         </div>
       </div>

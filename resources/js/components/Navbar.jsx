@@ -4,15 +4,17 @@ import CategoryDropdown from './CategoryDropdown';
 import LoadingScreen from './LoadingScreen';
 import { useCurrency } from '../contexts/CurrencyContext';
 
-const Navbar = () => {
+const Navbar = ({ websiteName, websiteLogo }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const dropdownTimeoutRef = useRef(null);
   const countryDropdownTimeoutRef = useRef(null);
-  const { auth, cartCount } = usePage().props;
+  const { auth, cartCount, websiteSettings } = usePage().props;
   const { countries, selectedCountry, setSelectedCountry } = useCurrency();
+  const resolvedWebsiteName = websiteName || websiteSettings?.website_name || 'BrightMaxTrading';
+  const resolvedWebsiteLogo = websiteLogo || (websiteSettings?.website_logo ? `/storage/${websiteSettings.website_logo}` : '/logo.png');
 
   const handleDropdownMouseEnter = () => {
     if (dropdownTimeoutRef.current) {
@@ -68,9 +70,9 @@ const Navbar = () => {
 
           {/* ── Logo ── */}
           <Link href="/" className="flex items-center gap-1.5 flex-shrink-0 text-white text-decoration-none">
-            <img src={`/logo.png`} style={{height: "40px", backgroundColor: "#e7e7ff", borderRadius: "20px"}} alt="Logo" />
+            <img src={resolvedWebsiteLogo} style={{height: "40px", backgroundColor: "#e7e7ff", borderRadius: "20px"}} alt={resolvedWebsiteName} />
             <span className="text-base font-extrabold tracking-tight leading-none">
-              BrightMaxTrading
+              {resolvedWebsiteName}
             </span>
           </Link>
 

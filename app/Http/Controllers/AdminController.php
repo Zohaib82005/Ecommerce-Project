@@ -11,8 +11,11 @@ use App\Models\Product;
 use App\Models\Subcategory;
 use App\Models\Sub_subcategory;
 use App\Models\Order;
+use App\Models\HomeBanner;
+use App\Models\PromotionBanner;
 use App\Models\WebsiteSetting;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -35,7 +38,7 @@ class AdminController extends Controller
                            'orders.id as order_id',
                            'orders.address_id',
                            'orders.total_amount',
-                           'orders.status as order_status',
+                           
                            'orders.payment_method',
                            'orders.created_at',
                            'customers.name as customer_name',
@@ -54,6 +57,12 @@ class AdminController extends Controller
                        )
                        ->orderBy('orders.created_at', 'desc')
                        ->get();
+        $homeBanners = HomeBanner::orderBy('sort_order', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
+        $promotionBanners = PromotionBanner::orderBy('sort_order', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
         $websiteSettings = WebsiteSetting::getSettings();
         return Inertia::render('Admin',
             [
@@ -64,6 +73,8 @@ class AdminController extends Controller
                 'products' => $products,
                 'sellers' => $sellers,
                 'orders' => $orders,
+                'homeBanners' => $homeBanners,
+                'promotionBanners' => $promotionBanners,
                 'websiteSettings' => $websiteSettings,
             ]
         );
@@ -220,10 +231,23 @@ class AdminController extends Controller
     {
         $data = $request->validate([
             'admin_login_slug' => ['required', 'string', 'max:120', 'regex:/^[a-zA-Z0-9_-]+$/'],
+            'website_name' => ['required', 'string', 'max:160'],
+            'website_logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:5120'],
         ]);
 
         $settings = WebsiteSetting::getSettings();
         $settings->admin_login_slug = strtolower(trim($data['admin_login_slug']));
+
+        $settings->website_name = trim($data['website_name']);
+
+        if ($request->hasFile('website_logo')) {
+            if (!empty($settings->website_logo) && Storage::disk('public')->exists($settings->website_logo)) {
+                Storage::disk('public')->delete($settings->website_logo);
+            }
+
+            $settings->website_logo = $request->file('website_logo')->store('website-settings', 'public');
+        }
+
         $settings->save();
 
         return redirect()->back()->with('success', 'Website settings updated successfully.');

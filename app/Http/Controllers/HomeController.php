@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Category;
+use App\Models\HomeBanner;
+use App\Models\PromotionBanner;
 use App\Models\Product;
 
 
@@ -49,11 +51,22 @@ class HomeController extends Controller
             });
         
         // You can add more sections as needed
+        $homeBanners = HomeBanner::where('is_active', true)
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $promotionBanners = PromotionBanner::where('is_active', true)
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
         
         return Inertia::render('welcome', [
             'categories' => $categories,
             'topPicks' => $topPicks,
             'dealsOfTheDay' => $dealsOfTheDay,
+            'homeBanners' => $homeBanners,
+            'promotionBanners' => $promotionBanners,
         ]);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use App\Models\Cart;
+use App\Models\WebsiteSetting;
 use Illuminate\Support\Facades\Auth;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,6 +32,15 @@ class AppServiceProvider extends ServiceProvider
                         ->count();
                 }
                 return 0;
+            },
+            'websiteSettings' => function () {
+                $settings = WebsiteSetting::getSettings();
+
+                return [
+                    'admin_login_slug' => $settings->admin_login_slug,
+                    'website_name' => $settings->website_name,
+                    'website_logo' => $settings->website_logo,
+                ];
             },
         ]);
     }

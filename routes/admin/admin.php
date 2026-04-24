@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\BannerController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -27,6 +28,10 @@ Route::middleware([CheckAdmin::class])->group(function () {
     Route::post('/admin/category/update', [AdminController::class, 'updateCategory']);
     Route::post('/admin/category/delete', [AdminController::class, 'deleteCategory']);
     Route::post('/admin/orders/update-status', [OrderController::class, 'updateStatus']);
+    Route::post('/admin/banners', [BannerController::class, 'store']);
+    Route::delete('/admin/banners/{id}', [BannerController::class, 'destroy']);
+    Route::post('/admin/promotions', [BannerController::class, 'storePromotion']);
+    Route::delete('/admin/promotions/{id}', [BannerController::class, 'destroyPromotion']);
 
     Route::post('/admin/website-settings/update', [AdminController::class, 'updateWebsiteSettings']);
 });

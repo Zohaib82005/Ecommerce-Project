@@ -293,6 +293,11 @@ const Seller = () => {
   const filteredOrders = (props.orders ? 
     Array.from(new Map(props.orders.map(order => [order.oid, order])).values()) : [])
     .filter(order => {
+      const cartStatus = props.orders.find(o => o.oid === order.oid)?.cart_status || 'ordered';
+      const normalized = String(cartStatus).toLowerCase();
+      return normalized !== 'cancelled' && normalized !== 'canceled';
+    })
+    .filter(order => {
         if (orderFilterStatus === "all") return true;
         const cartStatus = props.orders.find(o => o.oid === order.oid)?.cart_status || 'ordered';
         return cartStatus === orderFilterStatus;

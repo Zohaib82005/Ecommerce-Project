@@ -83,6 +83,7 @@ Route::middleware([CheckSeller::class])->group(function () {
 // ========== CUSTOMER ROUTES (Customer only) ==========
 Route::middleware([CheckCustomer::class])->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard']);
+    Route::post('/orders/cancel', [OrderController::class, 'cancelByCustomer']);
     Route::post('/cart/add', [CartController::class, 'addToCart']);
     Route::get('/cart', [CartController::class, 'viewCart']);
     Route::delete('/cart/remove/{id}', [CartController::class, 'removeFromCart']);

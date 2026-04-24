@@ -221,5 +221,45 @@ class OrderController extends Controller
         return redirect()->back()->with('success', 'Status Updated Successfully!');
     }
 
+    public function cancelByCustomer(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|integer|exists:orders,id',
+        ]);
+
+        $user = Auth::user();
+        $order = Order::where('id', $validated['order_id'])
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$order) {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        $orderItems = Cart::where('order_id', $order->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'ordered')
+            ->get();
+
+        if ($orderItems->isEmpty()) {
+            return redirect()->back()->with('error', 'No cancellable items found for this order.');
+        }
+
+        $hasNonCancellableItems = $orderItems->contains(function ($item) {
+            return !in_array((string) $item->orderstatus, ['Pending', 'Processing'], true);
+        });
+
+        if ($hasNonCancellableItems) {
+            return redirect()->back()->with('error', 'Only pending or processing orders can be cancelled.');
+        }
+
+        Cart::where('order_id', $order->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'ordered')
+            ->update(['orderstatus' => 'Cancelled']);
+
+        return redirect()->back()->with('success', 'Order cancelled successfully.');
+    }
+
 
 }

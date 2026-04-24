@@ -148,6 +148,10 @@ class UserController extends Controller
             ->join('addresses', 'orders.address_id', '=', 'addresses.id')
             ->where('products.added_by', Auth::user()->id)
             ->where('carts.status', 'ordered')
+            ->where(function ($query) {
+                $query->whereNull('carts.orderstatus')
+                    ->orWhereNotIn('carts.orderstatus', ['Cancelled', 'Canceled']);
+            })
             ->select(
                 'orders.id as oid',
                 'orders.total_amount',
@@ -199,6 +203,10 @@ class UserController extends Controller
         $orders = Order::where('orders.user_id', Auth::user()->id)
             ->join('carts', 'orders.id', '=', 'carts.order_id')
             ->join('products', 'carts.product_id', '=', 'products.id')
+            ->where(function ($query) {
+                $query->whereNull('carts.orderstatus')
+                    ->orWhereNotIn('carts.orderstatus', ['Cancelled', 'Canceled']);
+            })
             ->select('orders.id as oid', 'orders.total_amount', 'orders.user_id', 'orders.payment_method', 'carts.orderstatus as cstatus', 'orders.created_at', 'orders.updated_at', 'products.name as product_name', 'carts.quantity as quantity', 'products.image as product_image', 'carts.amount as pprice')
             ->get();
         // dd($orders);

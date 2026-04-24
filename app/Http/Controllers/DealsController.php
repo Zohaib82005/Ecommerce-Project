@@ -194,6 +194,7 @@ class DealsController extends Controller
                 ->whereDate('start_date', '<=', $today)
                 ->whereDate('end_date', '>=', $today)
                 ->with('products')
+                ->where('products.status', 'Approved')
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($deal) {

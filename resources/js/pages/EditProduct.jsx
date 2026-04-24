@@ -73,6 +73,18 @@ const EditProduct = () => {
     }
   };
 
+  // Prevent accidental number changes from mouse wheel / arrow keys.
+  const preventNumberInputDrift = (e) => {
+    if (e.type === 'wheel') {
+      e.currentTarget.blur();
+      return;
+    }
+
+    if (e.type === 'keydown' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true); setErrorMsg(''); setSuccessMsg('');
@@ -238,6 +250,8 @@ const EditProduct = () => {
                   <input
                     type="number" name="price" id="price" step="0.01" required
                     value={formData.price} onChange={handleChange}
+                    onWheel={preventNumberInputDrift}
+                    onKeyDown={preventNumberInputDrift}
                     placeholder="0.00" className="ep-input"
                   />
                 </div>
@@ -250,6 +264,8 @@ const EditProduct = () => {
                     type="number" name="discount_price" id="discount_price"
                     step="0.01" min="0"
                     value={formData.discount_price} onChange={handleChange}
+                    onWheel={preventNumberInputDrift}
+                    onKeyDown={preventNumberInputDrift}
                     placeholder="0.00" className="ep-input"
                   />
                   <select name="discount_type" value={formData.discount_type} onChange={handleChange} className="ep-discount-type">
@@ -266,6 +282,8 @@ const EditProduct = () => {
                   <input
                     type="number" name="instock" id="instock" required min="0"
                     value={formData.instock} onChange={handleChange}
+                    onWheel={preventNumberInputDrift}
+                    onKeyDown={preventNumberInputDrift}
                     placeholder="0" className="ep-input"
                     style={{ paddingLeft: '34px' }}
                   />

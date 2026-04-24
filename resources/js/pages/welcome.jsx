@@ -42,7 +42,7 @@ const AnimatedSection = ({ children, className = '', delay = 0, style = {} }) =>
 };
 
 // ─── Data ────────────────────────────────────────────────────────────────────
-const carouselBanners = [
+const fallbackCarouselBanners = [
   {
     id: 1, badge: 'EXCLUSIVE DEALS', badgeStyle: { background: '#f59e0b', color: '#1a0533' },
     title: 'GET UP TO 40% OFF', subtitle: 'On Pre-Owned Products',
@@ -372,6 +372,9 @@ const Welcome = ({
   categories: dbCategories = [],
   topPicks: dbTopPicks = [],
   dealsOfTheDay: dbDealsOfTheDay = [],
+  homeBanners: dbHomeBanners = [],
+  promotionBanners: dbPromotionBanners = [],
+  websiteSettings = {},
 }) => {
   const { formatCurrencyFromMYR } = useCurrency();
 
@@ -380,6 +383,9 @@ const Welcome = ({
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
+
+  const resolvedWebsiteName = websiteSettings?.website_name || 'BrightMaxTrading';
+  const resolvedWebsiteLogo = websiteSettings?.website_logo ? `/storage/${websiteSettings.website_logo}` : '/logo.png';
 
   // Initialize form for add to cart
  const { post, processing, reset, setData } = useForm({
@@ -526,6 +532,46 @@ const handleAddToCart = (productId) => {
   const displayTopPicks      = dbTopPicks.length > 0      ? dbTopPicks.map((p) => mapProduct(p))      : fallbackTopPicks;
   const displayDealsOfTheDay = dbDealsOfTheDay.length > 0 ? dbDealsOfTheDay.map((p) => mapProduct(p)) : fallbackDealsOfTheDay;
 
+  const carouselSlides = dbHomeBanners.length > 0
+    ? dbHomeBanners.map((banner, index) => ({
+        id: banner.id || index + 1,
+        badge: banner.badge || 'FEATURED',
+        badgeStyle: { background: '#f59e0b', color: '#1a0533' },
+        title: banner.title || 'Special Offer',
+        subtitle: banner.subtitle || '',
+        desc: banner.description || '',
+        btnStyle: { background: '#f59e0b', color: '#1a0533' },
+        buttonText: banner.button_text || 'Shop Now',
+        buttonLink: banner.button_link || '#',
+        image: banner.image || null,
+      }))
+    : fallbackCarouselBanners;
+
+  const promotionCards = dbPromotionBanners.length > 0
+    ? dbPromotionBanners.map((banner, index) => ({
+        id: banner.id || index + 1,
+        text: banner.title || 'Promotion',
+        subtitle: banner.subtitle || '',
+        image: banner.image || null,
+        buttonLink: banner.button_link || '#',
+        gradient: [
+          'linear-gradient(135deg, #ef4444, #dc2626)',
+          'linear-gradient(135deg, #f59e0b, #f97316)',
+          'linear-gradient(135deg, #10b981, #059669)',
+          'linear-gradient(135deg, #3b82f6, #2563eb)',
+          'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+          'linear-gradient(135deg, #ec4899, #db2777)',
+        ][index % 6],
+      }))
+    : promoBadges.map((badge) => ({
+        id: badge.id,
+        text: badge.text,
+        subtitle: '',
+        image: null,
+        buttonLink: '#',
+        gradient: badge.gradient,
+      }));
+
   // ── State ──
   const [currentSlide, setCurrentSlide]             = useState(0);
   const [categoryScrollPosition, setCategoryScrollPosition] = useState(0);
@@ -569,9 +615,11 @@ const handleAddToCart = (productId) => {
 
   // Auto-advance carousel
   useEffect(() => {
-    const timer = setInterval(() => setCurrentSlide((p) => (p + 1) % carouselBanners.length), 4000);
+    if (carouselSlides.length <= 1) return undefined;
+
+    const timer = setInterval(() => setCurrentSlide((p) => (p + 1) % carouselSlides.length), 4000);
     return () => clearInterval(timer);
-  }, []);
+  }, [carouselSlides.length]);
 
   // Fetch ratings for initial products
   useEffect(() => {
@@ -734,7 +782,7 @@ const handleAddToCart = (productId) => {
     <>
 
       <LoadingScreen isVisible={true} duration={2500} />
-      <Navbar />
+      <Navbar websiteName={resolvedWebsiteName} websiteLogo={resolvedWebsiteLogo} />
       <FlashMessage />
       <div className="min-h-screen" style={{ background: '#f8f7fa', fontFamily: "'Poppins', sans-serif" }}>
         <style>{`
@@ -763,14 +811,22 @@ const handleAddToCart = (productId) => {
                   className="flex gap-3 p-2"
                   style={{ transform: `translateX(-${categoryScrollPosition * 0.3}px)` }}
                 >
-                  {[...promoBadges, ...promoBadges].map((badge, index) => (
-                    <div
+                  {[...promotionCards, ...promotionCards].map((badge, index) => (
+                    <Link
                       key={`${badge.id}-${index}`}
-                      className="rounded-xl p-3 flex-shrink-0 w-32 h-24 flex items-center justify-center text-center font-bold text-xs text-white shadow-md"
-                      style={{ background: badge.gradient }}
+                      href={badge.buttonLink || '#'}
+                      className="rounded-xl p-3 flex-shrink-0 w-32 h-24 flex items-center justify-center text-center font-bold text-xs text-white shadow-md text-decoration-none overflow-hidden"
+                      style={{
+                        background: badge.image
+                          ? `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('/storage/${badge.image}') center/cover no-repeat`
+                          : badge.gradient,
+                      }}
                     >
-                      {badge.text}
-                    </div>
+                      <div>
+                        <div>{badge.text}</div>
+                        {badge.subtitle ? <div className="text-[10px] opacity-90 mt-1">{badge.subtitle}</div> : null}
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -837,12 +893,14 @@ const handleAddToCart = (productId) => {
               className="md:col-span-2 relative rounded-2xl overflow-hidden"
               style={{ height: '300px', boxShadow: '0 10px 40px rgba(109,40,217,0.2)' }}
             >
-              {carouselBanners.map((banner, i) => (
+              {carouselSlides.map((banner, i) => (
                 <div
                   key={banner.id}
                   className="absolute inset-0 flex items-center"
                   style={{
-                    background: banner.gradient,
+                    background: banner.image
+                      ? `linear-gradient(rgba(26,5,51,0.55), rgba(26,5,51,0.55)), url('/storage/${banner.image}') center/cover no-repeat`
+                      : banner.gradient,
                     opacity: i === currentSlide ? 1 : 0,
                     transition: 'opacity 0.6s ease',
                     padding: '2rem',
@@ -860,16 +918,20 @@ const handleAddToCart = (productId) => {
                     </h1>
                     <p className="text-white/80 text-sm mb-1">{banner.subtitle}</p>
                     <p className="text-white/60 text-xs mb-5">{banner.desc}</p>
-                    <button
-                      className="px-6 py-2.5 rounded-xl font-bold text-sm transition hover:scale-105 hover:shadow-lg"
-                      style={banner.btnStyle}
-                    >
-                      Shop Now →
-                    </button>
+                    <Link href={banner.buttonLink || '#'} className="text-decoration-none">
+                      <button
+                        className="px-6 py-2.5 rounded-xl font-bold text-sm transition hover:scale-105 hover:shadow-lg"
+                        style={banner.btnStyle}
+                      >
+                        {banner.buttonText || 'Shop Now'} →
+                      </button>
+                    </Link>
                   </div>
-                  <div className="absolute right-8 top-1/2 -translate-y-1/2 text-8xl opacity-20 select-none">
-                    {banner.emoji}
-                  </div>
+                  {!banner.image && (
+                    <div className="absolute right-8 top-1/2 -translate-y-1/2 text-8xl opacity-20 select-none">
+                      {banner.emoji}
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -883,8 +945,8 @@ const handleAddToCart = (productId) => {
                   onClick={() =>
                     setCurrentSlide((p) =>
                       btn.dir === 'next'
-                        ? (p + 1) % carouselBanners.length
-                        : (p - 1 + carouselBanners.length) % carouselBanners.length
+                        ? (p + 1) % carouselSlides.length
+                        : (p - 1 + carouselSlides.length) % carouselSlides.length
                     )
                   }
                   className={`absolute ${btn.pos} top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white/90 rounded-full shadow-lg flex items-center justify-center hover:bg-white transition`}
@@ -897,7 +959,7 @@ const handleAddToCart = (productId) => {
 
               {/* Dot indicators */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                {carouselBanners.map((_, i) => (
+                {carouselSlides.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => setCurrentSlide(i)}
@@ -1622,7 +1684,7 @@ const handleAddToCart = (productId) => {
 
         </div>
       </div>
-      <Footer />
+      <Footer websiteName={resolvedWebsiteName} websiteLogo={resolvedWebsiteLogo} />
     </>
   );
 };
